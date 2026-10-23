@@ -28,7 +28,7 @@ include(FetchContent)
 
 FetchContent_Declare(nezumi
     GIT_REPOSITORY https://github.com/ddigiorg/nezumi.git
-    GIT_TAG        b470b319aeba9e82f61b0d74c9df005c2c42d785 # dev: Added UnitGroup
+    GIT_TAG        707a137b2528463f487e11fd97a7bf12964a5811 # dev: InputMap + camera follow (#4)
 )
 FetchContent_MakeAvailable(nezumi)
 
@@ -39,15 +39,24 @@ FetchContent_MakeAvailable(nezumi)
 # included as <Nightmourn/...>, the same way the engine is included as
 # <Nezumi/...>. The game executable and every demo link this library, so a
 # demo can try out game code without copying it.
-#
-# Header-only for now. Once src/Nightmourn/ has .cpp files, make this a
-# STATIC library and list them here.
 # ------------------------------------------------------------------------------
 
-add_library(nightmourn_game INTERFACE)
+# Same warnings as the engine (applied PRIVATE to game targets).
+# -Werror=switch: a switch over an enum that misses a case is an error.
+set(NIGHTMOURN_WARNINGS
+    "$<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall;-Wextra;-Werror=switch>"
+    "$<$<CXX_COMPILER_ID:MSVC>:/W4;/we4062>"
+)
 
-target_include_directories(nightmourn_game INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(nightmourn_game INTERFACE Nezumi::Engine)
+add_library(nightmourn_game STATIC
+    src/Nightmourn/Character/Character.cpp
+    src/Nightmourn/Input/Actions.cpp
+    src/Nightmourn/Player/Player.cpp
+)
+
+target_include_directories(nightmourn_game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_options(nightmourn_game PRIVATE ${NIGHTMOURN_WARNINGS})
+target_link_libraries(nightmourn_game PUBLIC Nezumi::Engine)
 
 # ------------------------------------------------------------------------------
 # Game
