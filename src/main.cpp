@@ -3,10 +3,10 @@
 #include <exception> // exception
 #include <iostream>  // cerr
 
-class MyGame final : public Nezumi::IApplication {
+class Game final : public Nezumi::IApplication {
 public:
     void on_init(Nezumi::Engine& engine) override {
-        engine.logger().info("Hello from a game using the Nezumi Engine!");
+        engine.logger().info("Starting Nightmourn");
         engine.logger().info("Press Escape or close the window to exit.");
     }
 
@@ -22,12 +22,12 @@ public:
 int main() {
     try {
         Nezumi::EngineConfig config = {};
-        config.window.title = "Nezumi Quickstart";
+        config.window.title = "Nightmourn";
         config.escape_exits = true;
 
         Nezumi::Engine engine(config);
 
-        MyGame app;
+        Game app;
         engine.run(app);
 
         return EXIT_SUCCESS;
