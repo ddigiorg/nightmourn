@@ -1,4 +1,5 @@
 .build/
+.temp/
 
 # Per-developer presets (e.g. dev-local, see README.md)
 CMakeUserPresets.json
