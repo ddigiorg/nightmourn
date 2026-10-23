@@ -28,7 +28,7 @@ include(FetchContent)
 
 FetchContent_Declare(nezumi
     GIT_REPOSITORY https://github.com/ddigiorg/nezumi.git
-    GIT_TAG        707a137b2528463f487e11fd97a7bf12964a5811 # dev: InputMap + camera follow (#4)
+    GIT_TAG        main
 )
 FetchContent_MakeAvailable(nezumi)
 
