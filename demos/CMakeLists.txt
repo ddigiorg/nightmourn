@@ -31,6 +31,7 @@ function(add_demo DEMO_NAME)
 
     add_executable(${DEMO_NAME} ${DEMO_SOURCE})
     target_link_libraries(${DEMO_NAME} PRIVATE nightmourn_game)
+    target_compile_options(${DEMO_NAME} PRIVATE ${NIGHTMOURN_WARNINGS})
 
     nezumi_copy_assets(${DEMO_NAME} ENGINE)
 endfunction()
@@ -40,3 +41,4 @@ endfunction()
 # ------------------------------------------------------------------------------
 
 add_demo(00-hello-world)
+add_demo(01-player-armies)
