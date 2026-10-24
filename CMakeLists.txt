@@ -59,6 +59,7 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/UnitGroupDrawer.cpp
     src/Nightmourn/Draw/WorldDrawer.cpp
     src/Nightmourn/GUI/DebugMenu.cpp
+    src/Nightmourn/GUI/Theme.cpp
     src/Nightmourn/Input/Actions.cpp
     src/Nightmourn/Player/Player.cpp
 )

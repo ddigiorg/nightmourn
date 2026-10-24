@@ -32,6 +32,7 @@
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
 #include "Nightmourn/GUI/DebugMenu.hpp"
+#include "Nightmourn/GUI/Theme.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include <algorithm>   // erase_if
@@ -247,8 +248,10 @@ public:
         }
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
-        // The HUD shares the UI's font (loading a font takes about a second)
+        // The HUD shares the UI's font (loading a font takes about a second),
+        // and the UI wears Nightmourn's colors
         font_ = engine.ui()->font();
+        Nightmourn::apply_ui_theme(engine.ui()->style());
 
         surface_id_ = world.create_surface(
             SurfaceConfig{
