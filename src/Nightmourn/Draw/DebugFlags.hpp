@@ -1,7 +1,7 @@
 // =============================================================================
 // Draw/DebugFlags.hpp
 //
-// Visual debug options, like Factorio's F4 menu (show-tile-grid,
+// Visual debug options, like Factorio's F4 menu (show-world-grid,
 // show-collision-rectangles, ...). Each flag turns on one overlay in the
 // drawers; none of them changes the simulation.
 //
@@ -22,8 +22,7 @@
 namespace Nightmourn {
 
 enum class DebugFlag : std::uint8_t {
-    ShowTileGrid,            // 1 px lines between tiles (and chunk edges)
-    ShowChunkBorders,        // 3 px lines on chunk edges
+    ShowWorldGrid,           // 1 px lines between tiles, 3 px on chunk edges
     ShowCollisionRectangles, // collision box of every collidable entity
     ShowFacingArrows,        // arrow on units and characters, the way they face
     ShowUnitBehaviorInfo,    // unit state dot, line to its target
@@ -56,7 +55,7 @@ public:
     // Names
     // -------------------------------------------------------------------------
 
-    // Factorio-style kebab-case name, e.g. "show-tile-grid"
+    // Factorio-style kebab-case name, e.g. "show-world-grid"
     static std::string_view name(DebugFlag flag);
 
 private:
