@@ -12,8 +12,12 @@
 //   into a blue group gets the hero hurt and, eventually, killed.
 // - A dead hero respawns at the red camp after a few seconds.
 //
-// Controls: W/A/S/D move, mouse wheel zooms, R restarts the battle. Press
-// Escape (or close the window) to quit.
+// Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
+// demo only sets up its atlas rows and draws the HUD.
+//
+// Controls: W/A/S/D move, mouse wheel zooms, R restarts the battle, F1-F6
+// toggle the debug overlays (listed in the HUD). Press Escape (or close the
+// window) to quit.
 // =============================================================================
 
 #include "Nezumi/Control/CameraController.hpp"
@@ -21,11 +25,14 @@
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entities/UnitGroup.hpp"
 #include "Nezumi/World/Physics/Area2D.hpp"
-#include "Nezumi/World/Physics/TileCoord.hpp"
 #include "Nightmourn/Character/Character.hpp"
+#include "Nightmourn/Draw/DebugFlags.hpp"
+#include "Nightmourn/Draw/DrawContext.hpp"
+#include "Nightmourn/Draw/DrawLayers.hpp"
+#include "Nightmourn/Draw/WorldDrawer.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Player/Player.hpp"
-#include <algorithm>   // erase_if, max, min
+#include <algorithm>   // erase_if
 #include <array>       // array
 #include <cstdint>     // int32_t, uint16_t
 #include <cstdio>      // snprintf
@@ -35,13 +42,16 @@
 #include <iostream>    // cerr
 #include <memory>      // unique_ptr, make_unique
 #include <string>      // string, to_string
-#include <utility>     // swap
 #include <vector>      // vector
 
 using namespace Nezumi;
 using Nightmourn::Character;
 using Nightmourn::CharacterConfig;
+using Nightmourn::DebugFlag;
+using Nightmourn::DebugFlags;
+using Nightmourn::DrawContext;
 using Nightmourn::Player;
+using Nightmourn::WorldDrawer;
 
 // -----------------------------------------------------------------------------
 // Demo Actions
@@ -149,35 +159,21 @@ namespace AtlasPixels {
 struct SideStyle {
     const char* name;
     glm::vec2   atlas_origin; // first unit frame in the atlas
+    glm::vec4   color;        // group routes and slots
     float       direction;    // +1 marches right, -1 left
 };
 
 static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
-    { "red",  { 0.0f,   0.0f },  1.0f },
-    { "blue", { 0.0f, 128.0f }, -1.0f },
+    { "red",  { 0.0f,   0.0f }, { 1.0f, 0.25f, 0.2f, 1.0f },  1.0f },
+    { "blue", { 0.0f, 128.0f }, { 0.3f, 0.5f,  1.0f, 1.0f }, -1.0f },
 }};
 
 static constexpr FactionIndex RED = 0;
 
-constexpr glm::vec4 inset_half_texel(glm::vec4 pixel_box) {
-    return pixel_box + glm::vec4{ 0.5f, 0.5f, -0.5f, -0.5f };
-}
-
-// Sprite size in tiles, anchored on the feet (the entity's position)
-static constexpr glm::vec4 UNIT_SPRITE_BOUNDS = { -0.25f, -0.25f, 0.25f, 0.75f };
-
-// Healthbar above the sprite, drawn only once hurt
-static constexpr glm::vec4 HEALTHBAR_BOUNDS = { -0.3f, 0.82f, 0.3f, 0.97f };
-static constexpr float     HEALTHBAR_BORDER = 0.04f;
-
-// -----------------------------------------------------------------------------
-// Draw Params
-// -----------------------------------------------------------------------------
-
-constexpr Render::DrawParams DRAW_PARAMS_GROUND     = { .view = Render::View::World,  .layer = 0 };
-constexpr Render::DrawParams DRAW_PARAMS_UNITS      = { .view = Render::View::World,  .layer = 1 };
-constexpr Render::DrawParams DRAW_PARAMS_HEALTHBARS = { .view = Render::View::World,  .layer = 2 };
-constexpr Render::DrawParams DRAW_PARAMS_UI         = { .view = Render::View::Screen, .layer = 0 };
+constexpr Render::DrawParams DRAW_PARAMS_HUD = {
+    .view  = Render::View::Screen,
+    .layer = Nightmourn::DrawLayer::Hud,
+};
 
 // -----------------------------------------------------------------------------
 // PlayerArmiesDemo
@@ -227,8 +223,27 @@ public:
             }
         ).object;
 
-        tex_grass_dark_  = atlas_->tex_box(inset_half_texel(AtlasPixels::GrassDark ));
-        tex_grass_light_ = atlas_->tex_box(inset_half_texel(AtlasPixels::GrassLight));
+        WorldDrawer::Config draw_config = {
+            .chunks = {
+                .atlas       = atlas_,
+                .grass_dark  = AtlasPixels::GrassDark,
+                .grass_light = AtlasPixels::GrassLight,
+            },
+            .units = {
+                .atlas      = atlas_,
+                .frame_size = AtlasPixels::UnitSize,
+            },
+            .characters = {
+                .atlas      = atlas_,
+                .frame_size = AtlasPixels::UnitSize,
+                .row        = AtlasPixels::HeroOrigin,
+            },
+        };
+        for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
+            draw_config.units.faction_rows[f]         = SIDES[f].atlas_origin;
+            draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
+        }
+        world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         font_ = renderer->create_font(
             Render::FontConfig{
@@ -249,7 +264,7 @@ public:
         spawn_hero_(world);
 
         engine.logger().info("Player Armies Demo");
-        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. R: restart. Escape: quit.");
+        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. R: restart. F1-F6: debug. Escape: quit.");
     }
 
     // -------------------------------------------------------------------------
@@ -260,6 +275,8 @@ public:
 
     void on_tick(Nezumi::Engine& engine) override {
         Nezumi::World& world = engine.world();
+
+        Nightmourn::toggle_debug_flags(engine.input(), debug_flags_);
 
         if (engine.input().was_pressed(DemoAction::Restart)) {
             clear_world_(world);
@@ -294,16 +311,10 @@ public:
         }
         camera_controller_->update(engine.clock().get_real_dt());
 
-        const Nezumi::Surface* surface = world.get_surface(surface_id_);
-        if (!surface) return;
-
-        const glm::vec4 view = world_camera_->world_bounds();
-        const Area2D    view_area(view.x, view.y, view.z, view.w);
-
-        surface->each_chunk_in(ChunkSpan::span_from_box(view_area), [&](const Chunk& chunk) {
-            draw_ground_  (r, chunk, view_area);
-            draw_entities_(r, chunk);
-        });
+        if (const Nezumi::Surface* surface = world.get_surface(surface_id_)) {
+            DrawContext ctx = DrawContext::make(*r, world, *world_camera_, debug_flags_);
+            world_drawer_->draw(ctx, *surface);
+        }
 
         draw_hud_(r, engine);
     }
@@ -314,6 +325,7 @@ public:
 
     void on_exit(Nezumi::Engine& engine) override {
         camera_controller_.reset();
+        world_drawer_.reset();
 
         engine.logger().info("Ran " + std::to_string(engine.get_stats().tick_count) + " ticks.");
         engine.logger().info("Goodbye!");
@@ -425,105 +437,6 @@ private:
     }
 
     // -------------------------------------------------------------------------
-    // Draw Ground
-    // -------------------------------------------------------------------------
-
-    void draw_ground_(Render::Renderer* r, const Chunk& chunk, const Area2D& view) {
-        const Area2D& bounds = chunk.bounds();
-
-        const TileCoord min = TileCoord::from_position({
-            std::max(bounds.min.x, view.min.x),
-            std::max(bounds.min.y, view.min.y),
-        });
-        const TileCoord max = TileCoord::from_position({
-            std::min(bounds.max.x, view.max.x) - 0.001f,
-            std::min(bounds.max.y, view.max.y) - 0.001f,
-        });
-
-        Render::DrawParams params = DRAW_PARAMS_GROUND;
-        params.material = atlas_->material();
-
-        TileCoord tile;
-        for (tile.y = min.y; tile.y <= max.y; tile.y++) {
-            for (tile.x = min.x; tile.x <= max.x; tile.x++) {
-                r->draw_sprite(
-                    Render::Sprite{
-                        .pos_box = tile.bounds().to_vec4(),
-                        .tex_box = ((tile.x + tile.y) & 1) ? tex_grass_light_ : tex_grass_dark_,
-                    },
-                    params
-                );
-            }
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Draw Entities
-    //
-    // Units and the hero share the frame layout; the hero uses the purple row.
-    // Sorted by y, healthbars only once hurt.
-    // -------------------------------------------------------------------------
-
-    void draw_entities_(Render::Renderer* r, const Chunk& chunk) {
-        chunk.visit_active_entities([&](const Nezumi::Entity& entity) {
-            if (!entity.is_alive()) return true;
-
-            if (entity.is_type<Unit>()) {
-                const Unit& unit = *entity.as_type<Unit>();
-                draw_figure_(r, unit, SIDES[unit.faction_index()].atlas_origin, unit.facing());
-            }
-            else if (entity.is_type<Character>()) {
-                const Character& character = *entity.as_type<Character>();
-                draw_figure_(r, character, AtlasPixels::HeroOrigin, character.facing());
-            }
-            return true;
-        });
-    }
-
-    void draw_figure_(Render::Renderer* r, const EntityDamageable& entity,
-                      glm::vec2 atlas_origin, Position2D facing)
-    {
-        const glm::vec2 pos = entity.position.to_vec2();
-
-        // Heading column: 0 down, 1 down-right, 2 right, 3 up-right, 4 up.
-        // 0.383 = sin(22.5 deg) splits the circle into 8 equal sectors.
-        const int dx = (facing.x > 0.383f) - (facing.x < -0.383f);
-        const int dy = (facing.y > 0.383f) - (facing.y < -0.383f);
-        const int column = (dx == 0) ? (dy > 0 ? 4 : 0) : (dy + 2);
-
-        const glm::vec2 origin = atlas_origin + glm::vec2{ column * AtlasPixels::UnitSize.x, 0.0f };
-        glm::vec4 tex_box = atlas_->tex_box({ origin, origin + AtlasPixels::UnitSize });
-        if (dx < 0) std::swap(tex_box.x, tex_box.z); // mirror
-
-        Render::DrawParams params = DRAW_PARAMS_UNITS;
-        params.material = atlas_->material();
-        params.order    = -static_cast<int32_t>(pos.y * 16.0f);
-
-        r->draw_sprite(
-            Render::Sprite{
-                .pos_box = glm::vec4{ pos, pos } + UNIT_SPRITE_BOUNDS,
-                .tex_box = tex_box,
-            },
-            params
-        );
-
-        if (!entity.is_full_health()) draw_healthbar_(r, pos, entity.health_ratio());
-    }
-
-    void draw_healthbar_(Render::Renderer* r, glm::vec2 pos, float ratio) {
-        const glm::vec4 back = glm::vec4{ pos, pos } + HEALTHBAR_BOUNDS;
-
-        glm::vec4 fill = back + glm::vec4{ HEALTHBAR_BORDER, HEALTHBAR_BORDER,
-                                          -HEALTHBAR_BORDER, -HEALTHBAR_BORDER };
-        fill.z = fill.x + (fill.z - fill.x) * ratio;
-
-        r->draw_rectangle(Render::Rectangle{ .pos_box = back, .color = { 0.0f, 0.0f, 0.0f, 1.0f } },
-                          DRAW_PARAMS_HEALTHBARS);
-        r->draw_rectangle(Render::Rectangle{ .pos_box = fill, .color = { 1.0f, 1.0f, 1.0f, 1.0f } },
-                          DRAW_PARAMS_HEALTHBARS);
-    }
-
-    // -------------------------------------------------------------------------
     // Draw HUD
     // -------------------------------------------------------------------------
 
@@ -553,7 +466,14 @@ private:
             text += line;
         }
 
-        text += "\nW/A/S/D: move  wheel: zoom  R: restart";
+        text += "\nW/A/S/D: move  wheel: zoom  R: restart\n\n";
+
+        for (size_t i = 0; i < Nightmourn::DEBUG_FLAG_COUNT; i++) {
+            const auto flag = static_cast<DebugFlag>(i);
+            std::snprintf(line, sizeof line, "F%-2zu %-3s %s\n", i + 1,
+                debug_flags_.is_on(flag) ? "on" : "off", DebugFlags::name(flag).data());
+            text += line;
+        }
 
         r->draw_text(
             text,
@@ -567,7 +487,7 @@ private:
                 .align         = Render::TextAlign::Left,
                 .valign        = Render::TextVAlign::Top,
             },
-            DRAW_PARAMS_UI
+            DRAW_PARAMS_HUD
         );
     }
 
@@ -580,10 +500,9 @@ private:
     Render::Atlas*  atlas_         = nullptr;
     Render::Font*   font_          = nullptr;
 
-    glm::vec4 tex_grass_dark_  = {};
-    glm::vec4 tex_grass_light_ = {};
-
     std::unique_ptr<CameraController> camera_controller_ = nullptr;
+    std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;
+    DebugFlags                        debug_flags_       = {};
 
     Player   player_        = {};
     uint16_t respawn_ticks_ = 0;     // counting down while the hero is dead
