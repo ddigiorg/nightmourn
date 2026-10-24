@@ -6,7 +6,8 @@
 //
 // Within a layer, leave DrawParams::order at 0 unless the order matters (it
 // is what lets the renderer batch). Entity sprites are the exception: they
-// sort by y so figures further down the screen overlap the ones behind them.
+// sort by the view-space y of their feet, so figures further down the screen
+// overlap the ones behind them (in iso: lower x + y draws on top).
 // =============================================================================
 
 #pragma once
@@ -32,8 +33,9 @@ constexpr Nezumi::Render::DrawParams world_layer(std::uint8_t layer) {
     return { .view = Nezumi::Render::View::World, .layer = layer };
 }
 
-// Sort order for an entity sprite at `y`: lower on screen draws later (on
-// top). 1/16 tile steps; the order's +/- 2^23 range covers +/- 524k tiles.
+// Sort order for an entity sprite whose feet are at view-space `y`: lower on
+// screen draws later (on top). 1/16 view unit steps; the order's +/- 2^23
+// range covers +/- 524k view units.
 constexpr std::int32_t y_sort_order(float y) {
     return -static_cast<std::int32_t>(y * 16.0f);
 }

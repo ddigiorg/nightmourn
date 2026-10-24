@@ -38,6 +38,37 @@ These change how later items are built, so they come first.
 
 ---
 
+## Isometric
+
+Phases 0 and 1 of the isometric plan are done: `Render::Projection`, the
+`Quad` kind, every drawer in view space, screen-relative WASD, tile and
+figure picking, and a `use-top-down-view` debug toggle. Decided: projection
+on the CPU in the drawers, square textures projected onto diamonds, flat
+world, footprint depth for buildings, 3D pre-rendered art, 64x32 tiles.
+
+- [ ] **Atlas frames with pivots** (JSON sidecar): per-frame size and feet
+      pivot, replacing the fixed `FIGURE_SPRITE_BOUNDS` box.
+- [ ] **Player-color mask** in a sprite shader variant, replacing one atlas
+      row per faction.
+- [ ] **Texture2DArray atlases** (Renderer #1) and an atlas builder
+      (Renderer #8). Iso art outgrows one page fast.
+- [ ] **First pre-rendered unit** (Blender: orthographic, 30° elevation,
+      45° yaw), 8 directions (5 stored + 3 mirrored), walk + attack. Frames
+      are picked with `Projection::dir_to_heading`.
+- [ ] **Terrain**: tile types in chunks, a retained (or per-chunk tile-index)
+      ground layer, terrain blending, and the grid kind taking the inverse
+      projection.
+- [ ] **Footprint depth for buildings**: a depth attachment on the world
+      pass, and a sprite variant that writes the depth of its footprint's
+      front edge per pixel column. Then occluded-unit silhouettes and a
+      placement ghost snapped to `tile_at`.
+- [ ] **Darkness**: light map pass (offscreen target + multiply), hero light
+      radius, fog of war per chunk, day/night ambient.
+- [ ] Drag-box selection: query the world bounds of the screen box, keep
+      figures whose projected feet fall inside it.
+
+---
+
 ## Nezumi (engine)
 
 ### Bugs and small fixes

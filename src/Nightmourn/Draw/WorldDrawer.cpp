@@ -28,8 +28,15 @@ WorldDrawer::WorldDrawer(const Config& config)
 // -----------------------------------------------------------------------------
 
 void WorldDrawer::draw(DrawContext& ctx, const Nezumi::Surface& surface) const {
-    // Inactive (sleeping) entities are still on screen, so both lists
-    surface.each_chunk_in(Nezumi::ChunkSpan::span_from_box(ctx.view), [&](const Nezumi::Chunk& chunk) {
+    // Chunks in the world box of the view, minus the ones whose projected
+    // bounds miss it (in iso the box's corners are off screen). The view is
+    // grown by DrawContext::VIEW_OVERHANG, so figures standing in a skipped
+    // chunk never reach into the screen. Inactive (sleeping) entities are
+    // still on screen, so both lists.
+    surface.each_chunk_in(Nezumi::ChunkSpan::span_from_box(ctx.world_view), [&](const Nezumi::Chunk& chunk) {
+        const glm::vec4 b = ctx.proj.box_to_view_bounds(chunk.bounds().to_vec4());
+        if (!Nezumi::Area2D(b.x, b.y, b.z, b.w).overlaps(ctx.view)) return;
+
         chunks_.draw(ctx, chunk);
         chunk.visit_entities([&](const Nezumi::Entity& entity) {
             if (entity.is_alive() && entity.is_drawable()) draw_entity_(ctx, entity);
@@ -51,7 +58,7 @@ void WorldDrawer::draw_entity_(DrawContext& ctx, const Nezumi::Entity& entity) c
 // while its members can stand in the next one over, so these get their own
 // pass over a wider span, only while the overlay is on
 void WorldDrawer::draw_unit_groups_(DrawContext& ctx, const Nezumi::Surface& surface) const {
-    const Nezumi::Area2D area = Nezumi::Area2D(ctx.view).grow(UnitGroupDrawer::VIEW_MARGIN);
+    const Nezumi::Area2D area = Nezumi::Area2D(ctx.world_view).grow(UnitGroupDrawer::VIEW_MARGIN);
 
     surface.each_chunk_in(Nezumi::ChunkSpan::span_from_box(area), [&](const Nezumi::Chunk& chunk) {
         chunk.visit_entities([&](const Nezumi::Entity& entity) {

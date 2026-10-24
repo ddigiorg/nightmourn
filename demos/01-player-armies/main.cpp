@@ -11,18 +11,25 @@
 //   group. Blue units treat the hero like any other red target, so walking
 //   into a blue group gets the hero hurt and, eventually, killed.
 // - A dead hero respawns at the red camp after a few seconds.
+// - The world is drawn 2:1 isometric (use-top-down-view in the debug menu
+//   switches to top-down). The sim is the same either way: only drawing,
+//   the move keys and mouse picking go through the projection.
+// - The tile under the mouse is outlined; clicking a figure selects it.
 //
 // Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
 // demo only sets up its atlas rows and draws the HUD. The debug overlays are
 // switched in the debug menu (src/Nightmourn/GUI/DebugMenu), drawn by
 // Nezumi's UI.
 //
-// Controls: W/A/S/D move, mouse wheel zooms, R restarts the battle, tilde (~)
-// opens and closes the debug menu. Press Escape (or close the window) to quit.
+// Controls: W/A/S/D move (screen-relative), mouse wheel zooms, left click
+// selects, R restarts the battle, tilde (~) opens and closes the debug menu.
+// Press Escape (or close the window) to quit.
 // =============================================================================
 
 #include "Nezumi/Control/CameraController.hpp"
 #include "Nezumi/Engine.hpp"
+#include "Nezumi/Input/Events/OnMouseButtonDown.hpp"
+#include "Nezumi/Input/Events/OnMouseMotion.hpp"
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entities/UnitGroup.hpp"
 #include "Nezumi/World/Physics/Area2D.hpp"
@@ -30,10 +37,12 @@
 #include "Nightmourn/Draw/DebugFlags.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
+#include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
 #include "Nightmourn/GUI/DebugMenu.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
 #include "Nightmourn/Input/Actions.hpp"
+#include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include <algorithm>   // erase_if
 #include <array>       // array
@@ -71,7 +80,8 @@ namespace DemoAction {
 // Settings
 // -----------------------------------------------------------------------------
 
-// Screen pixels per tile at zoom 1.0
+// Screen pixels per view unit at zoom 1.0: 32x32 px tiles top-down, 64x32 px
+// diamonds in iso (a tile is 2 view units wide there)
 static constexpr float TILE_PIXELS = 32.0f;
 
 // Each side spawns one group per lane, SPAWN_X tiles from the middle (see the
@@ -173,6 +183,11 @@ static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
 
 static constexpr FactionIndex RED = 0;
 
+// Hovered tile outline and selection ring
+static constexpr glm::vec4 HOVER_COLOR      = { 1.0f, 0.9f, 0.4f, 0.9f };
+static constexpr glm::vec4 SELECTION_COLOR  = { 0.4f, 1.0f, 0.5f, 1.0f };
+static constexpr float     SELECTION_RADIUS = 0.5f;  // tiles, wider than a figure
+
 constexpr Render::DrawParams DRAW_PARAMS_HUD = {
     .view  = Render::View::Screen,
     .layer = Nightmourn::DrawLayer::Hud,
@@ -248,6 +263,23 @@ public:
         }
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
+        // Mouse: remember the cursor for hover, select on left click (not
+        // when the click lands on the debug menu)
+        mouse_listeners_[0] = engine.event_bus().subscribe<OnMouseMotion>(
+            [this](const OnMouseMotion& e) {
+                cursor_     = { e.pos_x, e.pos_y };
+                has_cursor_ = true;
+            }
+        );
+        mouse_listeners_[1] = engine.event_bus().subscribe<OnMouseButtonDown>(
+            [this, &engine](const OnMouseButtonDown& e) {
+                if (e.button != MouseButton::Left || !has_cursor_) return;
+                if (engine.input().is_mouse_captured()) return;
+                if (const Nezumi::Surface* surface = engine.world().get_surface(surface_id_))
+                    selected_ = Nightmourn::pick_figure(*surface, *world_camera_, projection_(), cursor_);
+            }
+        );
+
         // The HUD shares the UI's font (loading a font takes about a second),
         // and the UI wears Nightmourn's colors
         font_ = engine.ui()->font();
@@ -265,7 +297,7 @@ public:
         spawn_hero_(world);
 
         engine.logger().info("Player Armies Demo");
-        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. R: restart. ~: debug menu. Escape: quit.");
+        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. Click: select. R: restart. ~: debug menu. Escape: quit.");
     }
 
     // -------------------------------------------------------------------------
@@ -292,7 +324,7 @@ public:
             else if (--respawn_ticks_ == 0) spawn_hero_(world);
         }
 
-        player_.update(world, engine.input());
+        player_.update(world, engine.input(), projection_());
 
         prune_groups_(world);
         retarget_idle_groups_(world);
@@ -306,16 +338,25 @@ public:
         Render::Renderer* r = engine.renderer();
         const Nezumi::World& world = engine.world();
 
+        // The camera looks at view space, so switching projections moves
+        // everything on screen: jump to the hero instead of sliding there
+        const Render::Projection proj = projection_();
+        if (proj != last_projection_) {
+            last_projection_ = proj;
+            snap_camera_     = true;
+        }
+
         // Follow the hero; while it's dead the camera stays where it fell
-        if (auto target = player_.view_target(world)) {
+        if (auto target = player_.view_target(world, proj)) {
             camera_controller_->set_follow_target(*target, snap_camera_);
             snap_camera_ = false;
         }
         camera_controller_->update(engine.clock().get_real_dt());
 
         if (const Nezumi::Surface* surface = world.get_surface(surface_id_)) {
-            DrawContext ctx = DrawContext::make(*r, world, *world_camera_, debug_flags_);
+            DrawContext ctx = DrawContext::make(*r, world, *world_camera_, proj, debug_flags_);
             world_drawer_->draw(ctx, *surface);
+            draw_pointer_(ctx, !engine.input().is_mouse_captured());
         }
 
         draw_hud_(r, engine);
@@ -327,6 +368,7 @@ public:
     // -------------------------------------------------------------------------
 
     void on_exit(Nezumi::Engine& engine) override {
+        for (EventListenerID id : mouse_listeners_) engine.event_bus().unsubscribe(id);
         camera_controller_.reset();
         world_drawer_.reset();
 
@@ -440,6 +482,35 @@ private:
     }
 
     // -------------------------------------------------------------------------
+    // Projection
+    // -------------------------------------------------------------------------
+
+    // Iso unless use-top-down-view is on. Drawing, the move keys and picking
+    // all ask here, so they always agree.
+    Render::Projection projection_() const { return DrawContext::projection(debug_flags_); }
+
+    // -------------------------------------------------------------------------
+    // Draw Pointer
+    //
+    // The tile under the mouse (a diamond in iso) and a ring under the
+    // selected figure, both on the ground below the sprites
+    // -------------------------------------------------------------------------
+
+    void draw_pointer_(DrawContext& ctx, bool show_hover) const {
+        using Nightmourn::DrawLayer::GroundOverlay;
+
+        if (has_cursor_ && show_hover) {
+            const TileCoord tile = Nightmourn::tile_at(*world_camera_, ctx.proj, cursor_);
+            Nightmourn::draw_outline(ctx, tile.bounds(), HOVER_COLOR, 2.0f, GroundOverlay);
+        }
+
+        if (const Nezumi::Entity* entity = ctx.world.get_entity(selected_); entity && entity->is_alive()) {
+            Nightmourn::draw_ground_circle(ctx, entity->position.to_vec2(), SELECTION_RADIUS,
+                                           SELECTION_COLOR, 2.0f, GroundOverlay);
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Draw HUD
     // -------------------------------------------------------------------------
 
@@ -469,7 +540,24 @@ private:
             text += line;
         }
 
-        text += "\nW/A/S/D: move  wheel: zoom  R: restart  ~: debug menu\n";
+        const Render::Projection proj = projection_();
+        if (has_cursor_) {
+            const TileCoord tile = Nightmourn::tile_at(*world_camera_, proj, cursor_);
+            std::snprintf(line, sizeof line, "\ntile  %d, %d  (%s view)\n",
+                static_cast<int>(tile.x), static_cast<int>(tile.y), proj.is_top_down() ? "top-down" : "iso");
+            text += line;
+        }
+
+        if (const Nezumi::Entity* entity = world.get_entity(selected_); entity && entity->is_alive()) {
+            std::string_view name = "entity";
+            if (entity->is_type<Unit>())      name = entity->as_type<Unit>()->config().name;
+            if (entity->is_type<Character>()) name = entity->as_type<Character>()->config().name;
+            std::snprintf(line, sizeof line, "selected  %.*s at %.1f, %.1f\n",
+                static_cast<int>(name.size()), name.data(), entity->position.x, entity->position.y);
+            text += line;
+        }
+
+        text += "\nW/A/S/D: move  wheel: zoom  click: select  R: restart  ~: debug menu\n";
 
         r->draw_text(
             text,
@@ -500,6 +588,13 @@ private:
     std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;
     DebugFlags                        debug_flags_       = {};
     DebugMenu                         debug_menu_        = {};
+
+    // Mouse
+    std::array<EventListenerID, 2> mouse_listeners_ = {};
+    glm::vec2                      cursor_          = {}; // window pixels
+    bool                           has_cursor_      = false;
+    EntityHandle                   selected_        = {};
+    Render::Projection             last_projection_ = {};
 
     Player   player_        = {};
     uint16_t respawn_ticks_ = 0;     // counting down while the hero is dead
