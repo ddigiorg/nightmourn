@@ -8,6 +8,7 @@
 
 #pragma once
 #include "Nezumi/Input/ActionID.hpp"
+#include "Nightmourn/Draw/DebugFlags.hpp"
 
 namespace Nezumi {
     class InputMap;
@@ -21,9 +22,23 @@ namespace Action {
     inline constexpr Nezumi::ActionID MoveRight = 1;
     inline constexpr Nezumi::ActionID MoveDown  = 2;
     inline constexpr Nezumi::ActionID MoveUp    = 3;
+
+    // Debug flag toggles: DebugToggleFirst + DebugFlag, one per flag
+    inline constexpr Nezumi::ActionID DebugToggleFirst = 100;
 }
 
-// Bind every action to its default keys (W/A/S/D for movement)
+// The action that toggles `flag`
+constexpr Nezumi::ActionID debug_toggle_action(DebugFlag flag) {
+    return Nezumi::ActionID(static_cast<Nezumi::ActionID::value_t>(
+        Action::DebugToggleFirst.value() + static_cast<Nezumi::ActionID::value_t>(flag)));
+}
+
+// Bind every action to its default keys: W/A/S/D for movement, and F1, F2,
+// ... for the debug flags in DebugFlag order (until a debug menu exists)
 void bind_default_actions(Nezumi::InputMap& input);
+
+// Toggle each debug flag whose action was pressed. Call from on_tick, where
+// presses are reported (see InputMap).
+void toggle_debug_flags(const Nezumi::InputMap& input, DebugFlags& flags);
 
 } // namespace Nightmourn

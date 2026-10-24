@@ -50,6 +50,14 @@ set(NIGHTMOURN_WARNINGS
 
 add_library(nightmourn_game STATIC
     src/Nightmourn/Character/Character.cpp
+    src/Nightmourn/Draw/CharacterDrawer.cpp
+    src/Nightmourn/Draw/ChunkDrawer.cpp
+    src/Nightmourn/Draw/DebugFlags.cpp
+    src/Nightmourn/Draw/DrawContext.cpp
+    src/Nightmourn/Draw/DrawUtils.cpp
+    src/Nightmourn/Draw/UnitDrawer.cpp
+    src/Nightmourn/Draw/UnitGroupDrawer.cpp
+    src/Nightmourn/Draw/WorldDrawer.cpp
     src/Nightmourn/Input/Actions.cpp
     src/Nightmourn/Player/Player.cpp
 )
