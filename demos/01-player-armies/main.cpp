@@ -13,11 +13,12 @@
 // - A dead hero respawns at the red camp after a few seconds.
 //
 // Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
-// demo only sets up its atlas rows and draws the HUD.
+// demo only sets up its atlas rows and draws the HUD. The debug overlays are
+// switched in the debug menu (src/Nightmourn/GUI/DebugMenu), drawn by
+// Nezumi's UI.
 //
-// Controls: W/A/S/D move, mouse wheel zooms, R restarts the battle, F1-F6
-// toggle the debug overlays (listed in the HUD). Press Escape (or close the
-// window) to quit.
+// Controls: W/A/S/D move, mouse wheel zooms, R restarts the battle, tilde (~)
+// opens and closes the debug menu. Press Escape (or close the window) to quit.
 // =============================================================================
 
 #include "Nezumi/Control/CameraController.hpp"
@@ -30,6 +31,8 @@
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/GUI/DebugMenu.hpp"
+#include "Nightmourn/GUI/Theme.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include <algorithm>   // erase_if
@@ -47,8 +50,8 @@
 using namespace Nezumi;
 using Nightmourn::Character;
 using Nightmourn::CharacterConfig;
-using Nightmourn::DebugFlag;
 using Nightmourn::DebugFlags;
+using Nightmourn::DebugMenu;
 using Nightmourn::DrawContext;
 using Nightmourn::Player;
 using Nightmourn::WorldDrawer;
@@ -245,12 +248,10 @@ public:
         }
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
-        font_ = renderer->create_font(
-            Render::FontConfig{
-                .name     = "demo-font",
-                .filepath = "assets/fonts/CommitMono-1.143/CommitMono-400-Regular.otf"
-            }
-        ).object;
+        // The HUD shares the UI's font (loading a font takes about a second),
+        // and the UI wears Nightmourn's colors
+        font_ = engine.ui()->font();
+        Nightmourn::apply_ui_theme(engine.ui()->style());
 
         surface_id_ = world.create_surface(
             SurfaceConfig{
@@ -264,7 +265,7 @@ public:
         spawn_hero_(world);
 
         engine.logger().info("Player Armies Demo");
-        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. R: restart. F1-F6: debug. Escape: quit.");
+        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. R: restart. ~: debug menu. Escape: quit.");
     }
 
     // -------------------------------------------------------------------------
@@ -276,7 +277,8 @@ public:
     void on_tick(Nezumi::Engine& engine) override {
         Nezumi::World& world = engine.world();
 
-        Nightmourn::toggle_debug_flags(engine.input(), debug_flags_);
+        if (engine.input().was_pressed(Nightmourn::Action::ToggleDebugMenu))
+            debug_menu_.toggle();
 
         if (engine.input().was_pressed(DemoAction::Restart)) {
             clear_world_(world);
@@ -317,6 +319,7 @@ public:
         }
 
         draw_hud_(r, engine);
+        debug_menu_.draw(*engine.ui(), debug_flags_);
     }
 
     // -------------------------------------------------------------------------
@@ -466,14 +469,7 @@ private:
             text += line;
         }
 
-        text += "\nW/A/S/D: move  wheel: zoom  R: restart\n\n";
-
-        for (size_t i = 0; i < Nightmourn::DEBUG_FLAG_COUNT; i++) {
-            const auto flag = static_cast<DebugFlag>(i);
-            std::snprintf(line, sizeof line, "F%-2zu %-3s %s\n", i + 1,
-                debug_flags_.is_on(flag) ? "on" : "off", DebugFlags::name(flag).data());
-            text += line;
-        }
+        text += "\nW/A/S/D: move  wheel: zoom  R: restart  ~: debug menu\n";
 
         r->draw_text(
             text,
@@ -503,6 +499,7 @@ private:
     std::unique_ptr<CameraController> camera_controller_ = nullptr;
     std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;
     DebugFlags                        debug_flags_       = {};
+    DebugMenu                         debug_menu_        = {};
 
     Player   player_        = {};
     uint16_t respawn_ticks_ = 0;     // counting down while the hero is dead

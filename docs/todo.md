@@ -112,6 +112,32 @@ These change how later items are built, so they come first.
 - [ ] A `snap_to_8_directions(glm::vec2)` helper in `Core/`, if a second
       user appears.
 
+### UI
+
+From the first UI pass (immediate-mode `UI::Context`, the `UIQuad` kind).
+
+- [ ] **Escape while typing.** `EngineConfig::escape_exits` listens to raw
+      key events, so Escape in a text field quits the game. Route it through
+      `InputMap` (or check `is_keyboard_captured()`).
+- [ ] **Keyboard and gamepad navigation**: Tab between widgets, arrow keys
+      in dropdowns, a focus ring. Needed before a console port or a
+      controller-only menu.
+- [ ] **Tooltips** on hover (a delay, then a small overlay panel).
+- [ ] **Text field editing**: selection, clipboard (SDL has it), Ctrl+arrow
+      word jumps, caret blink, UTF-8 once the font covers more than ASCII.
+- [ ] **Scrollbar dragging.** Panels scroll with the wheel and show a thumb,
+      but the thumb can't be dragged yet.
+- [ ] **Images and icons** in widgets (sprite atlas regions). Needs a second
+      material in the UI batch, or the font and UI icons in one atlas.
+- [ ] **Skinning**: nine-slice frame textures for panels and buttons, for the
+      "make it pretty" pass. `Style` stays the place for sizes and colors.
+- [ ] **Layout helpers**: columns / tables, word-wrapped text, and
+      right-aligned or centered rows.
+- [ ] **HiDPI**: the UI maps window points to backbuffer pixels, but sizes
+      aren't scaled. Add `Style::scale` from the display's content scale.
+- [ ] **Persist panel positions** (where the player dragged the debug menu)
+      with the rest of the settings once there's serialization.
+
 ### World: entities and combat
 
 - [ ] **Unit separation / collision response.** Units stack when they
@@ -199,7 +225,6 @@ These change how later items are built, so they come first.
 - [ ] Multithreaded draw path: (a) per-thread command queues, (b) split
       visible chunks across workers in `WorldDrawer::draw`, (c) a render
       snapshot so tick N+1 can overlap the draw of tick N.
-- [ ] A debug menu to replace the F1 to F6 debug flag keys.
 
 ### Gameplay
 
