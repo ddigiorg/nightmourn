@@ -7,10 +7,11 @@
 //
 // The game owns one DebugFlags and hands it to the drawers through the
 // DrawContext, so there is no global state for a future draw thread to race
-// on. Flags change between frames (see toggle_debug_flags in Input/Actions).
+// on. The player changes flags in the debug menu (GUI/DebugMenu), which is
+// drawn after the world, so the drawers see one consistent set per frame.
 //
 // To add a flag: add it to DebugFlag above Count and give it a name in
-// DebugFlags.cpp. It gets the next F key automatically.
+// DebugFlags.cpp. It shows up in the debug menu automatically.
 // =============================================================================
 
 #pragma once
