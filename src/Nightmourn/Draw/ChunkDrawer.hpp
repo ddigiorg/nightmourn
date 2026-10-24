@@ -4,6 +4,9 @@
 // Draws a chunk's ground: its tiles, and the world grid when show-world-grid
 // is on (Factorio's tile grid look, with chunk borders).
 //
+// Tiles are square textures drawn as Quads through the projection: squares
+// top-down, 2:1 diamonds in iso, from the same art.
+//
 // The grid costs 31 + 31 lines per chunk, not one outline per tile: each
 // interior line spans the whole chunk. Chunk edges are 4 more, thicker lines.
 // Line widths are in screen pixels, so the grid looks the same at every zoom.

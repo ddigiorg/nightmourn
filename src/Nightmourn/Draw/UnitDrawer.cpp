@@ -55,7 +55,7 @@ void UnitDrawer::draw(DrawContext& ctx, const Nezumi::Unit& unit) const {
 }
 
 void UnitDrawer::draw_behavior_(DrawContext& ctx, const Nezumi::Unit& unit) const {
-    const glm::vec2 pos   = unit.position.to_vec2();
+    const glm::vec2 pos   = ctx.to_view(unit.position.to_vec2());
     const glm::vec4 color = STATE_COLORS[static_cast<std::size_t>(unit.state())];
     const Nezumi::Render::DrawParams params = world_layer(DrawLayer::Debug);
 
@@ -63,7 +63,7 @@ void UnitDrawer::draw_behavior_(DrawContext& ctx, const Nezumi::Unit& unit) cons
         ctx.renderer.draw_line(
             Nezumi::Render::Line{
                 .position_a = pos,
-                .position_b = target->position.to_vec2(),
+                .position_b = ctx.to_view(target->position.to_vec2()),
                 .color      = color,
                 .width      = TARGET_LINE_WIDTH * ctx.pixel_size,
             },
@@ -72,7 +72,7 @@ void UnitDrawer::draw_behavior_(DrawContext& ctx, const Nezumi::Unit& unit) cons
     }
 
     ctx.renderer.draw_circle(
-        Nezumi::Render::Circle{ .position = pos, .color = color, .radius = STATE_DOT_RADIUS },
+        Nezumi::Render::Circle{ .position = pos, .color = color, .radius = STATE_DOT_RADIUS * ctx.upright_scale() },
         params
     );
 }

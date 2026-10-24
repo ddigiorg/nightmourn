@@ -11,14 +11,19 @@
 // where the camera should look:
 //
 //   void on_tick(Engine& engine) override {
-//       player_.update(engine.world(), engine.input());
+//       player_.update(engine.world(), engine.input(), projection);
 //   }
 //
 //   void on_draw(Engine& engine) override {
-//       if (auto target = player_.view_target(engine.world()))
+//       if (auto target = player_.view_target(engine.world(), projection))
 //           camera_controller_->set_follow_target(*target);
 //       camera_controller_->update(engine.clock().get_real_dt());
 //   }
+//
+// Moves are screen-relative: W walks up the screen whatever the projection,
+// which in iso is world (+1, +1). The projection only turns the keys into a
+// world direction; the command itself is in world space like the rest of the
+// sim.
 //
 // Possession is just a handle: possess() another character to switch, and a
 // character that dies (World removes it) leaves the player with nothing to
@@ -26,6 +31,7 @@
 // =============================================================================
 
 #pragma once
+#include "Nezumi/Render/View/Projection.hpp"
 #include "Nezumi/World/Entity/EntityID.hpp"
 #include <glm/glm.hpp> // vec2
 #include <optional>    // optional
@@ -59,17 +65,20 @@ public:
     // Update (between ticks)
     //
     // Reads the move actions and commands the possessed character: 8
-    // directions, diagonals as fast as straight lines.
+    // directions on screen, diagonals as fast as straight lines.
     // -------------------------------------------------------------------------
 
-    void update(Nezumi::World& world, const Nezumi::InputMap& input);
+    void update(Nezumi::World& world, const Nezumi::InputMap& input,
+                const Nezumi::Render::Projection& proj);
 
     // -------------------------------------------------------------------------
     // View
     // -------------------------------------------------------------------------
 
-    // Where the camera should look: the possessed character's position, if any
-    std::optional<glm::vec2> view_target(const Nezumi::World& world) const;
+    // Where the camera should look (view space): the possessed character's
+    // projected position, if any
+    std::optional<glm::vec2> view_target(const Nezumi::World& world,
+                                         const Nezumi::Render::Projection& proj) const;
 
 private:
     Nezumi::EntityHandle character_ = {};

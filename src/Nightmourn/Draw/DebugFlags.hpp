@@ -3,7 +3,8 @@
 //
 // Visual debug options, like Factorio's F4 menu (show-world-grid,
 // show-collision-rectangles, ...). Each flag turns on one overlay in the
-// drawers; none of them changes the simulation.
+// drawers, or changes how the world is viewed (use-top-down-view); none of
+// them changes the simulation.
 //
 // The game owns one DebugFlags and hands it to the drawers through the
 // DrawContext, so there is no global state for a future draw thread to race
@@ -27,6 +28,7 @@ enum class DebugFlag : std::uint8_t {
     ShowFacingArrows,        // arrow on units and characters, the way they face
     ShowUnitBehaviorInfo,    // unit state dot, line to its target
     ShowUnitGroupInfo,       // group bounds, route, slots and stragglers
+    UseTopDownView,          // draw the world top-down instead of isometric
 
     Count
 };

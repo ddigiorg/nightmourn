@@ -28,12 +28,16 @@ const Character* Player::character(const Nezumi::World& world) const {
 // Update
 // -----------------------------------------------------------------------------
 
-void Player::update(Nezumi::World& world, const Nezumi::InputMap& input) {
+void Player::update(Nezumi::World& world, const Nezumi::InputMap& input,
+                    const Nezumi::Render::Projection& proj)
+{
     Character* c = character(world);
     if (!c) return;
 
-    glm::vec2 dir = input.axis2d(
+    // Screen direction of the keys, as a world direction
+    const glm::vec2 screen_dir = input.axis2d(
         Action::MoveLeft, Action::MoveRight, Action::MoveDown, Action::MoveUp);
+    glm::vec2 dir = proj.dir_to_world(screen_dir);
     if (dir != glm::vec2(0.0f)) dir = glm::normalize(dir);
 
     c->issue(CharacterCommand{ .move_dir = { dir.x, dir.y } });
@@ -43,10 +47,12 @@ void Player::update(Nezumi::World& world, const Nezumi::InputMap& input) {
 // View
 // -----------------------------------------------------------------------------
 
-std::optional<glm::vec2> Player::view_target(const Nezumi::World& world) const {
+std::optional<glm::vec2> Player::view_target(const Nezumi::World& world,
+                                             const Nezumi::Render::Projection& proj) const
+{
     const Character* c = character(world);
     if (!c) return std::nullopt;
-    return c->position.to_vec2();
+    return proj.to_view(c->position.to_vec2());
 }
 
 } // namespace Nightmourn

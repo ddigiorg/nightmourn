@@ -7,7 +7,9 @@
 //
 //   void on_draw(Engine& engine) override {
 //       DrawContext ctx = DrawContext::make(*engine.renderer(), engine.world(),
-//                                           *world_camera_, debug_flags_);
+//                                           *world_camera_,
+//                                           DrawContext::projection(debug_flags_),
+//                                           debug_flags_);
 //       world_drawer_->draw(ctx, *surface);
 //   }
 //
