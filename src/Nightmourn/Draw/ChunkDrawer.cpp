@@ -39,7 +39,7 @@ ChunkDrawer::ChunkDrawer(const Config& config)
 void ChunkDrawer::draw(DrawContext& ctx, const Nezumi::Chunk& chunk) const {
     draw_tiles_(ctx, chunk);
 
-    if (ctx.show(DebugFlag::ShowTileGrid) || ctx.show(DebugFlag::ShowChunkBorders))
+    if (ctx.show(DebugFlag::ShowWorldGrid))
         draw_grid_(ctx, chunk);
 }
 
@@ -82,7 +82,7 @@ void ChunkDrawer::draw_grid_(DrawContext& ctx, const Nezumi::Chunk& chunk) const
     // Tile lines: the 31 interior lines on each axis, each the chunk's full
     // length. Skipped when tiles are too small on screen to read.
     const float tile_pixels = 1.0f / ctx.pixel_size;
-    if (ctx.show(DebugFlag::ShowTileGrid) && tile_pixels >= config_.min_tile_grid_pixels) {
+    if (tile_pixels >= config_.min_tile_grid_pixels) {
         const float width = config_.tile_line_pixels * ctx.pixel_size;
 
         for (uint32_t i = 1; i < Nezumi::CHUNK_TILE_COUNT.x; i++) {
@@ -112,14 +112,11 @@ void ChunkDrawer::draw_grid_(DrawContext& ctx, const Nezumi::Chunk& chunk) const
         }
     }
 
-    // Chunk edges: the tile grid's outer lines, thicker with chunk borders
-    // on. Neighbors both draw their shared edge; it's 4 lines per chunk, and
+    // Chunk edges: thicker than the tile lines, and drawn at every zoom.
+    // Neighbors both draw their shared edge; it's 4 lines per chunk, and
     // drawing all 4 keeps the edge of the map closed.
-    const float edge_pixels = ctx.show(DebugFlag::ShowChunkBorders)
-        ? config_.chunk_line_pixels
-        : config_.tile_line_pixels;
-
-    draw_outline(ctx, bounds, config_.grid_color, edge_pixels, DrawLayer::GroundOverlay);
+    draw_outline(ctx, bounds, config_.grid_color, config_.chunk_line_pixels,
+                 DrawLayer::GroundOverlay);
 }
 
 } // namespace Nightmourn

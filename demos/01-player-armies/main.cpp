@@ -198,7 +198,8 @@ public:
         Nightmourn::bind_default_actions(input);
         input.bind(DemoAction::Restart, ScanCode::R);
 
-        // Cameras. No pan actions: the camera follows the hero.
+        // Cameras. No pan actions: the camera follows the hero, locked on
+        // with no easing or dead zone (Diablo / Path of Exile style).
         world_camera_  = renderer->get_view_camera(Render::View::World );
         screen_camera_ = renderer->get_view_camera(Render::View::Screen);
         world_camera_->set_pixels_per_unit(TILE_PIXELS);
@@ -213,8 +214,7 @@ public:
                 .zoom_init        = 0.75f,
                 .zoom_min         = 0.125f,
                 .zoom_max         = 4.0f,
-                .follow_rate      = 6.0f,
-                .follow_dead_zone = { 1.5f, 1.0f }, // tiles
+                .follow_rate      = 0.0f, // snap to the hero every frame
             }
         );
 
