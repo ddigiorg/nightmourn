@@ -17,12 +17,6 @@
 
 namespace Nightmourn {
 
-// Shrinks a pixel box by half a texel on each side, so linear filtering never
-// samples the neighboring sprite
-static constexpr glm::vec4 inset_half_texel(glm::vec4 pixel_box) {
-    return pixel_box + glm::vec4{ 0.5f, 0.5f, -0.5f, -0.5f };
-}
-
 // -----------------------------------------------------------------------------
 // Construction & Destruction
 // -----------------------------------------------------------------------------
@@ -30,9 +24,46 @@ static constexpr glm::vec4 inset_half_texel(glm::vec4 pixel_box) {
 ChunkDrawer::ChunkDrawer(const Config& config)
     : config_(config)
 {
-    assert(config_.atlas && "ChunkDrawer: config.atlas is null");
-    tex_grass_dark_  = config_.atlas->tex_box(inset_half_texel(config_.grass_dark ));
-    tex_grass_light_ = config_.atlas->tex_box(inset_half_texel(config_.grass_light));
+    assert(config_.atlas      && "ChunkDrawer: config.atlas is null");
+    assert(config_.grass_tiles && "ChunkDrawer: config.grass_tiles must be > 0");
+
+    // Cut the grass texture into its cells, row-major with cell (0, 0) at the
+    // texture's bottom-left: world y goes up, image y goes down. Neighboring
+    // cells are neighbors in the texture too, so linear filtering across a
+    // tile edge samples the right pixels. Only the texture's outer edges are
+    // inset by half a texel, so filtering never reaches past them into the
+    // next sprite in the atlas (the wrap there is invisible on seamless art).
+    const std::uint32_t n    = config_.grass_tiles;
+    const float         cell = (config_.grass.z - config_.grass.x) / static_cast<float>(n);
+
+    grass_cells_.resize(static_cast<std::size_t>(n) * n);
+    for (std::uint32_t cy = 0; cy < n; cy++) {
+        for (std::uint32_t cx = 0; cx < n; cx++) {
+            const float x0 = config_.grass.x + cell * static_cast<float>(cx);
+            const float y0 = config_.grass.y + cell * static_cast<float>(n - 1 - cy);
+
+            glm::vec4 pixels = { x0, y0, x0 + cell, y0 + cell };
+            if (cx == 0)     pixels.x += 0.5f;
+            if (cx == n - 1) pixels.z -= 0.5f;
+            if (cy == n - 1) pixels.y += 0.5f; // top row of the image
+            if (cy == 0)     pixels.w -= 0.5f; // bottom row of the image
+
+            grass_cells_[cy * n + cx] = config_.atlas->tex_box(pixels);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+glm::vec4 ChunkDrawer::grass_cell_(std::int32_t x, std::int32_t y) const {
+    // Floor modulo, so negative tiles continue the pattern instead of
+    // mirroring it
+    const std::int32_t n  = static_cast<std::int32_t>(config_.grass_tiles);
+    const std::int32_t cx = ((x % n) + n) % n;
+    const std::int32_t cy = ((y % n) + n) % n;
+    return grass_cells_[static_cast<std::size_t>(cy * n + cx)];
 }
 
 // -----------------------------------------------------------------------------
@@ -109,7 +140,7 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Nezumi::Chunk& chunk) cons
             ctx.renderer.draw_quad(
                 Nezumi::Render::Quad{
                     .corners = ctx.proj.box_to_view(tile.bounds().to_vec4()),
-                    .tex_box = ((tile.x + tile.y) & 1) ? tex_grass_light_ : tex_grass_dark_,
+                    .tex_box = grass_cell_(tile.x, tile.y),
                 },
                 params
             );
