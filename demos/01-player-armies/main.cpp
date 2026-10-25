@@ -8,7 +8,7 @@
 //   by a Nightmourn::Player: W/A/S/D move in 8 directions and the camera
 //   follows.
 // - Each army is a front line of 5 soldier groups with 3 archer groups behind
-//   it, every group a block of 50 (10 ranks of 5 files). The groups (Nezumi
+//   it, every group a block of 50 (5 ranks of 10 files). The groups (Nezumi
 //   Units and UnitGroups) attack-move across the field and fight. Groups that
 //   finish their route attack the nearest enemy group. Red units treat the
 //   hero like any other blue target, so walking into a red group gets the
@@ -98,14 +98,14 @@ static constexpr float TILE_PIXELS = 32.0f;
 // groups' y; groups march straight across the field along them.
 static constexpr size_t SIDE_COUNT  = 2;
 static constexpr float  FRONT_X     = 40.0f;
-static constexpr float  ARCHER_BACK = 10.0f; // a block is ~8 tiles deep
+static constexpr float  ARCHER_BACK = 6.0f; // a block is ~4 tiles deep
 
-static constexpr uint16_t BLOCK_RANKS = 10; // rows, front to back
-static constexpr uint16_t BLOCK_FILES = 5;  // units per rank
+static constexpr uint16_t BLOCK_RANKS = 5;  // rows, front to back
+static constexpr uint16_t BLOCK_FILES = 10; // units per rank
 static constexpr size_t   BLOCK_UNITS = BLOCK_RANKS * BLOCK_FILES;
 
-static constexpr std::array<float, 5> SOLDIER_LANES = { -14.0f, -7.0f, 0.0f, 7.0f, 14.0f };
-static constexpr std::array<float, 3> ARCHER_LANES  = {  -7.0f,  0.0f, 7.0f };
+static constexpr std::array<float, 5> SOLDIER_LANES = { -20.0f, -10.0f, 0.0f, 10.0f, 20.0f };
+static constexpr std::array<float, 3> ARCHER_LANES  = {  -10.0f,   0.0f, 10.0f };
 
 // Spawned units stand up to this far off their slot, so the blocks look
 // formed but not drilled
