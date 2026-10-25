@@ -1,16 +1,20 @@
 // =============================================================================
 // demos/01-player-armies/main.cpp
 //
-// The player walks a hero around a battlefield while red and blue unit groups
-// fight each other.
+// The player walks a hero around a battlefield while a friendly blue army and
+// an enemy red army fight each other.
 //
-// - The hero is a Nightmourn::Character on the red side, controlled by a
-//   Nightmourn::Player: W/A/S/D move in 8 directions and the camera follows.
-// - Red and blue groups (Nezumi Units and UnitGroups) attack-move across the
-//   field and fight. Groups that finish their route attack the nearest enemy
-//   group. Blue units treat the hero like any other red target, so walking
-//   into a blue group gets the hero hurt and, eventually, killed.
-// - A dead hero respawns at the red camp after a few seconds.
+// - The hero (cyan) is a Nightmourn::Character on the blue side, controlled
+//   by a Nightmourn::Player: W/A/S/D move in 8 directions and the camera
+//   follows.
+// - Each army is a front line of 5 soldier groups with 3 archer groups behind
+//   it, every group a block of 50 (10 ranks of 5 files). The groups (Nezumi
+//   Units and UnitGroups) attack-move across the field and fight. Groups that
+//   finish their route attack the nearest enemy group. Red units treat the
+//   hero like any other blue target, so walking into a red group gets the
+//   hero hurt and, eventually, killed.
+// - A dead hero respawns at the blue camp, behind the archers, after a few
+//   seconds.
 // - The world is drawn 2:1 isometric (use-top-down-view in the debug menu
 //   switches to top-down). The sim is the same either way: only drawing,
 //   the move keys and mouse picking go through the projection.
@@ -88,23 +92,24 @@ namespace DemoAction {
 // diamonds in iso (a tile is 2 view units wide there)
 static constexpr float TILE_PIXELS = 32.0f;
 
-// Each side spawns one group per lane, SPAWN_X tiles from the middle (see the
-// Nezumi example 04-unit-group-combat)
-static constexpr size_t SIDE_COUNT      = 2;
-static constexpr float  SPAWN_X         = 44.0f;
-static constexpr float  SPAWN_HALF_SIZE = 5.0f;
+// Each army spawns a front line of soldier groups FRONT_X tiles from the
+// middle, and a line of archer groups ARCHER_BACK tiles behind it. Every
+// group is a block of BLOCK_RANKS x BLOCK_FILES units. The lanes are the
+// groups' y; groups march straight across the field along them.
+static constexpr size_t SIDE_COUNT  = 2;
+static constexpr float  FRONT_X     = 40.0f;
+static constexpr float  ARCHER_BACK = 10.0f; // a block is ~8 tiles deep
 
-struct SideSetup {
-    std::array<float, 4> lanes_y;
-    size_t               lane_count;
-    size_t               soldiers; // per group
-    size_t               archers;  // per group
-};
+static constexpr uint16_t BLOCK_RANKS = 10; // rows, front to back
+static constexpr uint16_t BLOCK_FILES = 5;  // units per rank
+static constexpr size_t   BLOCK_UNITS = BLOCK_RANKS * BLOCK_FILES;
 
-static constexpr std::array<SideSetup, SIDE_COUNT> SETUPS = {{
-    { { -27.0f, -9.0f, 9.0f, 27.0f }, 4, 30, 12 }, // red:  4 x 42
-    { { -18.0f,  0.0f, 18.0f, 0.0f }, 3, 40, 16 }, // blue: 3 x 56
-}};
+static constexpr std::array<float, 5> SOLDIER_LANES = { -14.0f, -7.0f, 0.0f, 7.0f, 14.0f };
+static constexpr std::array<float, 3> ARCHER_LANES  = {  -7.0f,  0.0f, 7.0f };
+
+// Spawned units stand up to this far off their slot, so the blocks look
+// formed but not drilled
+static constexpr float SPAWN_JITTER = 0.15f;
 
 // Ground pre-created in [-MAP_HALF, MAP_HALF)
 static constexpr glm::vec2 MAP_HALF = { 80.0f, 48.0f };
@@ -112,8 +117,8 @@ static constexpr glm::vec2 MAP_HALF = { 80.0f, 48.0f };
 // Idle groups (route done, nothing in sight) attack the nearest enemy group
 static constexpr uint16_t IDLE_RETARGET_TICKS = 120; // 2 s at 60 UPS
 
-// The hero starts in the red camp, between two red lanes
-static constexpr Position2D HERO_SPAWN    = { -SPAWN_X - 6.0f, 0.0f };
+// The hero starts in the blue camp, behind the archers
+static constexpr Position2D HERO_SPAWN    = { -FRONT_X - ARCHER_BACK - 8.0f, 0.0f };
 static constexpr uint16_t   RESPAWN_TICKS = 180; // 3 s at 60 UPS
 
 // -----------------------------------------------------------------------------
@@ -153,7 +158,7 @@ static constexpr UnitConfig ARCHER = {
 static constexpr UnitGroupConfig BLOCK = {
     .name    = "block",
     .spacing = 0.9f,
-    .aspect  = 2.0f,
+    .columns = BLOCK_FILES,
 };
 
 // -----------------------------------------------------------------------------
@@ -171,7 +176,7 @@ namespace AtlasPixels {
     // 64x128 px unit frames, drawn 0.5x1 tile. One row of 5 headings per
     // color: down, down-right, right, up-right, up (left ones are mirrored).
     constexpr glm::vec2 UnitSize   = { 64.0f, 128.0f };
-    constexpr glm::vec2 HeroOrigin = { 320.0f, 0.0f }; // purple row
+    constexpr glm::vec2 HeroOrigin = { 320.0f, 128.0f }; // cyan row
 }
 
 struct SideStyle {
@@ -182,11 +187,12 @@ struct SideStyle {
 };
 
 static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
-    { "red",  { 0.0f,   0.0f }, { 1.0f, 0.25f, 0.2f, 1.0f },  1.0f },
-    { "blue", { 0.0f, 128.0f }, { 0.3f, 0.5f,  1.0f, 1.0f }, -1.0f },
+    { "blue", { 0.0f, 128.0f }, { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
+    { "red",  { 0.0f,   0.0f }, { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
 }};
 
-static constexpr FactionIndex RED = 0;
+// The hero's side
+static constexpr FactionIndex BLUE = 0;
 
 // Hovered tile outline and selection ring
 static constexpr glm::vec4 HOVER_COLOR      = { 1.0f, 0.9f, 0.4f, 0.9f };
@@ -404,47 +410,55 @@ private:
             /*.surface  = */surface_id_,
             /*.position = */HERO_SPAWN,
             /*.config   = */HERO,
-            /*.factions = */faction_bit(RED)
+            /*.factions = */faction_bit(BLUE)
         );
         player_.possess(hero);
         respawn_ticks_ = 0;
         snap_camera_   = true;
     }
 
-    // One group per lane per side, attack-moving across the field
+    // Per side: soldier groups in front, archer groups behind them
     void spawn_sides_(Nezumi::Engine& engine) {
+        for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
+            for (float lane_y : SOLDIER_LANES) spawn_group_(engine, f, SOLDIER, FRONT_X,               lane_y);
+            for (float lane_y : ARCHER_LANES)  spawn_group_(engine, f, ARCHER,  FRONT_X + ARCHER_BACK, lane_y);
+        }
+    }
+
+    // A block of `config` units `back` tiles from the middle on side `f`,
+    // attack-moving along its lane to the enemy's front line. The units
+    // start in their ranks, facing the march.
+    void spawn_group_(Nezumi::Engine& engine, FactionIndex f, const UnitConfig& config,
+                      float back, float lane_y) {
         Nezumi::World& world = engine.world();
 
-        for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
-            const float      dir   = SIDES[f].direction;
-            const SideSetup& setup = SETUPS[f];
+        const float      dir         = SIDES[f].direction;
+        const Position2D center      = { -dir * back,    lane_y };
+        const Position2D destination = {  dir * FRONT_X, lane_y };
 
-            for (size_t lane = 0; lane < setup.lane_count; lane++) {
-                const float      lane_y      = setup.lanes_y[lane];
-                const Position2D center      = { -dir * SPAWN_X, lane_y };
-                const Position2D destination = {  dir * SPAWN_X, lane_y };
+        const EntityHandle group_handle = world.create_entity<UnitGroup>(
+            surface_id_, center, BLOCK, faction_bit(f));
+        UnitGroup* group = world.get_entity_as<UnitGroup>(group_handle);
 
-                const EntityHandle group_handle = world.create_entity<UnitGroup>(
-                    surface_id_, center, BLOCK, faction_bit(f));
-                UnitGroup* group = world.get_entity_as<UnitGroup>(group_handle);
+        for (size_t i = 0; i < BLOCK_UNITS; i++) {
+            // Rank 0 is the front; the block is centered on `center`
+            const float rank = static_cast<float>(i / BLOCK_FILES);
+            const float file = static_cast<float>(i % BLOCK_FILES);
+            const float forward = ((BLOCK_RANKS - 1) * 0.5f - rank) * BLOCK.spacing;
+            const float lateral = (file - (BLOCK_FILES - 1) * 0.5f) * BLOCK.spacing;
 
-                for (size_t i = 0; i < setup.soldiers + setup.archers; i++) {
-                    const UnitConfig& config = (i < setup.soldiers) ? SOLDIER : ARCHER;
+            const Position2D position = {
+                center.x + dir * forward + engine.random().get<float>(-SPAWN_JITTER, SPAWN_JITTER),
+                center.y +       lateral + engine.random().get<float>(-SPAWN_JITTER, SPAWN_JITTER),
+            };
 
-                    const Position2D position = {
-                        center.x + engine.random().get<float>(-SPAWN_HALF_SIZE, SPAWN_HALF_SIZE),
-                        center.y + engine.random().get<float>(-SPAWN_HALF_SIZE, SPAWN_HALF_SIZE),
-                    };
-
-                    const EntityHandle handle = world.create_entity<Unit>(
-                        surface_id_, position, config, faction_bit(f));
-                    group->add_member(*world.get_entity_as<Unit>(handle));
-                }
-
-                group->attack_move(destination);
-                groups_.push_back(group_handle);
-            }
+            const EntityHandle handle = world.create_entity<Unit>(
+                surface_id_, position, config, faction_bit(f));
+            group->add_member(*world.get_entity_as<Unit>(handle));
         }
+
+        group->attack_move(destination);
+        groups_.push_back(group_handle);
     }
 
     void clear_world_(Nezumi::World& world) {
