@@ -6,7 +6,6 @@
 #include "Nezumi/Render/Atlas/Atlas.hpp"
 #include "Nezumi/World/Physics/TileCoord.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
-#include "Nightmourn/Resource/Resource.hpp"
 #include <algorithm> // min
 #include <cassert>   // assert
 #include <cstdint>   // uint32_t
@@ -52,10 +51,10 @@ ResourceDrawer::ResourceDrawer(const Config& config)
 // Draw
 // -----------------------------------------------------------------------------
 
-void ResourceDrawer::draw(DrawContext& ctx, const Resource& resource) const {
-    if (!resource.is_tree()) return; // no art for other resources yet
+void ResourceDrawer::draw(DrawContext& ctx, const Nezumi::Resource& resource) const {
+    if (!is_tree(resource)) return; // no art for other resources yet
 
-    const std::size_t variety = resource.variety().value();
+    const std::size_t variety = resource.variety_id.value();
     if (variety >= trees_.size() || trees_[variety].count == 0) return;
 
     const VarietyFrames& frames = trees_[variety];

@@ -370,16 +370,16 @@ From the first UI pass (immediate-mode `UI::Context`, the `UIQuad` kind).
 
 ### Resources and trees
 
-Trees are `Nightmourn::Resource`s (a `Nezumi::EntityResource`: they never
-tick; mining goes through `World::mine_entity` and `OnEntityMined`).
-`type_id` is Resource, `subtype_id` what it is (tree), the config's variety
-which one (oak, pine), and its `ResourceKind` what it holds and the `ItemID`
-mining yields. Decorative for now.
+Trees are `Nezumi::Resource`s (an `EntityResource`: they never tick; mining
+goes through `World::mine_entity` and `OnEntityMined`). `type_id` is
+Resource, `subtype_id` what it is (`ResourceType::Tree`), `variety_id` which
+one (`TreeVariety::Oak`, `Pine`), and `item` the `Nezumi::ItemID` mining
+yields (`Items::Wood`). Decorative for now.
 
-- [ ] Storage system, then a gatherer: find a resource with
-      `EntitySearchFilter::resources(EntityTypes::Resource)` (and the
-      subtype it wants), mine it on an interval, add `OnEntityMined::amount`
-      of `item(kind)` to its storage.
+- [ ] Storage system (Nezumi `World/Item/`), then a gatherer: find a
+      resource with `EntitySearchFilter::resources(Resource::TYPE_ID)` (and
+      the subtype it wants), mine it on an interval, add
+      `OnEntityMined::amount` of `OnEntityMined::item` to its storage.
 - [ ] Collision response, so figures walk around trunks (trees are already
       collidable, with a 0.8 tile box).
 - [ ] Figures hidden behind a canopy: AoE2 draws an outline of them on top.

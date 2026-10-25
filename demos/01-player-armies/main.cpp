@@ -20,7 +20,7 @@
 //   the move keys and mouse picking go through the projection.
 // - Forests line the top and bottom of the field, with groves behind each
 //   camp and lone trees scattered between: oaks, with stands of pines.
-//   Trees are Nightmourn::Resources (Nezumi EntityResources holding wood):
+//   Trees are Nezumi Resources (subtype ResourceType::Tree, holding wood):
 //   they never tick, so they cost nothing per tick, and for now they are
 //   only decoration (nothing mines them, and figures walk through them). R
 //   restarts the battle but keeps the trees.
@@ -42,6 +42,7 @@
 #include "Nezumi/Engine.hpp"
 #include "Nezumi/Input/Events/OnMouseButtonDown.hpp"
 #include "Nezumi/Input/Events/OnMouseMotion.hpp"
+#include "Nezumi/World/Entities/Resource.hpp"
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entities/UnitGroup.hpp"
 #include "Nezumi/World/Physics/Area2D.hpp"
@@ -57,7 +58,8 @@
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
-#include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Item/Items.hpp"
+#include "Nightmourn/Resource/ResourceTypes.hpp"
 #include <algorithm>   // erase_if, max, min
 #include <array>       // array
 #include <cstdint>     // int32_t, uint16_t, uint32_t
@@ -80,8 +82,8 @@ using Nightmourn::DebugMenu;
 using Nightmourn::DrawContext;
 using Nightmourn::InfoOverlay;
 using Nightmourn::Player;
-using Nightmourn::Resource;
-using Nightmourn::ResourceConfig;
+using Nightmourn::ResourceType;
+using Nightmourn::TreeVariety;
 using Nightmourn::WorldDrawer;
 
 // -----------------------------------------------------------------------------
@@ -190,17 +192,17 @@ static constexpr UnitConfig ARCHER = {
 
 static constexpr ResourceConfig OAK = {
     .name       = "oak",
-    .subtype    = Nightmourn::ResourceSubtypes::Tree,
-    .variety    = Nightmourn::TreeVarieties::Oak,
-    .kind       = Nightmourn::ResourceKind::Wood,
+    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
+    .variety    = Nightmourn::to_variety(TreeVariety::Oak),
+    .item       = Nightmourn::Items::Wood,
     .max_amount = 100,
 };
 
 static constexpr ResourceConfig PINE = {
     .name       = "pine",
-    .subtype    = Nightmourn::ResourceSubtypes::Tree,
-    .variety    = Nightmourn::TreeVarieties::Pine,
-    .kind       = Nightmourn::ResourceKind::Wood,
+    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
+    .variety    = Nightmourn::to_variety(TreeVariety::Pine),
+    .item       = Nightmourn::Items::Wood,
     .max_amount = 100,
 };
 
@@ -335,8 +337,8 @@ public:
             draw_config.units.faction_rows[f]         = SIDES[f].atlas_origin;
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
         }
-        draw_config.resources.trees[Nightmourn::TreeVarieties::Oak .value()] = { AtlasPixels::OakOrigin,  2 };
-        draw_config.resources.trees[Nightmourn::TreeVarieties::Pine.value()] = { AtlasPixels::PineOrigin, 1 };
+        draw_config.resources.trees[static_cast<size_t>(TreeVariety::Oak )] = { AtlasPixels::OakOrigin,  2 };
+        draw_config.resources.trees[static_cast<size_t>(TreeVariety::Pine)] = { AtlasPixels::PineOrigin, 1 };
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         // Mouse: remember the cursor for hover, select on left click (not
@@ -717,7 +719,7 @@ private:
 
             if (entity->is_type<Resource>()) {
                 const Resource*        resource = entity->as_type<Resource>();
-                const std::string_view kind     = Nightmourn::name(resource->kind());
+                const std::string_view kind     = Nightmourn::item_name(resource->item);
                 std::snprintf(line, sizeof line, "          %.*s %u / %u\n",
                     static_cast<int>(kind.size()), kind.data(),
                     static_cast<unsigned>(resource->amount), static_cast<unsigned>(resource->max_amount));

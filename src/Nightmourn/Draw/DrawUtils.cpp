@@ -8,7 +8,7 @@
 #include "Nezumi/World/Entity/EntityDamageable.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
-#include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Resource/ResourceTypes.hpp"
 #include <cmath>   // atan2, cos, sin
 #include <utility> // swap
 
@@ -47,7 +47,7 @@ glm::vec4 FigureFrames::pick(glm::vec2 heading) const {
 
 const glm::vec4* sprite_bounds(const Nezumi::Entity& entity) {
     if (entity.is_type<Nezumi::Unit>() || entity.is_type<Character>()) return &FIGURE_SPRITE_BOUNDS;
-    if (entity.is_type<Resource>() && entity.as_type<Resource>()->is_tree()) return &TREE_SPRITE_BOUNDS;
+    if (entity.is_type<Nezumi::Resource>() && is_tree(*entity.as_type<Nezumi::Resource>())) return &TREE_SPRITE_BOUNDS;
     return nullptr;
 }
 
