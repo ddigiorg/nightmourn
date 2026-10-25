@@ -52,10 +52,10 @@ struct FigureFrames {
 };
 
 // Sprite boxes around an entity's feet (its position), in tiles of upright
-// size. A tree is twice a figure's size. The tallest one sets
-// DrawContext::VIEW_OVERHANG.
+// size. A tree is 4x a figure's size each way (AoE2's trees tower over its
+// villagers). The tallest one sets DrawContext::VIEW_OVERHANG.
 inline constexpr glm::vec4 FIGURE_SPRITE_BOUNDS = { -0.25f, -0.25f, 0.25f, 0.75f };
-inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -0.50f, -0.50f, 0.50f, 1.50f };
+inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -1.00f, -1.00f, 1.00f, 3.00f };
 
 // Sprite bounds of a drawable entity (above), or nullptr for types without a
 // sprite. Picking (Input/Picking) asks here, so a click hits what is drawn.

@@ -19,10 +19,11 @@
 //   switches to top-down). The sim is the same either way: only drawing,
 //   the move keys and mouse picking go through the projection.
 // - Forests line the top and bottom of the field, with groves behind each
-//   camp and lone trees scattered between. Trees are Nightmourn::Trees
-//   (Nezumi EntityResources): they never tick, so they cost nothing per
-//   tick, and for now they are only decoration (nothing mines them, and
-//   figures walk through them). R restarts the battle but keeps the trees.
+//   camp and lone trees scattered between: oaks, with stands of pines.
+//   Trees are Nightmourn::Resources (Nezumi EntityResources holding wood):
+//   they never tick, so they cost nothing per tick, and for now they are
+//   only decoration (nothing mines them, and figures walk through them). R
+//   restarts the battle but keeps the trees.
 // - The tile under the mouse is outlined; clicking a figure or a tree
 //   selects it.
 //
@@ -56,7 +57,7 @@
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
-#include "Nightmourn/Resource/Tree.hpp"
+#include "Nightmourn/Resource/Resource.hpp"
 #include <algorithm>   // erase_if, max, min
 #include <array>       // array
 #include <cstdint>     // int32_t, uint16_t, uint32_t
@@ -79,8 +80,8 @@ using Nightmourn::DebugMenu;
 using Nightmourn::DrawContext;
 using Nightmourn::InfoOverlay;
 using Nightmourn::Player;
-using Nightmourn::Tree;
-using Nightmourn::TreeConfig;
+using Nightmourn::Resource;
+using Nightmourn::ResourceConfig;
 using Nightmourn::WorldDrawer;
 
 // -----------------------------------------------------------------------------
@@ -129,20 +130,24 @@ static constexpr uint16_t IDLE_RETARGET_TICKS = 120; // 2 s at 60 UPS
 
 // Trees: forests along the top and bottom edges, from FOREST_EDGE tiles off
 // the middle out (the lanes and blocks stay within ~25), groves behind each
-// camp, and a few lone trees everywhere else. At most one tree per tile, a
-// little off its center. A fixed seed, so every run grows the same forest.
+// camp, and a few lone trees everywhere else. At most one tree per
+// TREE_SPACING square cell, somewhere near its center. Pines grow in stands
+// where a second noise field is high. A fixed seed, so every run grows the
+// same forest.
 static constexpr uint64_t TREE_SEED         = 7;
+static constexpr float    TREE_SPACING      = 2.25f; // tiles; a tree is 2 wide
+static constexpr float    TREE_JITTER       = 0.45f;
 static constexpr float    FOREST_EDGE       = 29.0f;
 static constexpr float    FOREST_DEPTH      = 10.0f; // tiles until it is densest
-static constexpr float    LONE_TREE_DENSITY = 0.006f;
-static constexpr float    TREE_JITTER       = 0.2f;
+static constexpr float    LONE_TREE_DENSITY = 0.03f;
+static constexpr float    PINE_STANDS       = 0.62f; // pine noise above this: pines
 
 struct Grove { glm::vec2 center; float radius; };
 static constexpr std::array<Grove, 4> GROVES = {{
-    { { -70.0f, -15.0f }, 4.5f },
-    { { -68.0f,  17.0f }, 3.5f },
-    { {  70.0f,  14.0f }, 4.5f },
-    { {  67.0f, -18.0f }, 3.0f },
+    { { -70.0f, -15.0f }, 7.0f },
+    { { -68.0f,  17.0f }, 5.5f },
+    { {  70.0f,  14.0f }, 7.0f },
+    { {  67.0f, -18.0f }, 5.0f },
 }};
 
 // The hero starts in the blue camp, behind the archers
@@ -183,9 +188,20 @@ static constexpr UnitConfig ARCHER = {
     .aggro_radius    = 7.0f,
 };
 
-static constexpr TreeConfig OAK = {
-    .name     = "oak",
-    .max_wood = 100,
+static constexpr ResourceConfig OAK = {
+    .name       = "oak",
+    .subtype    = Nightmourn::ResourceSubtypes::Tree,
+    .variety    = Nightmourn::TreeVarieties::Oak,
+    .kind       = Nightmourn::ResourceKind::Wood,
+    .max_amount = 100,
+};
+
+static constexpr ResourceConfig PINE = {
+    .name       = "pine",
+    .subtype    = Nightmourn::ResourceSubtypes::Tree,
+    .variety    = Nightmourn::TreeVarieties::Pine,
+    .kind       = Nightmourn::ResourceKind::Wood,
+    .max_amount = 100,
 };
 
 static constexpr UnitGroupConfig BLOCK = {
@@ -211,11 +227,11 @@ namespace AtlasPixels {
     constexpr glm::vec2 UnitSize   = { 64.0f, 128.0f };
     constexpr glm::vec2 HeroOrigin = { 320.0f, 128.0f }; // cyan row
 
-    // 128x256 px tree frames (2x a unit frame), drawn 1x2 tiles, side by
-    // side. Made by tools/gen_trees.py.
-    constexpr glm::vec2   TreeSize   = { 128.0f, 256.0f };
-    constexpr glm::vec2   TreeOrigin = { 640.0f, 0.0f };
-    constexpr std::size_t TreeLooks  = 3;
+    // 256x512 px tree frames (4x a unit frame each way), drawn 2x4 tiles,
+    // below the meadow: two oaks, then a pine. Made by tools/gen_trees.py.
+    constexpr glm::vec2 TreeSize   = { 256.0f, 512.0f };
+    constexpr glm::vec2 OakOrigin  = {   0.0f, 1408.0f };
+    constexpr glm::vec2 PineOrigin = { 512.0f, 1408.0f };
 }
 
 struct SideStyle {
@@ -310,17 +326,17 @@ public:
                 .frame_size = AtlasPixels::UnitSize,
                 .row        = AtlasPixels::HeroOrigin,
             },
-            .trees = {
-                .atlas      = atlas_,
-                .frame_size = AtlasPixels::TreeSize,
-                .origin     = AtlasPixels::TreeOrigin,
-                .looks      = AtlasPixels::TreeLooks,
+            .resources = {
+                .atlas           = atlas_,
+                .tree_frame_size = AtlasPixels::TreeSize,
             },
         };
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
             draw_config.units.faction_rows[f]         = SIDES[f].atlas_origin;
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
         }
+        draw_config.resources.trees[Nightmourn::TreeVarieties::Oak .value()] = { AtlasPixels::OakOrigin,  2 };
+        draw_config.resources.trees[Nightmourn::TreeVarieties::Pine.value()] = { AtlasPixels::PineOrigin, 1 };
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         // Mouse: remember the cursor for hover, select on left click (not
@@ -463,20 +479,23 @@ private:
         snap_camera_   = true;
     }
 
-    // One tree per tile at most, with a chance that grows into the edge
+    // One tree per cell at most, with a chance that grows into the edge
     // forests and the groves. The forests' inner edge is broken up by coarse
     // value noise, so it reads as a treeline rather than a ruler.
     void spawn_trees_(Nezumi::World& world) {
         Random rng(TREE_SEED);
 
-        // Value noise on a grid of 6-tile cells, in [0, 1]
+        // Value noise on a grid of 6-tile cells, in [0, 1]: one field for the
+        // treeline, one for the pine stands
         constexpr int CELL = 6;
         constexpr int GX = static_cast<int>(2.0f * MAP_HALF.x) / CELL + 2;
         constexpr int GY = static_cast<int>(2.0f * MAP_HALF.y) / CELL + 2;
-        std::array<float, GX * GY> grid;
-        for (float& v : grid) v = rng.get<float>(0.0f, 1.0f);
+        using Grid = std::array<float, GX * GY>;
+        Grid edge_grid, pine_grid;
+        for (float& v : edge_grid) v = rng.get<float>(0.0f, 1.0f);
+        for (float& v : pine_grid) v = rng.get<float>(0.0f, 1.0f);
 
-        const auto noise = [&](float x, float y) {
+        const auto noise = [&](const Grid& grid, float x, float y) {
             const float gx = (x + MAP_HALF.x) / CELL, gy = (y + MAP_HALF.y) / CELL;
             const int   ix = static_cast<int>(gx),    iy = static_cast<int>(gy);
             const float fx = gx - ix,                 fy = gy - iy;
@@ -486,19 +505,20 @@ private:
             return a + (b - a) * fy;
         };
 
-        for (float y = -MAP_HALF.y; y < MAP_HALF.y; y += 1.0f) {
-            for (float x = -MAP_HALF.x; x < MAP_HALF.x; x += 1.0f) {
-                const glm::vec2 center = { x + 0.5f, y + 0.5f };
+        constexpr float HALF = TREE_SPACING * 0.5f;
+        for (float y = -MAP_HALF.y; y + TREE_SPACING <= MAP_HALF.y; y += TREE_SPACING) {
+            for (float x = -MAP_HALF.x; x + TREE_SPACING <= MAP_HALF.x; x += TREE_SPACING) {
+                const glm::vec2 center = { x + HALF, y + HALF };
 
                 // Edge forests: denser further out, ragged on the inside
                 const float depth = (std::abs(center.y) - FOREST_EDGE) / FOREST_DEPTH
-                                  + (noise(center.x, center.y) - 0.5f) * 0.8f;
+                                  + (noise(edge_grid, center.x, center.y) - 0.5f) * 0.8f;
                 float chance = depth > 0.0f ? 0.25f + 0.5f * std::min(depth, 1.0f) : LONE_TREE_DENSITY;
 
                 // Groves: dense at the middle, thinning out
                 for (const Grove& grove : GROVES) {
                     const glm::vec2 d = (center - grove.center) / grove.radius;
-                    chance = std::max(chance, 0.7f * std::exp(-glm::dot(d, d)));
+                    chance = std::max(chance, 0.8f * std::exp(-glm::dot(d, d)));
                 }
 
                 if (rng.get<float>(0.0f, 1.0f) >= chance) continue;
@@ -507,7 +527,8 @@ private:
                     center.x + rng.get<float>(-TREE_JITTER, TREE_JITTER),
                     center.y + rng.get<float>(-TREE_JITTER, TREE_JITTER),
                 };
-                world.create_entity<Tree>(surface_id_, position, OAK);
+                const bool pine = noise(pine_grid, center.x, center.y) > PINE_STANDS;
+                world.create_entity<Resource>(surface_id_, position, pine ? PINE : OAK);
             }
         }
     }
@@ -560,7 +581,7 @@ private:
     void clear_world_(Nezumi::World& world) {
         std::vector<EntityHandle> doomed;
         world.each_entity([&](const Nezumi::Entity& entity) {
-            if (!entity.is_pending_remove() && !entity.is_type<Tree>()) doomed.push_back(entity.handle);
+            if (!entity.is_pending_remove() && !entity.is_type<Resource>()) doomed.push_back(entity.handle);
         });
         for (EntityHandle handle : doomed) world.remove_entity(handle);
 
@@ -650,11 +671,11 @@ private:
         const Nezumi::World& world = engine.world();
 
         std::array<size_t, SIDE_COUNT> units = {};
-        size_t                         trees = 0;
+        size_t                         trees = 0; // every resource is a tree for now
         world.each_entity([&](const Nezumi::Entity& entity) {
             if (!entity.is_alive()) return;
             if      (entity.is_type<Unit>()) units[entity.faction_index()]++;
-            else if (entity.is_type<Tree>()) trees++;
+            else if (entity.is_type<Resource>()) trees++;
         });
 
         std::string text;
@@ -689,15 +710,17 @@ private:
             std::string_view name = "entity";
             if (entity->is_type<Unit>())      name = entity->as_type<Unit>()->config().name;
             if (entity->is_type<Character>()) name = entity->as_type<Character>()->config().name;
-            if (entity->is_type<Tree>())      name = entity->as_type<Tree>()->config().name;
+            if (entity->is_type<Resource>())  name = entity->as_type<Resource>()->config().name;
             std::snprintf(line, sizeof line, "selected  %.*s at %.1f, %.1f\n",
                 static_cast<int>(name.size()), name.data(), entity->position.x, entity->position.y);
             text += line;
 
-            if (entity->is_type<Tree>()) {
-                const Tree* tree = entity->as_type<Tree>();
-                std::snprintf(line, sizeof line, "          wood %u / %u\n",
-                    static_cast<unsigned>(tree->amount), static_cast<unsigned>(tree->max_amount));
+            if (entity->is_type<Resource>()) {
+                const Resource*        resource = entity->as_type<Resource>();
+                const std::string_view kind     = Nightmourn::name(resource->kind());
+                std::snprintf(line, sizeof line, "          %.*s %u / %u\n",
+                    static_cast<int>(kind.size()), kind.data(),
+                    static_cast<unsigned>(resource->amount), static_cast<unsigned>(resource->max_amount));
                 text += line;
             }
         }

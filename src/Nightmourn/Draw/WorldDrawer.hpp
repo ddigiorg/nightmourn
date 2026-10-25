@@ -23,7 +23,7 @@
 #include "Nightmourn/Draw/CharacterDrawer.hpp"
 #include "Nightmourn/Draw/ChunkDrawer.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
-#include "Nightmourn/Draw/TreeDrawer.hpp"
+#include "Nightmourn/Draw/ResourceDrawer.hpp"
 #include "Nightmourn/Draw/UnitDrawer.hpp"
 #include "Nightmourn/Draw/UnitGroupDrawer.hpp"
 
@@ -46,7 +46,7 @@ public:
         UnitDrawer::Config      units       = {};
         UnitGroupDrawer::Config unit_groups = {};
         CharacterDrawer::Config characters  = {};
-        TreeDrawer::Config      trees       = {};
+        ResourceDrawer::Config  resources   = {};
     };
 
     // -------------------------------------------------------------------------
@@ -69,7 +69,7 @@ public:
     const UnitDrawer&      units()       const { return units_;       }
     const UnitGroupDrawer& unit_groups() const { return unit_groups_; }
     const CharacterDrawer& characters()  const { return characters_;  }
-    const TreeDrawer&      trees()       const { return trees_;       }
+    const ResourceDrawer&  resources()   const { return resources_;   }
 
 private:
 
@@ -91,7 +91,7 @@ private:
     UnitDrawer      units_;
     UnitGroupDrawer unit_groups_;
     CharacterDrawer characters_;
-    TreeDrawer      trees_;
+    ResourceDrawer  resources_;
 };
 
 } // namespace Nightmourn
