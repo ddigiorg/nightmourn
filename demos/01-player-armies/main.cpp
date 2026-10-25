@@ -46,7 +46,7 @@
 #include "Nightmourn/Player/Player.hpp"
 #include <algorithm>   // erase_if
 #include <array>       // array
-#include <cstdint>     // int32_t, uint16_t
+#include <cstdint>     // int32_t, uint16_t, uint32_t
 #include <cstdio>      // snprintf
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
 #include <exception>   // exception
@@ -159,9 +159,10 @@ static constexpr UnitGroupConfig BLOCK = {
 // -----------------------------------------------------------------------------
 
 namespace AtlasPixels {
-    // 64x64 px ground tiles, drawn 1x1 tile
-    constexpr glm::vec4 GrassDark  = {  64.0f, 256.0f, 128.0f, 320.0f };
-    constexpr glm::vec4 GrassLight = {  64.0f, 320.0f, 128.0f, 384.0f };
+    // Seamless 1024x1024 px meadow covering 8x8 tiles (128 px per tile),
+    // drawn world-space (see ChunkDrawer). Made by tools/gen_meadow.py.
+    constexpr glm::vec4     Meadow      = { 0.0f, 384.0f, 1024.0f, 1408.0f };
+    constexpr std::uint32_t MeadowTiles = 8;
 
     // 64x128 px unit frames, drawn 0.5x1 tile. One row of 5 headings per
     // color: down, down-right, right, up-right, up (left ones are mirrored).
@@ -244,8 +245,8 @@ public:
         WorldDrawer::Config draw_config = {
             .chunks = {
                 .atlas       = atlas_,
-                .grass_dark  = AtlasPixels::GrassDark,
-                .grass_light = AtlasPixels::GrassLight,
+                .grass       = AtlasPixels::Meadow,
+                .grass_tiles = AtlasPixels::MeadowTiles,
             },
             .units = {
                 .atlas      = atlas_,

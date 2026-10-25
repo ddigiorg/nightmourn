@@ -46,18 +46,19 @@ figure picking, and a `use-top-down-view` debug toggle. Decided: projection
 on the CPU in the drawers, square textures projected onto diamonds, flat
 world, footprint depth for buildings, 3D pre-rendered art, 64x32 tiles.
 
+Ground is world-space (AoE2: DE style): one seamless 1024² meadow covers
+8x8 tiles (`tools/gen_meadow.py`). Research and the reasoning behind the
+terrain roadmap below: `isometric-plan/TILE-RESEARCH.md` in the project
+files.
+
 - [ ] **Atlas frames with pivots** (JSON sidecar): per-frame size and feet
-      pivot, replacing the fixed `FIGURE_SPRITE_BOUNDS` box.
+      pivot, replacing the fixed `FIGURE_SPRITE_BOUNDS` box. Comes out of
+      the packer below.
 - [ ] **Player-color mask** in a sprite shader variant, replacing one atlas
       row per faction.
-- [ ] **Texture2DArray atlases** (Renderer #1) and an atlas builder
-      (Renderer #8). Iso art outgrows one page fast.
 - [ ] **First pre-rendered unit** (Blender: orthographic, 30° elevation,
       45° yaw), 8 directions (5 stored + 3 mirrored), walk + attack. Frames
       are picked with `Projection::dir_to_heading`.
-- [ ] **Terrain**: tile types in chunks, a retained (or per-chunk tile-index)
-      ground layer, terrain blending, and the grid kind taking the inverse
-      projection.
 - [ ] **Footprint depth for buildings**: a depth attachment on the world
       pass, and a sprite variant that writes the depth of its footprint's
       front edge per pixel column. Then occluded-unit silhouettes and a
@@ -66,6 +67,102 @@ world, footprint depth for buildings, 3D pre-rendered art, 64x32 tiles.
       radius, fog of war per chunk, day/night ambient.
 - [ ] Drag-box selection: query the world bounds of the screen box, keep
       figures whose projected feet fall inside it.
+
+### Asset pipeline
+
+Decisions for the rest of the roadmap to build on.
+
+- **Sprite packer: yes.** Factorio ships each entity's sprites as separate
+  PNG sheets and packs them into atlas pages when the game loads. AoE2: DE
+  ships separate files too: one sprite file per unit graphic, one `.dds` per
+  terrain. Loose files are what an artist (or Blender) produces. Atlases are
+  what the GPU wants, so something has to pack them.
+  - Pack **at build time**, not at startup: a `tools/` packer run by a CMake
+    custom command that writes atlas pages plus a JSON of frames
+    (`{ page, tex_box, size, pivot }`). It's simpler in the engine, and
+    there's no packing cost at load. Move it to startup (Factorio's way)
+    only if mods need to add sprites. Then cache the result on disk.
+  - Group sprites drawn together onto the same page (units with units,
+    terrain with terrain). Leave padding of at least `2^(mips-1)` px between
+    sprites, so mips don't blend neighbors.
+- **File format: PNG for source art; a GPU container for shipping, later.**
+  - `.dds` is a container, not a pixel format. The AoE2: DE wiki lists its
+    terrain `.dds` files as linear RGBA 8-bit, uncompressed. DDS (or KTX2)
+    usually earns its keep with GPU block compression (BC1/BC3/BC7: 4-8x
+    less VRAM, no decode) and a mip chain stored in the file.
+  - Raw RGBA8 files would load without a decode step but take about 2x
+    PNG's disk space (1024² is 4 MB raw vs 1.8 MB for the meadow PNG),
+    and no image editor opens them. Not worth it.
+  - So: keep PNGs in `assets/` as the source of truth. When load time or
+    VRAM matters, have the packer write KTX2/DDS (BC7, with mips) next to
+    them, and have the engine load those. Until then the engine loads
+    PNGs.
+- **Mips: one source image, generated chain.** Author one full-size image
+  and generate the levels (box filter in premultiplied alpha, see
+  `AtlasConfig::mip_levels`'s TODO), either at load or in the packer. A
+  DDS/KTX2 file stores the whole chain in one file, so "one file per level"
+  only makes sense if someone hand-paints the small levels, which nobody
+  does for terrain.
+
+### Terrain: per-chunk ground kind (TILE-RESEARCH step 5)
+
+The end state: one instance per visible chunk, terrains blended in the
+shader. It replaces `ChunkDrawer`'s per-tile Quads. Prerequisites first,
+each useful on its own:
+
+- [ ] **Mipmaps** (Renderer #7, `AtlasConfig::mip_levels` TODO): CPU chain or
+      `glGenerateMipmap`, a `mip_filter` on the sampler. Needed now as well:
+      below about zoom 0.5 the meadow aliases into a shimmer, because a 128
+      px tile cell lands on a few screen pixels with no mips.
+- [ ] **Texture2DArray** in the RHI and the renderer (Renderer #1): array
+      textures, `sampler2DArray`, and atlas pages as layers with the page
+      index per instance. Units batch across pages, and terrains get one
+      layer each.
+- [ ] **Materials with more than one texture**: today a material is one
+      texture + sampler bind group. The ground kind needs the terrain array
+      and a tile-type map.
+- [ ] **Tile storage in chunks** (engine World): a 32x32 `uint8_t` terrain id
+      per chunk, `Surface::get_tile` / `set_tile` (deferred like the other
+      world changes), and a per-chunk "tiles changed" version the draw side
+      can compare against. Pathing costs and buildability read the same
+      array.
+- [ ] **Terrain definitions**: id → texture layer, tiles per texture (N),
+      blend priority. The meadow is terrain 0.
+- [ ] **Ground kind** (engine): instance = the chunk's 4 projected corners
+      plus its tile-map layer. The vertex shader interpolates world
+      position next to view position. The fragment shader reads the tile id
+      with `texelFetch` at `floor(world)`, samples the terrain layer at
+      `fract(world / N)`, and blends with the 3x3 neighbors by priority,
+      through a shared noise/mask texture (blendomatic's rule, per pixel).
+- [ ] **Tile-map layers**: an R8 `Texture2DArray` of 32x32 layers, one per
+      visible chunk, handed out from a pool (least recently drawn reused).
+      Re-upload a layer only when its chunk's tile version changes.
+- [ ] **Switch `ChunkDrawer`** to the ground kind. The grid and top-down view
+      keep working, since the kind takes projected corners like `Quad`.
+- [ ] **Grid kind** taking the inverse projection, so the world grid draws
+      in the same pass (todo above).
+- [ ] Later: a **detail layer** of decals (rocks, flowers, cracks) over the
+      material, Factorio-style. That's where 2x2/4x4 variants belong.
+
+### Terrain: cached ground (TILE-RESEARCH step 6, only if profiled)
+
+Factorio keeps terrain in a buffer texture and redraws only the strips a
+scroll reveals (FFF #333), because its transitions make the ground expensive
+per pixel. Do this only if the ground kind shows up in a GPU profile
+(Renderer #4, GPU timing, comes first).
+
+- [ ] **GPU timing** (Renderer #4): `GL_TIME_ELAPSED` per pass, so the
+      decision is measured.
+- [ ] **Offscreen color targets** in the renderer: a world-ground target a
+      little larger than the screen, drawn before the world pass and
+      composited as one quad.
+- [ ] **Scroll reuse**: keep the target's view offset, shift by whole pixels
+      as the camera moves, and redraw only the revealed strips (a scissored
+      ground pass each).
+- [ ] **Invalidation**: full redraw on zoom, projection switch or resize. A
+      chunk's region on a tile change.
+- [ ] The light map pass (Darkness) needs the same offscreen-target support,
+      so build that support once.
 
 ---
 
