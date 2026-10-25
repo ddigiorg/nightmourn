@@ -367,3 +367,25 @@ From the first UI pass (immediate-mode `UI::Context`, the `UIQuad` kind).
       `Player`.
 - [ ] Settlements, buildings that produce unit blocks, and waypoint orders
       from the settlement (the core loop in `docs/nightmourn.md`).
+
+### Resources and trees
+
+Trees are `Nezumi::EntityResource`s (they never tick; mining goes through
+`World::mine_entity` and `OnEntityMined`). Decorative for now.
+
+- [ ] Item and storage system, then a gatherer: find a tree with
+      `EntitySearchFilter::resources(EntityTypes::Tree)`, mine it on an
+      interval, credit `OnEntityMined::amount` to its inventory.
+- [ ] Collision response, so figures walk around trunks (trees are already
+      collidable, with a 0.6 tile box).
+- [ ] Figures hidden behind a canopy: AoE2 draws an outline of them on top.
+      A silhouette pass (sprites drawn again, flat color, behind-depth only)
+      or fading canopies near the hero.
+- [ ] A stump (and a felled-tree frame) once trees can be cut, instead of
+      vanishing at 0 wood.
+- [ ] More kinds (pine, palm, dead trees, berry bushes, stone, gold) as
+      `TreeConfig`s plus atlas looks. Once the atlas has a sidecar with
+      pivots, a kind's looks can differ in size.
+- [ ] Map generation: today the demo scatters trees with value noise; a
+      real map generator should own forests, clearings and resource spots.
+

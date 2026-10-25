@@ -65,8 +65,8 @@ struct DrawContext {
     Nezumi::Tick tick = 0;
 
     // How far (tiles of upright size) the view is grown on every side: the
-    // tallest sprite above its feet. A figure is 0.75 tiles tall.
-    static constexpr float VIEW_OVERHANG = 1.0f;
+    // tallest sprite above its feet. A figure is 0.75 tiles tall, a tree 1.5.
+    static constexpr float VIEW_OVERHANG = 1.5f;
 
     // The projection the game draws with: 2:1 isometric, or top-down while
     // use-top-down-view is on. Input and picking use the same one, so call

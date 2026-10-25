@@ -51,12 +51,28 @@ struct FigureFrames {
     glm::vec4 pick(glm::vec2 heading) const;
 };
 
-// Sprite box around a figure's feet (its position), in tiles of upright size
+// Sprite boxes around an entity's feet (its position), in tiles of upright
+// size. A tree is twice a figure's size. The tallest one sets
+// DrawContext::VIEW_OVERHANG.
 inline constexpr glm::vec4 FIGURE_SPRITE_BOUNDS = { -0.25f, -0.25f, 0.25f, 0.75f };
+inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -0.50f, -0.50f, 0.50f, 1.50f };
 
-// View-space sprite box of a figure standing at world `pos`. Drawing and
-// picking (Input/Picking) share it, so a click hits what is drawn.
-glm::vec4 figure_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos);
+// Sprite bounds of a drawable entity (above), or nullptr for types without a
+// sprite. Picking (Input/Picking) asks here, so a click hits what is drawn.
+const glm::vec4* sprite_bounds(const Nezumi::Entity& entity);
+
+// View-space box of a sprite with `bounds` whose feet are at world `pos`
+glm::vec4 sprite_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos, glm::vec4 bounds);
+
+// View-space sprite box of a figure standing at world `pos`
+inline glm::vec4 figure_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos) {
+    return sprite_view_box(proj, pos, FIGURE_SPRITE_BOUNDS);
+}
+
+// Draws the sprite `tex_box` of `atlas` at world `pos` in the box `bounds`
+// around its feet, y-sorted on DrawLayer::Entities
+void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
+                    glm::vec4 tex_box, glm::vec2 pos, glm::vec4 bounds);
 
 // Draws a figure sprite at its feet, y-sorted on DrawLayer::Entities
 void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,

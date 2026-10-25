@@ -18,7 +18,13 @@
 // - The world is drawn 2:1 isometric (use-top-down-view in the debug menu
 //   switches to top-down). The sim is the same either way: only drawing,
 //   the move keys and mouse picking go through the projection.
-// - The tile under the mouse is outlined; clicking a figure selects it.
+// - Forests line the top and bottom of the field, with groves behind each
+//   camp and lone trees scattered between. Trees are Nightmourn::Trees
+//   (Nezumi EntityResources): they never tick, so they cost nothing per
+//   tick, and for now they are only decoration (nothing mines them, and
+//   figures walk through them). R restarts the battle but keeps the trees.
+// - The tile under the mouse is outlined; clicking a figure or a tree
+//   selects it.
 //
 // Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
 // demo only sets up its atlas rows and draws the HUD. The debug overlays
@@ -50,9 +56,11 @@
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
-#include <algorithm>   // erase_if
+#include "Nightmourn/Resource/Tree.hpp"
+#include <algorithm>   // erase_if, max, min
 #include <array>       // array
 #include <cstdint>     // int32_t, uint16_t, uint32_t
+#include <cmath>       // abs, exp
 #include <cstdio>      // snprintf
 #include <cstdlib>     // EXIT_FAILURE, EXIT_SUCCESS
 #include <exception>   // exception
@@ -71,6 +79,8 @@ using Nightmourn::DebugMenu;
 using Nightmourn::DrawContext;
 using Nightmourn::InfoOverlay;
 using Nightmourn::Player;
+using Nightmourn::Tree;
+using Nightmourn::TreeConfig;
 using Nightmourn::WorldDrawer;
 
 // -----------------------------------------------------------------------------
@@ -117,6 +127,24 @@ static constexpr glm::vec2 MAP_HALF = { 80.0f, 48.0f };
 // Idle groups (route done, nothing in sight) attack the nearest enemy group
 static constexpr uint16_t IDLE_RETARGET_TICKS = 120; // 2 s at 60 UPS
 
+// Trees: forests along the top and bottom edges, from FOREST_EDGE tiles off
+// the middle out (the lanes and blocks stay within ~25), groves behind each
+// camp, and a few lone trees everywhere else. At most one tree per tile, a
+// little off its center. A fixed seed, so every run grows the same forest.
+static constexpr uint64_t TREE_SEED         = 7;
+static constexpr float    FOREST_EDGE       = 29.0f;
+static constexpr float    FOREST_DEPTH      = 10.0f; // tiles until it is densest
+static constexpr float    LONE_TREE_DENSITY = 0.006f;
+static constexpr float    TREE_JITTER       = 0.2f;
+
+struct Grove { glm::vec2 center; float radius; };
+static constexpr std::array<Grove, 4> GROVES = {{
+    { { -70.0f, -15.0f }, 4.5f },
+    { { -68.0f,  17.0f }, 3.5f },
+    { {  70.0f,  14.0f }, 4.5f },
+    { {  67.0f, -18.0f }, 3.0f },
+}};
+
 // The hero starts in the blue camp, behind the archers
 static constexpr Position2D HERO_SPAWN    = { -FRONT_X - ARCHER_BACK - 8.0f, 0.0f };
 static constexpr uint16_t   RESPAWN_TICKS = 180; // 3 s at 60 UPS
@@ -155,6 +183,11 @@ static constexpr UnitConfig ARCHER = {
     .aggro_radius    = 7.0f,
 };
 
+static constexpr TreeConfig OAK = {
+    .name     = "oak",
+    .max_wood = 100,
+};
+
 static constexpr UnitGroupConfig BLOCK = {
     .name    = "block",
     .spacing = 0.9f,
@@ -177,6 +210,12 @@ namespace AtlasPixels {
     // color: down, down-right, right, up-right, up (left ones are mirrored).
     constexpr glm::vec2 UnitSize   = { 64.0f, 128.0f };
     constexpr glm::vec2 HeroOrigin = { 320.0f, 128.0f }; // cyan row
+
+    // 128x256 px tree frames (2x a unit frame), drawn 1x2 tiles, side by
+    // side. Made by tools/gen_trees.py.
+    constexpr glm::vec2   TreeSize   = { 128.0f, 256.0f };
+    constexpr glm::vec2   TreeOrigin = { 640.0f, 0.0f };
+    constexpr std::size_t TreeLooks  = 3;
 }
 
 struct SideStyle {
@@ -271,6 +310,12 @@ public:
                 .frame_size = AtlasPixels::UnitSize,
                 .row        = AtlasPixels::HeroOrigin,
             },
+            .trees = {
+                .atlas      = atlas_,
+                .frame_size = AtlasPixels::TreeSize,
+                .origin     = AtlasPixels::TreeOrigin,
+                .looks      = AtlasPixels::TreeLooks,
+            },
         };
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
             draw_config.units.faction_rows[f]         = SIDES[f].atlas_origin;
@@ -291,7 +336,7 @@ public:
                 if (e.button != MouseButton::Left || !has_cursor_) return;
                 if (engine.input().is_mouse_captured()) return;
                 if (const Nezumi::Surface* surface = engine.world().get_surface(surface_id_))
-                    selected_ = Nightmourn::pick_figure(*surface, *world_camera_, projection_(), cursor_);
+                    selected_ = Nightmourn::pick_entity(*surface, *world_camera_, projection_(), cursor_);
             }
         );
 
@@ -308,6 +353,7 @@ public:
             }
         );
 
+        spawn_trees_(world);
         spawn_sides_(engine);
         spawn_hero_(world);
 
@@ -417,6 +463,55 @@ private:
         snap_camera_   = true;
     }
 
+    // One tree per tile at most, with a chance that grows into the edge
+    // forests and the groves. The forests' inner edge is broken up by coarse
+    // value noise, so it reads as a treeline rather than a ruler.
+    void spawn_trees_(Nezumi::World& world) {
+        Random rng(TREE_SEED);
+
+        // Value noise on a grid of 6-tile cells, in [0, 1]
+        constexpr int CELL = 6;
+        constexpr int GX = static_cast<int>(2.0f * MAP_HALF.x) / CELL + 2;
+        constexpr int GY = static_cast<int>(2.0f * MAP_HALF.y) / CELL + 2;
+        std::array<float, GX * GY> grid;
+        for (float& v : grid) v = rng.get<float>(0.0f, 1.0f);
+
+        const auto noise = [&](float x, float y) {
+            const float gx = (x + MAP_HALF.x) / CELL, gy = (y + MAP_HALF.y) / CELL;
+            const int   ix = static_cast<int>(gx),    iy = static_cast<int>(gy);
+            const float fx = gx - ix,                 fy = gy - iy;
+            const auto  at = [&](int i, int j) { return grid[static_cast<size_t>(j * GX + i)]; };
+            const float a  = at(ix, iy    ) + (at(ix + 1, iy    ) - at(ix, iy    )) * fx;
+            const float b  = at(ix, iy + 1) + (at(ix + 1, iy + 1) - at(ix, iy + 1)) * fx;
+            return a + (b - a) * fy;
+        };
+
+        for (float y = -MAP_HALF.y; y < MAP_HALF.y; y += 1.0f) {
+            for (float x = -MAP_HALF.x; x < MAP_HALF.x; x += 1.0f) {
+                const glm::vec2 center = { x + 0.5f, y + 0.5f };
+
+                // Edge forests: denser further out, ragged on the inside
+                const float depth = (std::abs(center.y) - FOREST_EDGE) / FOREST_DEPTH
+                                  + (noise(center.x, center.y) - 0.5f) * 0.8f;
+                float chance = depth > 0.0f ? 0.25f + 0.5f * std::min(depth, 1.0f) : LONE_TREE_DENSITY;
+
+                // Groves: dense at the middle, thinning out
+                for (const Grove& grove : GROVES) {
+                    const glm::vec2 d = (center - grove.center) / grove.radius;
+                    chance = std::max(chance, 0.7f * std::exp(-glm::dot(d, d)));
+                }
+
+                if (rng.get<float>(0.0f, 1.0f) >= chance) continue;
+
+                const Position2D position = {
+                    center.x + rng.get<float>(-TREE_JITTER, TREE_JITTER),
+                    center.y + rng.get<float>(-TREE_JITTER, TREE_JITTER),
+                };
+                world.create_entity<Tree>(surface_id_, position, OAK);
+            }
+        }
+    }
+
     // Per side: soldier groups in front, archer groups behind them
     void spawn_sides_(Nezumi::Engine& engine) {
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
@@ -461,10 +556,11 @@ private:
         groups_.push_back(group_handle);
     }
 
+    // Everything but the trees
     void clear_world_(Nezumi::World& world) {
         std::vector<EntityHandle> doomed;
         world.each_entity([&](const Nezumi::Entity& entity) {
-            if (!entity.is_pending_remove()) doomed.push_back(entity.handle);
+            if (!entity.is_pending_remove() && !entity.is_type<Tree>()) doomed.push_back(entity.handle);
         });
         for (EntityHandle handle : doomed) world.remove_entity(handle);
 
@@ -554,8 +650,11 @@ private:
         const Nezumi::World& world = engine.world();
 
         std::array<size_t, SIDE_COUNT> units = {};
+        size_t                         trees = 0;
         world.each_entity([&](const Nezumi::Entity& entity) {
-            if (entity.is_alive() && entity.is_type<Unit>()) units[entity.faction_index()]++;
+            if (!entity.is_alive()) return;
+            if      (entity.is_type<Unit>()) units[entity.faction_index()]++;
+            else if (entity.is_type<Tree>()) trees++;
         });
 
         std::string text;
@@ -575,6 +674,8 @@ private:
             std::snprintf(line, sizeof line, "%-5s %4zu units\n", SIDES[f].name, units[f]);
             text += line;
         }
+        std::snprintf(line, sizeof line, "trees %4zu\n", trees);
+        text += line;
 
         const Render::Projection proj = projection_();
         if (has_cursor_) {
@@ -588,9 +689,17 @@ private:
             std::string_view name = "entity";
             if (entity->is_type<Unit>())      name = entity->as_type<Unit>()->config().name;
             if (entity->is_type<Character>()) name = entity->as_type<Character>()->config().name;
+            if (entity->is_type<Tree>())      name = entity->as_type<Tree>()->config().name;
             std::snprintf(line, sizeof line, "selected  %.*s at %.1f, %.1f\n",
                 static_cast<int>(name.size()), name.data(), entity->position.x, entity->position.y);
             text += line;
+
+            if (entity->is_type<Tree>()) {
+                const Tree* tree = entity->as_type<Tree>();
+                std::snprintf(line, sizeof line, "          wood %u / %u\n",
+                    static_cast<unsigned>(tree->amount), static_cast<unsigned>(tree->max_amount));
+                text += line;
+            }
         }
 
         text += "\nW/A/S/D: move  wheel: zoom  click: select  R: restart  ~: debug menu\n";

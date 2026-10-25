@@ -16,5 +16,6 @@ namespace Nightmourn::EntityTypes {
 inline constexpr Nezumi::EntityTypeID::value_t GAME_TYPE_BASE = 64;
 
 inline constexpr Nezumi::EntityTypeID Character{ GAME_TYPE_BASE + 0 };
+inline constexpr Nezumi::EntityTypeID Tree     { GAME_TYPE_BASE + 1 };
 
 } // namespace Nightmourn::EntityTypes

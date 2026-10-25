@@ -55,6 +55,7 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/DebugFlags.cpp
     src/Nightmourn/Draw/DrawContext.cpp
     src/Nightmourn/Draw/DrawUtils.cpp
+    src/Nightmourn/Draw/TreeDrawer.cpp
     src/Nightmourn/Draw/UnitDrawer.cpp
     src/Nightmourn/Draw/UnitGroupDrawer.cpp
     src/Nightmourn/Draw/WorldDrawer.cpp

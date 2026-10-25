@@ -9,6 +9,7 @@
 #include "Nezumi/World/Entities/UnitGroup.hpp"
 #include "Nezumi/World/Surface/Surface.hpp"
 #include "Nightmourn/Character/Character.hpp"
+#include "Nightmourn/Resource/Tree.hpp"
 
 namespace Nightmourn {
 
@@ -21,6 +22,7 @@ WorldDrawer::WorldDrawer(const Config& config)
     , units_      (config.units)
     , unit_groups_(config.unit_groups)
     , characters_ (config.characters)
+    , trees_      (config.trees)
 {}
 
 // -----------------------------------------------------------------------------
@@ -50,8 +52,9 @@ void WorldDrawer::draw(DrawContext& ctx, const Nezumi::Surface& surface) const {
 void WorldDrawer::draw_entity_(DrawContext& ctx, const Nezumi::Entity& entity) const {
     // TODO: a table of drawers indexed by EntityTypeID once there are more
     //       than a handful of types
-    if      (entity.is_type<Nezumi::Unit     >()) units_     .draw(ctx, *entity.as_type<Nezumi::Unit     >());
-    else if (entity.is_type<Character>()) characters_.draw(ctx, *entity.as_type<Character>());
+    if      (entity.is_type<Nezumi::Unit>()) units_     .draw(ctx, *entity.as_type<Nezumi::Unit>());
+    else if (entity.is_type<Character   >()) characters_.draw(ctx, *entity.as_type<Character   >());
+    else if (entity.is_type<Tree        >()) trees_     .draw(ctx, *entity.as_type<Tree        >());
 }
 
 // Groups aren't drawable (no sprite), and one sits in its anchor's chunk
