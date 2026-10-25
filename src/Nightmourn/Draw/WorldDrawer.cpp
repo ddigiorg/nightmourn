@@ -5,6 +5,7 @@
 #include "Nightmourn/Draw/WorldDrawer.hpp"
 #include "Nezumi/World/Chunk/Chunk.hpp"
 #include "Nezumi/World/Chunk/ChunkSpan.hpp"
+#include "Nezumi/World/Entities/Resource.hpp"
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entities/UnitGroup.hpp"
 #include "Nezumi/World/Surface/Surface.hpp"
@@ -21,6 +22,7 @@ WorldDrawer::WorldDrawer(const Config& config)
     , units_      (config.units)
     , unit_groups_(config.unit_groups)
     , characters_ (config.characters)
+    , resources_  (config.resources)
 {}
 
 // -----------------------------------------------------------------------------
@@ -50,8 +52,9 @@ void WorldDrawer::draw(DrawContext& ctx, const Nezumi::Surface& surface) const {
 void WorldDrawer::draw_entity_(DrawContext& ctx, const Nezumi::Entity& entity) const {
     // TODO: a table of drawers indexed by EntityTypeID once there are more
     //       than a handful of types
-    if      (entity.is_type<Nezumi::Unit     >()) units_     .draw(ctx, *entity.as_type<Nezumi::Unit     >());
-    else if (entity.is_type<Character>()) characters_.draw(ctx, *entity.as_type<Character>());
+    if      (entity.is_type<Nezumi::Unit    >()) units_     .draw(ctx, *entity.as_type<Nezumi::Unit    >());
+    else if (entity.is_type<Character       >()) characters_.draw(ctx, *entity.as_type<Character       >());
+    else if (entity.is_type<Nezumi::Resource>()) resources_ .draw(ctx, *entity.as_type<Nezumi::Resource>());
 }
 
 // Groups aren't drawable (no sprite), and one sits in its anchor's chunk

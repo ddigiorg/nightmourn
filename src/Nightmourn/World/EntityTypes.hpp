@@ -4,7 +4,7 @@
 // Nightmourn's entity type IDs: the single place they are assigned, so two
 // types can never share one.
 //
-// Nezumi's own types (Unit 1, UnitGroup 2) sit below GAME_TYPE_BASE. Game
+// Nezumi's own types (Unit 1, UnitGroup 2, Resource 3) sit below GAME_TYPE_BASE. Game
 // types start there, leaving the engine room to grow.
 // =============================================================================
 

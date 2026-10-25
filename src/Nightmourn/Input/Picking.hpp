@@ -10,11 +10,11 @@
 // Tiles are exact: the inverse projection lands on the one tile under the
 // cursor, with no "which half of the diamond" lookup.
 //
-// Figures are upright, so the ground point under the cursor is behind a
-// figure's feet, not on them. pick_figure() looks for feet in the strip of
-// ground a sprite can reach up from, tests each one's drawn sprite box
-// (figure_view_box, the one the drawers use), and returns the front-most hit:
-// the one drawn on top.
+// Sprites are upright, so the ground point under the cursor is behind an
+// entity's feet, not on them. pick_entity() looks for feet in the strip of
+// ground the tallest sprite can reach up from, tests each one's drawn sprite
+// box (sprite_bounds, the one the drawers use), and returns the front-most
+// hit: the one drawn on top.
 // =============================================================================
 
 #pragma once
@@ -44,9 +44,9 @@ Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
                           const Nezumi::Render::Projection& proj,
                           glm::vec2                         screen);
 
-// Front-most drawable figure (unit or character) whose sprite covers screen
-// position `screen`, or a null handle
-Nezumi::EntityHandle pick_figure(const Nezumi::Surface&            surface,
+// Front-most drawable entity with a sprite (unit, character, tree) that
+// covers screen position `screen`, or a null handle
+Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
                                  const Nezumi::Render::Camera&     camera,
                                  const Nezumi::Render::Projection& proj,
                                  glm::vec2                         screen);

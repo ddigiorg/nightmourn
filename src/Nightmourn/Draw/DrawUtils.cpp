@@ -4,8 +4,11 @@
 
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entity/EntityDamageable.hpp"
+#include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
+#include "Nightmourn/Resource/ResourceTypes.hpp"
 #include <cmath>   // atan2, cos, sin
 #include <utility> // swap
 
@@ -38,13 +41,23 @@ glm::vec4 FigureFrames::pick(glm::vec2 heading) const {
     return tex_box;
 }
 
-glm::vec4 figure_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos) {
-    const glm::vec2 feet = proj.to_view(pos);
-    return glm::vec4{ feet, feet } + FIGURE_SPRITE_BOUNDS * proj.tile_size().x;
+// -----------------------------------------------------------------------------
+// Sprites
+// -----------------------------------------------------------------------------
+
+const glm::vec4* sprite_bounds(const Nezumi::Entity& entity) {
+    if (entity.is_type<Nezumi::Unit>() || entity.is_type<Character>()) return &FIGURE_SPRITE_BOUNDS;
+    if (entity.is_type<Nezumi::Resource>() && is_tree(*entity.as_type<Nezumi::Resource>())) return &TREE_SPRITE_BOUNDS;
+    return nullptr;
 }
 
-void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                 const FigureFrames& frames, glm::vec2 pos, Nezumi::Position2D facing)
+glm::vec4 sprite_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos, glm::vec4 bounds) {
+    const glm::vec2 feet = proj.to_view(pos);
+    return glm::vec4{ feet, feet } + bounds * proj.tile_size().x;
+}
+
+void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
+                    glm::vec4 tex_box, glm::vec2 pos, glm::vec4 bounds)
 {
     // Sorted by the feet's view y: further up the screen draws first
     Nezumi::Render::DrawParams params = world_layer(DrawLayer::Entities);
@@ -52,12 +65,16 @@ void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
     params.order    = y_sort_order(ctx.to_view(pos).y);
 
     ctx.renderer.draw_sprite(
-        Nezumi::Render::Sprite{
-            .pos_box = figure_view_box(ctx.proj, pos),
-            .tex_box = frames.pick(ctx.proj.dir_to_heading(facing.to_vec2())),
-        },
+        Nezumi::Render::Sprite{ .pos_box = sprite_view_box(ctx.proj, pos, bounds), .tex_box = tex_box },
         params
     );
+}
+
+void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
+                 const FigureFrames& frames, glm::vec2 pos, Nezumi::Position2D facing)
+{
+    const glm::vec4 tex_box = frames.pick(ctx.proj.dir_to_heading(facing.to_vec2()));
+    draw_sprite_at(ctx, atlas, tex_box, pos, FIGURE_SPRITE_BOUNDS);
 }
 
 // -----------------------------------------------------------------------------
