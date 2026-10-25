@@ -8,6 +8,7 @@ namespace Nightmourn {
 
 std::string_view DebugFlags::name(DebugFlag flag) {
     switch (flag) {
+        case DebugFlag::ShowInfo:                return "show-info";
         case DebugFlag::ShowWorldGrid:           return "show-world-grid";
         case DebugFlag::ShowCollisionRectangles: return "show-collision-rectangles";
         case DebugFlag::ShowFacingArrows:        return "show-facing-arrows";
