@@ -17,7 +17,8 @@
 // - The tile under the mouse is outlined; clicking a figure selects it.
 //
 // Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
-// demo only sets up its atlas rows and draws the HUD. The debug overlays are
+// demo only sets up its atlas rows and draws the HUD. The debug overlays
+// (show-info among them: timings, cursor and view above the HUD) are
 // switched in the debug menu (src/Nightmourn/GUI/DebugMenu), drawn by
 // Nezumi's UI.
 //
@@ -40,6 +41,7 @@
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
 #include "Nightmourn/GUI/DebugMenu.hpp"
+#include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
@@ -53,6 +55,7 @@
 #include <glm/glm.hpp> // vec2, vec4
 #include <iostream>    // cerr
 #include <memory>      // unique_ptr, make_unique
+#include <optional>    // optional, nullopt
 #include <string>      // string, to_string
 #include <vector>      // vector
 
@@ -62,6 +65,7 @@ using Nightmourn::CharacterConfig;
 using Nightmourn::DebugFlags;
 using Nightmourn::DebugMenu;
 using Nightmourn::DrawContext;
+using Nightmourn::InfoOverlay;
 using Nightmourn::Player;
 using Nightmourn::WorldDrawer;
 
@@ -188,6 +192,10 @@ static constexpr FactionIndex RED = 0;
 static constexpr glm::vec4 HOVER_COLOR      = { 1.0f, 0.9f, 0.4f, 0.9f };
 static constexpr glm::vec4 SELECTION_COLOR  = { 0.4f, 1.0f, 0.5f, 1.0f };
 static constexpr float     SELECTION_RADIUS = 0.5f;  // tiles, wider than a figure
+
+// HUD text: distance from the screen's corner, and gap below show-info
+static constexpr float HUD_MARGIN = 8.0f;
+static constexpr float HUD_GAP    = 12.0f;
 
 constexpr Render::DrawParams DRAW_PARAMS_HUD = {
     .view  = Render::View::Screen,
@@ -360,7 +368,15 @@ public:
             draw_pointer_(ctx, !engine.input().is_mouse_captured());
         }
 
-        draw_hud_(r, engine);
+        // show-info takes the top-left corner; the HUD goes below it
+        info_overlay_.update(engine);
+        float hud_top = screen_top_() - HUD_MARGIN;
+        if (debug_flags_.is_on(Nightmourn::DebugFlag::ShowInfo)) {
+            const std::optional<glm::vec2> cursor = has_cursor_ ? std::optional(cursor_) : std::nullopt;
+            hud_top = info_overlay_.draw(engine, *world_camera_, proj, cursor) - HUD_GAP;
+        }
+
+        draw_hud_(r, engine, hud_top);
         debug_menu_.draw(*engine.ui(), debug_flags_);
     }
 
@@ -515,7 +531,12 @@ private:
     // Draw HUD
     // -------------------------------------------------------------------------
 
-    void draw_hud_(Render::Renderer* r, Nezumi::Engine& engine) {
+    // Top edge of the screen view (points, y up). Its camera is sized in
+    // pixels, get_scale() of them per point.
+    float screen_top_() const { return screen_camera_->get_size().y / screen_camera_->get_scale(); }
+
+    // `top`: screen-view y of the HUD's first line
+    void draw_hud_(Render::Renderer* r, Nezumi::Engine& engine, float top) {
         const Nezumi::World& world = engine.world();
 
         std::array<size_t, SIDE_COUNT> units = {};
@@ -562,7 +583,7 @@ private:
 
         r->draw_text(
             text,
-            { 8.0f, screen_camera_->get_size().y - 8.0f },
+            { HUD_MARGIN, top },
             *font_,
             Render::TextStyle {
                 .size          = 16.0f,
@@ -589,6 +610,7 @@ private:
     std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;
     DebugFlags                        debug_flags_       = {};
     DebugMenu                         debug_menu_        = {};
+    InfoOverlay                       info_overlay_      = {};
 
     // Mouse
     std::array<EventListenerID, 2> mouse_listeners_ = {};

@@ -1,10 +1,10 @@
 // =============================================================================
 // Draw/DebugFlags.hpp
 //
-// Visual debug options, like Factorio's F4 menu (show-world-grid,
+// Visual debug options, like Factorio's F4 menu (show-info, show-world-grid,
 // show-collision-rectangles, ...). Each flag turns on one overlay in the
-// drawers, or changes how the world is viewed (use-top-down-view); none of
-// them changes the simulation.
+// drawers or the HUD (show-info, see GUI/InfoOverlay), or changes how the
+// world is viewed (use-top-down-view); none of them changes the simulation.
 //
 // The game owns one DebugFlags and hands it to the drawers through the
 // DrawContext, so there is no global state for a future draw thread to race
@@ -23,6 +23,7 @@
 namespace Nightmourn {
 
 enum class DebugFlag : std::uint8_t {
+    ShowInfo,                // timings, cursor and view in the top-left corner
     ShowWorldGrid,           // 1 px lines between tiles, 3 px on chunk edges
     ShowCollisionRectangles, // collision box of every collidable entity
     ShowFacingArrows,        // arrow on units and characters, the way they face
