@@ -22,10 +22,10 @@ UIAtlas UIAtlas::load(Nezumi::Render::Renderer& renderer) {
 
     UIAtlas a;
     a.eagle   = image(P::Eagle);
-    a.plate   = { image(P::Plate),  { 24.0f, 20.0f, 24.0f, 20.0f } };
-    a.slot    = { image(P::Slot),   {  8.0f,  8.0f,  8.0f,  8.0f } };
-    a.rim     = { image(P::Rim),    {  8.0f,  8.0f,  8.0f,  8.0f } };
-    a.button  = { image(P::Button), {  6.0f,  6.0f,  6.0f,  6.0f } };
+    a.plate   = { image(P::Plate),  { 8.0f, 8.0f, 8.0f, 8.0f } };
+    a.slot    = { image(P::Slot),   { 4.0f, 4.0f, 4.0f, 4.0f } };
+    a.rim     = { image(P::Rim),    { 4.0f, 4.0f, 4.0f, 4.0f } };
+    a.button  = { image(P::Button), { 4.0f, 4.0f, 4.0f, 4.0f } };
     a.divider = image(P::Divider);
     a.fill    = image(P::Fill);
 

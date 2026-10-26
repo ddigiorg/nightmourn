@@ -24,18 +24,18 @@ import math
 import numpy as np
 from PIL import Image, ImageDraw
 
-ATLAS_W, ATLAS_H = 2048, 288
+ATLAS_W, ATLAS_H = 1312, 208
 
 # Pixel boxes { x0, y0, x1, y1 }, matching GUI/UIAtlas.hpp
-EAGLE   = (0, 0, 192, 272)          # 96 x 136 pt, faces right (inward on the left)
-PLATE   = (200, 0, 1580, 140)       # 690 x 70 pt
-SLOT    = (200, 148, 280, 228)      # 40 x 40 pt, socket under the icon
-RIM     = (288, 148, 368, 228)      # 40 x 40 pt, bevelled rim over the icon
-BUTTON  = (376, 148, 432, 204)      # 28 x 28 pt
-DIVIDER = (440, 148, 472, 228)      # 16 x 40 pt
-FILL    = (480, 148, 496, 172)      # 8 x 12 pt, hp bar fill (white, tinted in game)
-MENU_ICONS_AT = (504, 148)          # 7 x (40 x 40 px), 48 px apart
-ITEM_ICONS_AT = (848, 148)          # 4 x (72 x 72 px), 80 px apart
+EAGLE   = (0, 0, 140, 120)          # 70 x 60 pt, crouched, faces right (inward on the left)
+PLATE   = (148, 0, 1298, 100)       # 575 x 50 pt
+SLOT    = (0, 128, 72, 200)         # 36 x 36 pt, socket under the icon
+RIM     = (80, 128, 152, 200)       # 36 x 36 pt, thin bevelled rim over the icon
+BUTTON  = (160, 128, 204, 192)      # 22 x 32 pt, rectangular menu button
+DIVIDER = (212, 128, 228, 200)      # 8 x 36 pt
+FILL    = (236, 128, 252, 142)      # 8 x 7 pt, hp bar fill (white, tinted in game)
+MENU_ICONS_AT = (260, 128)          # 7 x (40 x 40 px), 48 px apart
+ITEM_ICONS_AT = (604, 128)          # 4 x (72 x 72 px), 80 px apart
 MENU_ICONS = ["skills", "equipment", "inventory", "items", "options", "debug", "main"]
 ITEMS      = ["wood", "stone", "gold", "food"]
 
@@ -193,15 +193,15 @@ def outline(rgba, alpha, width, color=(0.04, 0.06, 0.09), strength=0.85):
 # ------------------------------------------------------------------------------
 # Eagle
 #
-# A perched eagle in profile, facing right, on a stone plinth: the far wing
-# raised behind it, the near wing folded over its side, the tail fanned
-# down behind the plinth. Coordinates are in 1x frame pixels (192 x 272) and
-# scaled by S for supersampling.
+# A stone eagle crouched on a low plinth like a gargoyle, facing right: wings
+# folded, shoulders hunched, head thrust forward over its talons, tail down
+# behind it. Only a little taller than the bar it guards. Coordinates are in
+# 1x frame pixels (140 x 120) and scaled by S for supersampling.
 # ------------------------------------------------------------------------------
 
 def gen_eagle():
-    S = 3
-    W, H = 192 * S, 272 * S
+    S = 4
+    W, H = 140 * S, 120 * S
     x, y = grid(W, H)
     x /= S
     y /= S
@@ -209,171 +209,110 @@ def gen_eagle():
     height = np.zeros((H, W))
     alpha  = np.zeros((H, W))
 
-    def add(mask, base, amp, r, detail=None):
+    def add(mask, base, amp, r):
         nonlocal height, alpha
         hm = base + amp * pillow(mask, r * S)
-        if detail is not None:
-            hm = hm + detail * mask
         height = np.where(mask > 0.5, np.maximum(height, hm), height)
         alpha = np.maximum(alpha, mask)
 
-    # Plinth: a carved block the eagle grips, its top at y=204
-    plinth = round_rect_mask(x, y, 54, 206, 192, 272, 4)
-    cap    = round_rect_mask(x, y, 46, 196, 192, 214, 4)
-    add(plinth, 0.10, 0.35, 5)
-    add(cap, 0.20, 0.40, 4)
-    # Engraved band across the plinth
-    band = round_rect_mask(x, y, 70, 232, 186, 238, 2)
-    height -= 0.18 * band
+    # Plinth: a low block along the bottom, running under the bar's end
+    add(round_rect_mask(x, y, 14, 100, 140, 120, 3), 0.10, 0.30, 4)
+    add(round_rect_mask(x, y, 8, 92, 140, 104, 3), 0.20, 0.35, 3)
 
-    # Tail: fanned feathers, down and back
-    tail = np.zeros((H, W))
-    for k in range(5):
-        ang = math.radians(118 + k * 9)
-        p0 = (82, 170)
-        p1 = (82 + 62 * math.cos(ang), 170 + 62 * math.sin(ang))
-        tail = np.maximum(tail, capsule_mask(x, y, p0, p1, 6, 8))
-    add(tail, 0.22, 0.30, 4)
-
-    # Far wing, raised behind the body: coverts from the shoulder to the
-    # wrist, then long primaries fanning up and back from the wrist and
-    # secondaries down its trailing edge, each its own shingled feather so
-    # the gaps between them read as carved grooves
-    wrist = (76, 58)
-    coverts = poly_mask(W, H, [(118, 104), (106, 76), (88, 56), (72, 54), (62, 66),
-                                (62, 90), (74, 116), (96, 132)], S)
-    add(coverts, 0.20, 0.26, 7)
-    feathers = [
-        # (base, angle in degrees, length, base radius) from the outside in
-        (wrist, -100, 52, 8.0), (wrist, -116, 58, 8.5), (wrist, -132, 60, 8.5),
-        (wrist, -148, 58, 8.5), ((74, 66), -164, 60, 8.5), ((74, 76), -180, 54, 8.5),
-        ((78, 88), -194, 48, 8.5), ((84, 100), -206, 44, 8.5), ((90, 110), -216, 40, 8.0),
-        ((96, 120), -224, 34, 7.5),
-    ]
-    for k, (b, ang, length, r) in enumerate(feathers):
-        a = math.radians(ang)
-        tip = (b[0] + length * math.cos(a), b[1] + length * math.sin(a))
-        f = capsule_mask(x, y, b, tip, r, 6.0)
-        add(f, 0.10 + 0.012 * k, 0.24, 3)
-        shaft = capsule_mask(x, y, b, (b[0] + 0.85 * length * math.cos(a), b[1] + 0.85 * length * math.sin(a)), 0.7, 0.4)
-        height -= 0.06 * shaft * f
-    # Rows of small covert feathers over the base of the primaries
-    for k in range(6):
-        t = k / 5
-        c = (72 + 22 * t, 66 + 50 * t)
-        cov = ellipse_mask(x, y, c[0] - 8, c[1] + 4, 13, 6, math.radians(-120 + 40 * t))
-        add(cov * coverts, 0.30 + 0.01 * k, 0.16, 3)
-
-    # Body: a tilted egg, chest to the right
-    body = ellipse_mask(x, y, 112, 146, 36, 54, math.radians(-14))
-    add(body, 0.40, 0.50, 22)
-
-    # Legs and talons gripping the plinth's edge
-    thigh = ellipse_mask(x, y, 126, 186, 20, 16, math.radians(-20))
-    add(thigh, 0.50, 0.30, 6)
-    for k, tx in enumerate([116, 132, 148]):
-        toe = capsule_mask(x, y, (tx - 6, 196), (tx + 4, 204), 4.0, 2.5)
-        add(toe, 0.55, 0.25, 2)
-
-    # Near wing, folded over the side, its long feathers sweeping to the tail
-    fold = poly_mask(W, H, [(126, 104), (104, 104), (86, 126), (74, 160), (66, 190),
-                             (80, 188), (100, 170), (122, 140)], S)
-    add(fold, 0.62, 0.30, 10)
+    # Tail: feathers fanned down behind the plinth
     for k in range(4):
-        t = k / 3
-        p0 = (112 - 16 * t, 118 + 12 * t)
-        p1 = (70 + 8 * t, 186 - 4 * t)
-        f = capsule_mask(x, y, p0, p1, 6, 3.5)
-        add(f * fold, 0.66 + 0.02 * k, 0.22, 3)
+        ang = math.radians(128 + k * 12)
+        p0 = (40, 74)
+        p1 = (40 + 34 * math.cos(ang), 74 + 34 * math.sin(ang))
+        add(capsule_mask(x, y, p0, p1, 5, 6), 0.22 + 0.01 * k, 0.26, 3)
 
-    # Neck and head: hackles ruffled at the nape, a flat crown, a heavy brow
-    # over the eye, and a big beak hooked down and forward
-    neck = ellipse_mask(x, y, 132, 98, 22, 30, math.radians(20))
-    add(neck, 0.55, 0.40, 14)
+    # Body: hunched, chest forward
+    add(ellipse_mask(x, y, 66, 62, 36, 26, math.radians(-18)), 0.40, 0.50, 16)
+
+    # Folded wing over the back: a raised shoulder, then long feathers
+    # sweeping down to the tail
+    add(ellipse_mask(x, y, 62, 40, 26, 15, math.radians(-12)), 0.60, 0.30, 8)
+    wing = poly_mask(W, H, [(88, 36), (60, 26), (36, 36), (18, 58), (8, 84), (22, 86),
+                            (48, 72), (80, 58)], S)
+    add(wing, 0.66, 0.26, 6)
     for k in range(5):
         t = k / 4
-        b = (128 - 6 * t, 70 + 14 * t)
-        tip = (b[0] - 14 + 2 * t, b[1] + 12)
-        add(capsule_mask(x, y, b, tip, 5.5, 2.0), 0.60 + 0.02 * k, 0.20, 3)
-    head = ellipse_mask(x, y, 146, 68, 24, 17, math.radians(-6))
-    add(head, 0.70, 0.40, 12)
-    beak = poly_mask(W, H, [(154, 58), (170, 56), (182, 60), (190, 70), (190, 82), (184, 90),
-                             (182, 80), (174, 76), (162, 80), (154, 76)], S)
-    add(beak, 0.80, 0.34, 4)
-    cere = capsule_mask(x, y, (158, 60), (162, 76), 3.0, 3.0)
-    add(cere * beak, 0.92, 0.10, 2)
+        p0 = (70 - 18 * t, 40 + 6 * t)
+        p1 = (14 + 14 * t, 82 - 6 * t)
+        add(capsule_mask(x, y, p0, p1, 5.5, 3.0) * wing, 0.70 + 0.025 * k, 0.20, 3)
+    # Scalloped coverts on the shoulder
+    for k in range(4):
+        c = (78 - 12 * k, 38 + 4 * k)
+        add(ellipse_mask(x, y, c[0], c[1], 9, 6, math.radians(-30)) *
+            (ellipse_mask(x, y, 62, 40, 26, 15, math.radians(-12)) > 0.5), 0.86 + 0.01 * k, 0.12, 2)
 
-    # Heavy brow over a deep-set eye, and the gape line under it
-    brow = capsule_mask(x, y, (136, 56), (160, 59), 4.0, 3.0)
-    add(brow, 1.00, 0.12, 2)
-    eye = ellipse_mask(x, y, 150, 65, 3.4, 3.0)
-    height -= 0.30 * eye
-    mouth = capsule_mask(x, y, (150, 74), (178, 74), 1.0, 0.8)
-    height -= 0.12 * mouth
+    # Legs and talons gripping the plinth's edge
+    add(ellipse_mask(x, y, 96, 80, 14, 11, math.radians(-15)), 0.55, 0.30, 5)
+    for tx in (94, 106, 118):
+        add(capsule_mask(x, y, (tx - 5, 88), (tx + 3, 95), 3.6, 2.2), 0.60, 0.22, 2)
 
-    # Feather texture: rows of small scales down the chest and neck
-    ruff = ((body + neck) > 0.5) & (fold < 0.5) & (head < 0.5)
-    rows = (y + 3.0 * np.sin(x * 0.55)) / 7.0
-    scale = (rows - np.floor(rows))
-    height -= 0.05 * scale * ruff
+    # Neck thrust forward, the head low and level with the shoulders
+    add(ellipse_mask(x, y, 98, 34, 15, 17, math.radians(40)), 0.62, 0.38, 9)
+    for k in range(4):
+        b = (96 - 4 * k, 18 + 6 * k)
+        add(capsule_mask(x, y, b, (b[0] - 11, b[1] + 8), 4.5, 1.8), 0.66 + 0.02 * k, 0.18, 2)
+    add(ellipse_mask(x, y, 110, 17, 15, 11, math.radians(-4)), 0.76, 0.36, 8)
+    beak = poly_mask(W, H, [(117, 9), (128, 8), (136, 13), (139, 21), (137, 29), (133, 33),
+                            (131, 25), (125, 22), (118, 25)], S)
+    add(beak, 0.84, 0.30, 3)
+    add(capsule_mask(x, y, (106, 9), (121, 11), 3.0, 2.2), 1.02, 0.10, 2)  # brow
+    height -= 0.30 * ellipse_mask(x, y, 116, 15, 2.4, 2.1)                  # eye
+    height -= 0.12 * capsule_mask(x, y, (116, 21), (131, 21), 0.8, 0.6)     # gape
 
-    height = blur(height, 1.0 * S) * 0.5 + height * 0.5
+    # Feather texture: rows of small scales down the chest
+    chest = (ellipse_mask(x, y, 66, 62, 36, 26, math.radians(-18)) > 0.5) & (wing < 0.5)
+    rows = (y + 2.5 * np.sin(x * 0.6)) / 5.0
+    height -= 0.05 * (rows - np.floor(rows)) * chest
 
-    rgba = shade_stone(height, alpha, seed=11, relief=48.0 * S / 3, grain=0.10, base=0.50,
-                       contrast=0.95, ao_radius=5 * S, ao_strength=3.0)
-    # The eye glints faintly, like the moon in wet stone
-    glint = ellipse_mask(x, y, 149.2, 63.8, 1.1, 1.0)
+    height = blur(height, 0.8 * S) * 0.5 + height * 0.5
+
+    rgba = shade_stone(height, alpha, seed=11, relief=13.0 * S, grain=0.10, base=0.46,
+                       contrast=0.95, ao_radius=4 * S, ao_strength=3.0)
+    glint = ellipse_mask(x, y, 115.4, 14.2, 0.8, 0.7)
     rgba[..., :3] = rgba[..., :3] * (1 - glint[..., None]) + hexc("#d8ecff") * glint[..., None]
-    rgba = outline(rgba, alpha, 1.5 * S)
+    rgba = outline(rgba, alpha, 1.2 * S)
     return to_image(rgba, S)
 
 
 # ------------------------------------------------------------------------------
-# Backplate: a long stone slab with bevelled top and bottom edges and a thin
-# moonlit line along its top. The slots sit on its middle.
+# Backplate: a dark stone strip with a thin bevelled rim. Almost all of it is
+# covered by the bar, the slots and the buttons, so it only shows as the
+# narrow seams between them.
 # ------------------------------------------------------------------------------
 
 def gen_plate():
     w, h = PLATE[2] - PLATE[0], PLATE[3] - PLATE[1]
     x, y = grid(w, h)
-    slab = round_rect_mask(x, y, 0, 0, w, h, 10)
-    height = 0.30 + 0.40 * pillow(slab, 8)
-    alpha = slab
-
-    # Recessed groove the hp bar sits in, along the top, and the wider
-    # channel the slots and buttons sit in (see ActionBar.cpp's layout)
-    groove  = round_rect_mask(x, y, 44, 10, w - 44, 38, 6)
-    channel = round_rect_mask(x, y, 40, 44, w - 40, h - 8, 8)
-    height -= 0.22 * pillow(groove, 4)
-    height -= 0.22 * pillow(channel, 5)
-
-    # Engraved lines along the top and bottom rims
-    for yy in (5, h - 4):
-        line = round_rect_mask(x, y, 22, yy - 1, w - 22, yy + 1, 1)
-        height -= 0.08 * line
-
-    rgba = shade_stone(height, alpha, seed=21, relief=12.0, grain=0.10, base=0.30,
-                       contrast=0.60, ao_radius=8, ao_strength=1.6)
-    rgba = outline(rgba, alpha, 1.5)
+    slab = round_rect_mask(x, y, 0, 0, w, h, 5)
+    height = 0.30 + 0.30 * pillow(slab, 4)
+    # Seam between the hp bar and the slot row
+    height -= 0.10 * round_rect_mask(x, y, 6, 19, w - 6, 21, 1)
+    rgba = shade_stone(height, slab, seed=21, relief=12.0, grain=0.10, base=0.22,
+                       contrast=0.55, ao_radius=4, ao_strength=1.2, rim=0.30)
+    rgba = outline(rgba, slab, 1.2)
     return to_image(rgba)
 
 
 # ------------------------------------------------------------------------------
-# Slots, buttons, divider
+# Slots, buttons, divider: thin frames, so the icons take nearly all the room
 # ------------------------------------------------------------------------------
 
 def gen_slot():
     s = SLOT[2] - SLOT[0]
     x, y = grid(s, s)
-    outer = round_rect_mask(x, y, 0, 0, s, s, 6)
-    inner = round_rect_mask(x, y, 5, 5, s - 5, s - 5, 5)
-    height = 0.6 * pillow(outer, 4) - 0.45 * pillow(inner, 3)
-    rgba = shade_stone(height, outer, seed=31, relief=10.0, grain=0.05, base=0.38,
-                       contrast=0.6, ao_radius=4, ao_strength=1.0)
-    # The empty socket: a dark, faintly blue hollow, lighter at the bottom
+    outer = round_rect_mask(x, y, 0, 0, s, s, 3)
+    inner = round_rect_mask(x, y, 4, 4, s - 4, s - 4, 3)
+    height = 0.5 * pillow(outer, 2) - 0.4 * pillow(inner, 2)
+    rgba = shade_stone(height, outer, seed=31, relief=10.0, grain=0.05, base=0.30,
+                       contrast=0.6, ao_radius=3, ao_strength=1.0)
     hollow = inner[..., None]
-    depth = np.clip((y - 5) / (s - 10), 0, 1)[..., None]
-    socket = hexc("#070a10") * (1 - depth) + hexc("#121a26") * depth
+    depth = np.clip((y - 4) / (s - 8), 0, 1)[..., None]
+    socket = hexc("#06080d") * (1 - depth) + hexc("#0f151f") * depth
     rgba[..., :3] = rgba[..., :3] * (1 - hollow) + socket * hollow
     return to_image(rgba)
 
@@ -381,41 +320,44 @@ def gen_slot():
 def gen_rim():
     s = RIM[2] - RIM[0]
     x, y = grid(s, s)
-    outer = round_rect_mask(x, y, 0, 0, s, s, 6)
-    inner = round_rect_mask(x, y, 5, 5, s - 5, s - 5, 5)
+    outer = round_rect_mask(x, y, 0, 0, s, s, 3)
+    inner = round_rect_mask(x, y, 4, 4, s - 4, s - 4, 3)
     ring = np.clip(outer - inner, 0, 1)
-    height = 0.6 * pillow(outer, 4) * ring
-    rgba = shade_stone(height, ring, seed=32, relief=14.0, grain=0.05, base=0.42,
-                       contrast=0.7, ao_radius=3, ao_strength=0.6, rim=0.35)
-    # Inner shadow onto the icon, so it sits under the rim
-    shadow = np.clip(blur(1.0 - inner, 3) * inner, 0, 1) * 0.8
+    height = 0.6 * pillow(outer, 2) * ring
+    rgba = shade_stone(height, ring, seed=32, relief=16.0, grain=0.05, base=0.36,
+                       contrast=0.8, ao_radius=2, ao_strength=0.6, rim=0.35)
+    shadow = np.clip(blur(1.0 - inner, 2) * inner, 0, 1) * 0.7
     rgba[..., 3] = np.maximum(rgba[..., 3], shadow)
     rgba[..., :3] = np.where((ring < 0.5)[..., None], 0.0, rgba[..., :3])
     return to_image(rgba)
 
 
 def gen_button():
-    s = BUTTON[2] - BUTTON[0]
-    x, y = grid(s, s)
-    outer = round_rect_mask(x, y, 0, 0, s, s, 8)
-    face  = round_rect_mask(x, y, 4, 4, s - 4, s - 4, 6)
-    height = 0.45 * pillow(outer, 4) + 0.25 * pillow(face, 8)
-    rgba = shade_stone(height, outer, seed=41, relief=10.0, grain=0.07, base=0.42,
-                       contrast=0.6, ao_radius=4, ao_strength=1.0)
-    rgba = outline(rgba, outer, 1.5)
+    w, h = BUTTON[2] - BUTTON[0], BUTTON[3] - BUTTON[1]
+    x, y = grid(w, h)
+    outer = round_rect_mask(x, y, 0, 0, w, h, 4)
+    face  = round_rect_mask(x, y, 4, 4, w - 4, h - 4, 3)
+    height = 0.5 * pillow(outer, 2) - 0.25 * pillow(face, 3)
+    rgba = shade_stone(height, outer, seed=41, relief=12.0, grain=0.06, base=0.32,
+                       contrast=0.7, ao_radius=3, ao_strength=1.0, rim=0.3)
+    # A dark face, lit faintly from the top, for the icon to sit on
+    depth = np.clip((y - 4) / (h - 8), 0, 1)[..., None]
+    face_c = hexc("#1a2230") * (1 - depth) + hexc("#0b1018") * depth
+    rgba[..., :3] = rgba[..., :3] * (1 - face[..., None]) + face_c * face[..., None]
+    rgba = outline(rgba, outer, 1.0)
     return to_image(rgba)
 
 
 def gen_divider():
     w, h = DIVIDER[2] - DIVIDER[0], DIVIDER[3] - DIVIDER[1]
     x, y = grid(w, h)
-    # A carved diamond-topped pillar between the slots and the buttons
-    shaft = round_rect_mask(x, y, w / 2 - 4, 10, w / 2 + 4, h - 10, 3)
-    gem = poly_mask(w, h, [(w / 2, h / 2 - 14), (w / 2 + 10, h / 2), (w / 2, h / 2 + 14), (w / 2 - 10, h / 2)])
+    # A carved diamond on a thin pillar between the slots and the buttons
+    shaft = round_rect_mask(x, y, w / 2 - 2, 4, w / 2 + 2, h - 4, 2)
+    gem = poly_mask(w, h, [(w / 2, h / 2 - 9), (w / 2 + 6, h / 2), (w / 2, h / 2 + 9), (w / 2 - 6, h / 2)])
     alpha = np.maximum(shaft, gem)
-    height = np.maximum(0.4 * pillow(shaft, 3), 0.6 * pillow(gem, 5))
+    height = np.maximum(0.4 * pillow(shaft, 2), 0.6 * pillow(gem, 3))
     rgba = shade_stone(height, alpha, seed=51, relief=10.0, grain=0.05, base=0.45, contrast=0.7,
-                       ao_radius=3, ao_strength=0.6, rim=0.35)
+                       ao_radius=2, ao_strength=0.6, rim=0.35)
     rgba = outline(rgba, alpha, 1.0)
     return to_image(rgba)
 
@@ -425,7 +367,7 @@ def gen_fill():
     _, y = grid(w, h)
     t = y / h
     # White, lit from above: a bright top edge, a soft band, darker below
-    v = 0.78 + 0.22 * np.exp(-((t - 0.18) / 0.12) ** 2) - 0.30 * t
+    v = 0.80 + 0.20 * np.exp(-((t - 0.25) / 0.15) ** 2) - 0.30 * t
     v = np.where(t < 1.5 / h, 1.0, v)
     rgba = np.dstack([v, v, v, np.ones_like(v)])
     return to_image(rgba)

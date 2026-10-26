@@ -4,7 +4,7 @@
 // Nightmourn's UI art: one atlas, assets/graphics/ui.png, made by
 // tools/gen_ui.py (placeholder art until hand-drawn sprites replace it at
 // the same pixel boxes). Painted at 2x, so every image is drawn at density 2:
-// a 192x272 px eagle is 96x136 UI points.
+// a 140x120 px eagle is 70x60 UI points.
 //
 //   ui_atlas_ = Nightmourn::UIAtlas::load(*engine.renderer());
 //   ui.draw_image(rect, ui_atlas_.eagle);
@@ -40,18 +40,18 @@ inline constexpr std::size_t MENU_COUNT = 7;
 
 namespace UIAtlasPixels {
     // { x0, y0, x1, y1 } in assets/graphics/ui.png, y down
-    constexpr glm::vec4 Eagle   = {   0.0f,   0.0f,  192.0f, 272.0f }; // faces right
-    constexpr glm::vec4 Plate   = { 200.0f,   0.0f, 1580.0f, 140.0f };
-    constexpr glm::vec4 Slot    = { 200.0f, 148.0f,  280.0f, 228.0f };
-    constexpr glm::vec4 Rim     = { 288.0f, 148.0f,  368.0f, 228.0f };
-    constexpr glm::vec4 Button  = { 376.0f, 148.0f,  432.0f, 204.0f };
-    constexpr glm::vec4 Divider = { 440.0f, 148.0f,  472.0f, 228.0f };
-    constexpr glm::vec4 Fill    = { 480.0f, 148.0f,  496.0f, 172.0f };
+    constexpr glm::vec4 Eagle   = {   0.0f,   0.0f,  140.0f, 120.0f }; // crouched, faces right
+    constexpr glm::vec4 Plate   = { 148.0f,   0.0f, 1298.0f, 100.0f };
+    constexpr glm::vec4 Slot    = {   0.0f, 128.0f,   72.0f, 200.0f };
+    constexpr glm::vec4 Rim     = {  80.0f, 128.0f,  152.0f, 200.0f };
+    constexpr glm::vec4 Button  = { 160.0f, 128.0f,  204.0f, 192.0f }; // rectangular, 22x32 pt
+    constexpr glm::vec4 Divider = { 212.0f, 128.0f,  228.0f, 200.0f };
+    constexpr glm::vec4 Fill    = { 236.0f, 128.0f,  252.0f, 142.0f };
 
     // One 40x40 px glyph per Menu, 48 px apart; one 72x72 px icon per item
     // (Items::Wood, Stone, Gold, Food), 80 px apart
-    constexpr glm::vec2 MenuIcons = { 504.0f, 148.0f };
-    constexpr glm::vec2 ItemIcons = { 848.0f, 148.0f };
+    constexpr glm::vec2 MenuIcons = { 260.0f, 128.0f };
+    constexpr glm::vec2 ItemIcons = { 604.0f, 128.0f };
     constexpr std::size_t ITEM_ICON_COUNT = 4;
 }
 

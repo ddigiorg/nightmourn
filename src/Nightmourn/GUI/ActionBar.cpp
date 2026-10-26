@@ -31,36 +31,44 @@ using glm::vec4;
 // -----------------------------------------------------------------------------
 
 namespace {
-    constexpr vec2  EAGLE_SIZE    = { 96.0f, 136.0f };
-    constexpr float EAGLE_OVERLAP = 16.0f;              // over each end of the slab
-    constexpr vec2  PLATE_SIZE    = { 690.0f, 70.0f };
+    // The eagles stand only a little taller than the slab, crouched over
+    // its ends; the slab wastes no room around what it holds
+    constexpr vec2  EAGLE_SIZE    = { 70.0f, 60.0f };
+    constexpr float EAGLE_OVERLAP = 6.0f;               // over each end of the slab
+    constexpr vec2  PLATE_SIZE    = { 575.0f, 50.0f };
     constexpr float PLATE_X       = EAGLE_SIZE.x - EAGLE_OVERLAP;
     constexpr float PLATE_Y       = EAGLE_SIZE.y - PLATE_SIZE.y;
     constexpr vec2  BAR_SIZE      = { PLATE_SIZE.x + 2.0f * PLATE_X, EAGLE_SIZE.y };
 
-    constexpr float INSET         = 24.0f;              // slab edge to its contents
+    constexpr float INSET         = 4.0f;               // slab edge to its contents
     constexpr float CONTENT_X     = PLATE_X + INSET;
     constexpr float CONTENT_W     = PLATE_SIZE.x - 2.0f * INSET;
 
-    constexpr float HP_Y          = PLATE_Y + 6.0f;
-    constexpr float HP_H          = 12.0f;
+    // A thin hp bar along the top, split into tenths like WoW's xp bar
+    constexpr float HP_Y          = PLATE_Y + 3.0f;
+    constexpr float HP_H          = 6.0f;
+    constexpr int   HP_SEGMENTS   = 10;
 
-    constexpr vec2  SLOT_SIZE     = { 40.0f, 40.0f };
-    constexpr float SLOT_GAP      = 2.0f;
-    constexpr float SLOTS_Y       = PLATE_Y + 24.0f;
+    constexpr vec2  SLOT_SIZE     = { 36.0f, 36.0f };
+    constexpr float SLOT_GAP      = 3.0f;
+    constexpr float SLOTS_Y       = PLATE_Y + 11.0f;
     constexpr float SLOTS_W       = ActionBar::SLOT_COUNT * SLOT_SIZE.x + (ActionBar::SLOT_COUNT - 1) * SLOT_GAP;
 
-    constexpr float DIVIDER_W     = 16.0f;
-    constexpr float BUTTON        = 28.0f;
-    constexpr float BUTTON_GAP    = 2.0f;
+    // Rectangular menu buttons, like WoW's micro menu
+    constexpr float DIVIDER_W     = 8.0f;
+    constexpr vec2  BUTTON        = { 22.0f, 32.0f };
+    constexpr float BUTTON_GAP    = 3.0f;
     constexpr float BUTTONS_X     = CONTENT_X + SLOTS_W + DIVIDER_W;
-    constexpr float BUTTONS_Y     = SLOTS_Y + (SLOT_SIZE.y - BUTTON) * 0.5f;
+    constexpr float BUTTONS_Y     = SLOTS_Y + (SLOT_SIZE.y - BUTTON.y) * 0.5f;
+    constexpr float ICON_SIZE     = 18.0f;
 
-    static_assert(SLOTS_W + DIVIDER_W + MENU_COUNT * BUTTON + (MENU_COUNT - 1) * BUTTON_GAP == CONTENT_W,
+    static_assert(SLOTS_W + DIVIDER_W + MENU_COUNT * BUTTON.x + (MENU_COUNT - 1) * BUTTON_GAP == CONTENT_W,
                   "slots, divider and buttons fill the slab");
+    static_assert(SLOTS_Y + SLOT_SIZE.y + 3.0f == EAGLE_SIZE.y, "3 points under the slots");
 
     // Colors
     constexpr vec4 HP_TRACK      = { 0.03f, 0.04f, 0.07f, 1.00f };
+    constexpr vec4 HP_TICK       = { 0.20f, 0.24f, 0.30f, 1.00f };
     constexpr vec4 HP_BORDER     = { 0.01f, 0.02f, 0.03f, 1.00f };
     constexpr vec4 HP_FILL       = { 0.74f, 0.13f, 0.12f, 1.00f };
     constexpr vec4 HP_TEXT       = { 0.95f, 0.95f, 0.97f, 1.00f };
@@ -150,16 +158,24 @@ void ActionBar::draw(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
 }
 
 void ActionBar::draw_hp_bar_(Nezumi::UI::Context& ui, const Rect& r, const Character* hero) {
-    ui.draw_rect(r, HP_TRACK, 3.0f, HP_BORDER, 1.0f);
+    ui.draw_rect(r, HP_TRACK, 2.0f, HP_BORDER, 1.0f);
 
     const float frac = hero && hero->max_health > 0
         ? std::clamp(static_cast<float>(hero->health) / static_cast<float>(hero->max_health), 0.0f, 1.0f)
         : 0.0f;
-    if (frac <= 0.0f) return;
 
     const Rect inner = r.shrink({ 1.0f, 1.0f });
-    const Rect fill  = { inner.min, { inner.min.x + std::round(inner.width() * frac), inner.max.y } };
-    ui.draw_image(fill, atlas_->fill, HP_FILL, 2.0f);
+    if (frac > 0.0f) {
+        const Rect fill = { inner.min, { inner.min.x + std::round(inner.width() * frac), inner.max.y } };
+        ui.draw_image(fill, atlas_->fill, HP_FILL, 1.0f);
+    }
+
+    // Tenths, as stone ticks over the fill (2 points: a box any thinner is
+    // mostly antialiased away)
+    for (int i = 1; i < HP_SEGMENTS; i++) {
+        const float x = std::round(r.min.x + r.width() * static_cast<float>(i) / HP_SEGMENTS);
+        ui.draw_rect({ { x - 1.0f, r.min.y }, { x + 1.0f, r.max.y } }, HP_TICK);
+    }
 }
 
 void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& input) {
@@ -180,8 +196,8 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         .spacing     = { SLOT_GAP, SLOT_GAP },
         .frame       = atlas_->slot,
         .frame_over  = atlas_->rim,
-        .icon_inset  = 3.0f,
-        .icon_radius = 3.0f,
+        .icon_inset  = 2.0f,
+        .icon_radius = 2.0f,
         .label_size  = 11.0f,
         .label_color = { 0.86f, 0.90f, 0.96f, 1.0f },
         .hover       = { 0.75f, 0.88f, 1.00f, 0.14f },
@@ -225,8 +241,8 @@ void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& i
     for (std::size_t i = 0; i < MENU_COUNT; i++) {
         const Menu menu = static_cast<Menu>(i);
         const Rect r = Rect::from_size(
-            origin + vec2(BUTTONS_X + static_cast<float>(i) * (BUTTON + BUTTON_GAP), BUTTONS_Y),
-            vec2(BUTTON));
+            origin + vec2(BUTTONS_X + static_cast<float>(i) * (BUTTON.x + BUTTON_GAP), BUTTONS_Y),
+            BUTTON);
 
         const auto it   = ui.interact(ui.get_id(menu_title(menu)), r);
         const bool open = menus.is_open(menu);
@@ -234,10 +250,11 @@ void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& i
 
         const vec4 tint = it.held ? BUTTON_HELD : it.hovered ? BUTTON_HOVER : vec4(1.0f);
         ui.draw_nine_slice(r, atlas_->button, tint);
-        if (open) ui.draw_rect(r.shrink({ 1.0f, 1.0f }), {}, 5.0f, OPEN_GLOW, 1.5f);
+        if (open) ui.draw_rect(r.shrink({ 1.0f, 1.0f }), {}, 3.0f, OPEN_GLOW, 1.5f);
 
         const float push = it.held ? 1.0f : 0.0f;
-        const Rect  icon = Rect::from_size(r.min + vec2(4.0f, 4.0f + push), vec2(BUTTON - 8.0f));
+        const Rect  icon = Rect::from_size(
+            r.min + glm::round((BUTTON - vec2(ICON_SIZE)) * 0.5f) + vec2(0.0f, push), vec2(ICON_SIZE));
         ui.draw_image(icon, atlas_->menu_icon(menu), (it.hovered || open) ? ICON_HOVER : ICON);
 
         // "Inventory (B)"
