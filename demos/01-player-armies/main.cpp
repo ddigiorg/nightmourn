@@ -26,6 +26,9 @@
 //   restarts the battle but keeps the trees.
 // - The tile under the mouse is outlined; clicking a figure or a tree
 //   selects it.
+// - The action bar (src/Nightmourn/GUI/ActionBar) runs along the bottom: the
+//   hero's hp, ten item slots (the first four hold test items; drag them
+//   around, or off the bar to empty a slot) and the menu buttons.
 //
 // Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
 // demo only sets up its atlas rows and draws the HUD. The debug overlays
@@ -34,11 +37,14 @@
 // Nezumi's UI.
 //
 // Controls: W/A/S/D move (screen-relative), mouse wheel zooms, left click
-// selects, R restarts the battle, tilde (~) opens and closes the debug menu.
-// Press Escape (or close the window) to quit.
+// selects, R restarts the battle, 1-9 and 0 use the action bar's slots,
+// K / C / B / I / O open the skill, equipment, inventory, items and options
+// menus, and tilde (~) the debug menu. Escape closes open menus, or opens
+// the main menu, whose Quit button (or closing the window) quits.
 // =============================================================================
 
 #include "Nezumi/Control/CameraController.hpp"
+#include "Nezumi/Core/Events/OnGameExited.hpp"
 #include "Nezumi/Engine.hpp"
 #include "Nezumi/Input/Events/OnMouseButtonDown.hpp"
 #include "Nezumi/Input/Events/OnMouseMotion.hpp"
@@ -52,9 +58,11 @@
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
-#include "Nightmourn/GUI/DebugMenu.hpp"
+#include "Nightmourn/GUI/ActionBar.hpp"
+#include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
+#include "Nightmourn/GUI/UIAtlas.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
@@ -78,8 +86,8 @@ using namespace Nezumi;
 using Nightmourn::Character;
 using Nightmourn::CharacterConfig;
 using Nightmourn::DebugFlags;
-using Nightmourn::DebugMenu;
 using Nightmourn::DrawContext;
+using Nightmourn::GameMenus;
 using Nightmourn::InfoOverlay;
 using Nightmourn::Player;
 using Nightmourn::ResourceType;
@@ -363,6 +371,14 @@ public:
         font_ = engine.ui()->font();
         Nightmourn::apply_ui_theme(engine.ui()->style());
 
+        // Action bar, with a few test items to use and drag around
+        ui_atlas_   = Nightmourn::UIAtlas::load(*renderer);
+        action_bar_ = std::make_unique<Nightmourn::ActionBar>(ui_atlas_);
+        action_bar_->set_slot(0, Nightmourn::Items::Wood);
+        action_bar_->set_slot(1, Nightmourn::Items::Stone);
+        action_bar_->set_slot(2, Nightmourn::Items::Gold);
+        action_bar_->set_slot(3, Nightmourn::Items::Food);
+
         surface_id_ = world.create_surface(
             SurfaceConfig{
                 .name           = "battlefield",
@@ -376,7 +392,8 @@ public:
         spawn_hero_(world);
 
         engine.logger().info("Player Armies Demo");
-        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. Click: select. R: restart. ~: debug menu. Escape: quit.");
+        engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. Click: select. R: restart. 1-0: slots. "
+                             "K/C/B/I/O/~: menus. Escape: main menu.");
     }
 
     // -------------------------------------------------------------------------
@@ -388,8 +405,16 @@ public:
     void on_tick(Nezumi::Engine& engine) override {
         Nezumi::World& world = engine.world();
 
-        if (engine.input().was_pressed(Nightmourn::Action::ToggleDebugMenu))
-            debug_menu_.toggle();
+        menus_.handle_input(engine.input());
+        if (menus_.quit_requested()) engine.event_bus().dispatch(OnGameExited{});
+
+        // Items do nothing yet: using one just says so
+        action_bar_->handle_input(engine.input());
+        for (std::size_t slot : action_bar_->take_used()) {
+            if (const auto item = action_bar_->slot(slot))
+                engine.logger().info("Used slot " + std::to_string(slot + 1) + ": " +
+                                     std::string(Nightmourn::item_name(*item)));
+        }
 
         if (engine.input().was_pressed(DemoAction::Restart)) {
             clear_world_(world);
@@ -447,7 +472,8 @@ public:
         }
 
         draw_hud_(r, engine, hud_top);
-        debug_menu_.draw(*engine.ui(), debug_flags_);
+        action_bar_->draw(*engine.ui(), engine.input(), menus_, player_.character(world));
+        menus_.draw(*engine.ui(), debug_flags_);
     }
 
     // -------------------------------------------------------------------------
@@ -458,6 +484,7 @@ public:
         for (EventListenerID id : mouse_listeners_) engine.event_bus().unsubscribe(id);
         camera_controller_.reset();
         world_drawer_.reset();
+        action_bar_.reset();
 
         engine.logger().info("Ran " + std::to_string(engine.get_stats().tick_count) + " ticks.");
         engine.logger().info("Goodbye!");
@@ -727,7 +754,7 @@ private:
             }
         }
 
-        text += "\nW/A/S/D: move  wheel: zoom  click: select  R: restart  ~: debug menu\n";
+        text += "\nW/A/S/D: move  wheel: zoom  click: select  R: restart  1-0: slots  Esc: menu\n";
 
         r->draw_text(
             text,
@@ -757,7 +784,9 @@ private:
     std::unique_ptr<CameraController> camera_controller_ = nullptr;
     std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;
     DebugFlags                        debug_flags_       = {};
-    DebugMenu                         debug_menu_        = {};
+    GameMenus                         menus_             = {};
+    Nightmourn::UIAtlas               ui_atlas_          = {};
+    std::unique_ptr<Nightmourn::ActionBar> action_bar_   = nullptr;
     InfoOverlay                       info_overlay_      = {};
 
     // Mouse
@@ -785,7 +814,7 @@ int main() {
         config.window.title  = "Nightmourn: 01-player-armies";
         config.window.width  = 1280;
         config.window.height = 720;
-        config.escape_exits  = true;
+        config.escape_exits  = false; // Escape opens the main menu
 
         Nezumi::Engine engine(config);
 

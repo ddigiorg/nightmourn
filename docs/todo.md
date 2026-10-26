@@ -244,27 +244,47 @@ per pixel. Do this only if the ground kind shows up in a GPU profile
 
 From the first UI pass (immediate-mode `UI::Context`, the `UIQuad` kind).
 
-- [ ] **Escape while typing.** `EngineConfig::escape_exits` listens to raw
-      key events, so Escape in a text field quits the game. Route it through
-      `InputMap` (or check `is_keyboard_captured()`).
+- [x] **Escape while typing.** The demo no longer uses
+      `EngineConfig::escape_exits`: Escape is `Action::ToggleMainMenu`, an
+      InputMap action, so a focused text field keeps it. (The engine flag
+      still listens to raw keys, for examples.)
 - [ ] **Keyboard and gamepad navigation**: Tab between widgets, arrow keys
       in dropdowns, a focus ring. Needed before a console port or a
       controller-only menu.
-- [ ] **Tooltips** on hover (a delay, then a small overlay panel).
+- [x] **Tooltips** on hover (`UI::Context::tooltip`, after
+      `Style::tooltip_delay`).
 - [ ] **Text field editing**: selection, clipboard (SDL has it), Ctrl+arrow
       word jumps, caret blink, UTF-8 once the font covers more than ASCII.
 - [ ] **Scrollbar dragging.** Panels scroll with the wheel and show a thumb,
       but the thumb can't be dragged yet.
-- [ ] **Images and icons** in widgets (sprite atlas regions). Needs a second
-      material in the UI batch, or the font and UI icons in one atlas.
-- [ ] **Skinning**: nine-slice frame textures for panels and buttons, for the
-      "make it pretty" pass. `Style` stays the place for sizes and colors.
+- [x] **Images and icons** in widgets (`UI::Image`, any atlas; the UI bumps
+      the draw order per texture run).
+- [ ] **Skinning**: `UI::NineSlice` exists and the action bar uses it, but
+      panels and the built-in buttons still draw `Style` boxes. Add
+      optional frames to `Style`.
 - [ ] **Layout helpers**: columns / tables, word-wrapped text, and
       right-aligned or centered rows.
 - [ ] **HiDPI**: the UI maps window points to backbuffer pixels, but sizes
       aren't scaled. Add `Style::scale` from the display's content scale.
 - [ ] **Persist panel positions** (where the player dragged the debug menu)
       with the rest of the settings once there's serialization.
+
+### Action bar
+
+From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
+
+- [ ] **Rebinding**: a WoW-style bind mode (hover a slot, press a key) in
+      the Options menu, and saving bindings with the settings.
+- [ ] **More slots**: the upgrade system that grows the bar
+      (`Action::MAX_ACTION_SLOTS` already reserves the ids); a second row,
+      or Shift+1..0 once `InputSource` has modifiers.
+- [ ] **Items that do something** when used, and cooldowns (`UI::Slot`
+      has a cooldown shade; a clock sweep like WoW's needs a shader shape).
+- [ ] **Inventory** as a slot grid that drags into the bar with
+      `ActionBar::DRAG_TYPE`, and drops items on the ground from
+      `take_unclaimed_drop`.
+- [ ] **Hand-drawn art** to replace `tools/gen_ui.py`'s placeholders at the
+      same pixel boxes (`GUI/UIAtlas.hpp`).
 
 ### World: entities and combat
 

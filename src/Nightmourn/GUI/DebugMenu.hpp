@@ -3,8 +3,9 @@
 //
 // Debug options menu, like Factorio's F4 menu: one checkbox per DebugFlag,
 // listed by its kebab-case name. Opened and closed with the tilde key (see
-// Action::ToggleDebugMenu) or the X in its title bar, and moved by dragging
-// the title. It sizes itself to its checkboxes, so it can't be resized.
+// Action::ToggleDebugMenu), the action bar's debug button, or the X in its
+// title bar, and moved by dragging the title. It sizes itself to its
+// checkboxes, so it can't be resized. GameMenus owns it with the other menus:
 //
 //   on_tick:  if (input.was_pressed(Action::ToggleDebugMenu)) debug_menu_.toggle();
 //   on_draw:  ... draw the world with debug_flags_ ...
