@@ -33,7 +33,7 @@ using glm::vec4;
 namespace {
     // The eagles stand only a little taller than the slab, crouched over
     // its ends; the slab wastes no room around what it holds
-    constexpr vec2  EAGLE_SIZE    = { 70.0f, 60.0f };
+    constexpr vec2  EAGLE_SIZE    = { 80.0f, 60.0f }; // the swept-back wing takes the outer 10
     constexpr float EAGLE_OVERLAP = 6.0f;               // over each end of the slab
     constexpr vec2  PLATE_SIZE    = { 575.0f, 50.0f };
     constexpr float PLATE_X       = EAGLE_SIZE.x - EAGLE_OVERLAP;

@@ -24,11 +24,11 @@ import math
 import numpy as np
 from PIL import Image, ImageDraw
 
-ATLAS_W, ATLAS_H = 1312, 208
+ATLAS_W, ATLAS_H = 1328, 208
 
 # Pixel boxes { x0, y0, x1, y1 }, matching GUI/UIAtlas.hpp
-EAGLE   = (0, 0, 140, 120)          # 70 x 60 pt, crouched, faces right (inward on the left)
-PLATE   = (148, 0, 1298, 100)       # 575 x 50 pt
+EAGLE   = (0, 0, 160, 120)          # 80 x 60 pt, crouched, faces right (inward on the left)
+PLATE   = (168, 0, 1318, 100)       # 575 x 50 pt
 SLOT    = (0, 128, 72, 200)         # 36 x 36 pt, socket under the icon
 RIM     = (80, 128, 152, 200)       # 36 x 36 pt, thin bevelled rim over the icon
 BUTTON  = (160, 128, 204, 192)      # 22 x 32 pt, rectangular menu button
@@ -103,6 +103,11 @@ def poly_mask(w, h, pts, s=1):
     img = Image.new("L", (w * 4, h * 4), 0)
     ImageDraw.Draw(img).polygon([(x * 4 * s, y * 4 * s) for x, y in pts], fill=255)
     return np.asarray(img.resize((w, h), Image.BOX), dtype=np.float64) / 255.0
+
+
+def poly_mask_dx(w, h, dx, pts, s=1):
+    """poly_mask with every point moved dx px right (frame vs bird coords)."""
+    return poly_mask(w, h, [(px + dx, py) for px, py in pts], s)
 
 
 def ellipse_mask(x, y, cx, cy, rx, ry, angle=0.0):
@@ -193,17 +198,20 @@ def outline(rgba, alpha, width, color=(0.04, 0.06, 0.09), strength=0.85):
 # ------------------------------------------------------------------------------
 # Eagle
 #
-# A stone eagle crouched on a low plinth like a gargoyle, facing right: wings
-# folded, shoulders hunched, head thrust forward over its talons, tail down
-# behind it. Only a little taller than the bar it guards. Coordinates are in
-# 1x frame pixels (140 x 120) and scaled by S for supersampling.
+# A stone eagle crouched on a low plinth like a gargoyle, facing right:
+# shoulders hunched, head thrust forward over its talons, tail down behind
+# it, and the far wing half raised, swept back no higher than the head.
+# Only a little taller than the bar it guards. Coordinates are in 1x pixels
+# of the bird (140 x 120), drawn DX px into the 160 px wide frame so the
+# swept wing has room behind it, and scaled by S for supersampling.
 # ------------------------------------------------------------------------------
 
 def gen_eagle():
-    S = 4
-    W, H = 140 * S, 120 * S
+    S  = 4
+    DX = 20
+    W, H = 160 * S, 120 * S
     x, y = grid(W, H)
-    x /= S
+    x = x / S - DX
     y /= S
 
     height = np.zeros((H, W))
@@ -214,6 +222,18 @@ def gen_eagle():
         hm = base + amp * pillow(mask, r * S)
         height = np.where(mask > 0.5, np.maximum(height, hm), height)
         alpha = np.maximum(alpha, mask)
+
+    # Far wing, half raised and swept back behind the body: its top edge
+    # stays under the head's crown, its primaries reach back past the tail
+    add(poly_mask_dx(W, H, DX, [(84, 30), (62, 14), (40, 8), (22, 10), (12, 20),
+                                (22, 30), (48, 40)], S), 0.16, 0.24, 5)
+    for k in range(7):
+        t = k / 6
+        b = (30 + 26 * t, 12 + 8 * t)
+        ang = math.radians(182 + 26 * t)
+        length = 40 - 10 * t
+        tip = (b[0] + length * math.cos(ang), b[1] + length * math.sin(ang))
+        add(capsule_mask(x, y, b, tip, 5.5, 3.5), 0.08 + 0.012 * k, 0.22, 3)
 
     # Plinth: a low block along the bottom, running under the bar's end
     add(round_rect_mask(x, y, 14, 100, 140, 120, 3), 0.10, 0.30, 4)
@@ -232,7 +252,7 @@ def gen_eagle():
     # Folded wing over the back: a raised shoulder, then long feathers
     # sweeping down to the tail
     add(ellipse_mask(x, y, 62, 40, 26, 15, math.radians(-12)), 0.60, 0.30, 8)
-    wing = poly_mask(W, H, [(88, 36), (60, 26), (36, 36), (18, 58), (8, 84), (22, 86),
+    wing = poly_mask_dx(W, H, DX, [(88, 36), (60, 26), (36, 36), (18, 58), (8, 84), (22, 86),
                             (48, 72), (80, 58)], S)
     add(wing, 0.66, 0.26, 6)
     for k in range(5):
@@ -257,7 +277,7 @@ def gen_eagle():
         b = (96 - 4 * k, 18 + 6 * k)
         add(capsule_mask(x, y, b, (b[0] - 11, b[1] + 8), 4.5, 1.8), 0.66 + 0.02 * k, 0.18, 2)
     add(ellipse_mask(x, y, 110, 17, 15, 11, math.radians(-4)), 0.76, 0.36, 8)
-    beak = poly_mask(W, H, [(117, 9), (128, 8), (136, 13), (139, 21), (137, 29), (133, 33),
+    beak = poly_mask_dx(W, H, DX, [(117, 9), (128, 8), (136, 13), (139, 21), (137, 29), (133, 33),
                             (131, 25), (125, 22), (118, 25)], S)
     add(beak, 0.84, 0.30, 3)
     add(capsule_mask(x, y, (106, 9), (121, 11), 3.0, 2.2), 1.02, 0.10, 2)  # brow
@@ -335,15 +355,19 @@ def gen_rim():
 def gen_button():
     w, h = BUTTON[2] - BUTTON[0], BUTTON[3] - BUTTON[1]
     x, y = grid(w, h)
+    # Raised: a rounded stone block, its face domed toward the viewer so the
+    # top-left edge catches the light and the bottom-right falls into shadow
     outer = round_rect_mask(x, y, 0, 0, w, h, 4)
-    face  = round_rect_mask(x, y, 4, 4, w - 4, h - 4, 3)
-    height = 0.5 * pillow(outer, 2) - 0.25 * pillow(face, 3)
-    rgba = shade_stone(height, outer, seed=41, relief=12.0, grain=0.06, base=0.32,
-                       contrast=0.7, ao_radius=3, ao_strength=1.0, rim=0.3)
-    # A dark face, lit faintly from the top, for the icon to sit on
-    depth = np.clip((y - 4) / (h - 8), 0, 1)[..., None]
-    face_c = hexc("#1a2230") * (1 - depth) + hexc("#0b1018") * depth
-    rgba[..., :3] = rgba[..., :3] * (1 - face[..., None]) + face_c * face[..., None]
+    face  = round_rect_mask(x, y, 3, 3, w - 3, h - 4, 3)
+    height = 0.45 * pillow(outer, 3) + 0.40 * pillow(face, 7)
+    rgba = shade_stone(height, outer, seed=41, relief=14.0, grain=0.06, base=0.50,
+                       contrast=1.0, ao_radius=3, ao_strength=0.4, rim=0.45)
+    # A darker lip along the bottom edge, as if it stands off the slab
+    lip = np.clip((y - (h - 5)) / 4, 0, 1) * outer
+    rgba[..., :3] *= (1 - 0.45 * lip)[..., None]
+    # Lit from above: the face brightens toward its top
+    t = np.clip(y / h, 0, 1)
+    rgba[..., :3] *= (1.18 - 0.36 * t)[..., None]
     rgba = outline(rgba, outer, 1.0)
     return to_image(rgba)
 
