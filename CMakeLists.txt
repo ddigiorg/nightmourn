@@ -56,12 +56,15 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/DrawContext.cpp
     src/Nightmourn/Draw/DrawUtils.cpp
     src/Nightmourn/Draw/ResourceDrawer.cpp
-        src/Nightmourn/Draw/UnitDrawer.cpp
+    src/Nightmourn/Draw/UnitDrawer.cpp
     src/Nightmourn/Draw/UnitGroupDrawer.cpp
     src/Nightmourn/Draw/WorldDrawer.cpp
+    src/Nightmourn/GUI/ActionBar.cpp
     src/Nightmourn/GUI/DebugMenu.cpp
+    src/Nightmourn/GUI/GameMenus.cpp
     src/Nightmourn/GUI/InfoOverlay.cpp
     src/Nightmourn/GUI/Theme.cpp
+    src/Nightmourn/GUI/UIAtlas.cpp
     src/Nightmourn/Input/Actions.cpp
     src/Nightmourn/Input/Picking.cpp
     src/Nightmourn/Player/Player.cpp
