@@ -2,7 +2,9 @@
 // Draw/CharacterDrawer.hpp
 //
 // Draws Characters (the hero, later NPCs): the sprite for the way the
-// character faces, its healthbar once hurt, and the debug overlays:
+// character faces, its healthbar once hurt, a swing while it mines (a
+// placeholder slash in front of it until there are swing frames), and the
+// debug overlays:
 //
 //   ShowCollisionRectangles  collision box
 //   ShowFacingArrows         arrow along facing()

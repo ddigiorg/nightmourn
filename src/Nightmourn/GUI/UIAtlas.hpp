@@ -14,11 +14,12 @@
 
 #pragma once
 #include "Nezumi/UI/Image.hpp"
+#include "Nezumi/UI/SlotGrid.hpp"
 #include "Nezumi/World/Item/ItemID.hpp"
 #include <array>       // array
 #include <cstddef>     // size_t
 #include <cstdint>     // uint8_t
-#include <glm/glm.hpp> // vec4
+#include <glm/glm.hpp> // vec2, vec4
 
 namespace Nezumi::Render {
     class Renderer;
@@ -77,6 +78,10 @@ struct UIAtlas {
     Nezumi::UI::Image item_icon(Nezumi::ItemID item) const {
         return item.value() < item_icons.size() ? item_icons[item.value()] : Nezumi::UI::Image{};
     }
+
+    // How item slots look (the action bar's, the inventory's): the socket
+    // and rim frames, with Nightmourn's hover colors
+    Nezumi::UI::SlotStyle item_slot_style(glm::vec2 slot_size, float gap) const;
 
     // Creates the atlas through the renderer (which owns it) and fills in
     // every image. Throws if ui.png can't be loaded.

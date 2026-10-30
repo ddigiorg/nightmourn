@@ -3,6 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/GUI/GameMenus.hpp"
+#include "Nightmourn/GUI/InventoryMenu.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nezumi/Input/InputMap.hpp"
 #include "Nezumi/UI/Context.hpp"
@@ -85,10 +86,13 @@ void GameMenus::handle_input(const Nezumi::InputMap& input) {
 // Draw
 // -----------------------------------------------------------------------------
 
-void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags) {
+void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, InventoryMenu* inventory) {
     if (is_open(Menu::Skills))    draw_stub_(ui, Menu::Skills,    "Skills you have learned, and the ones still to learn.");
     if (is_open(Menu::Equipment)) draw_stub_(ui, Menu::Equipment, "What your hero wears and wields.");
-    if (is_open(Menu::Inventory)) draw_stub_(ui, Menu::Inventory, "What your hero carries.");
+    if (is_open(Menu::Inventory)) {
+        if (inventory) inventory->draw(ui, open_[static_cast<std::size_t>(Menu::Inventory)]);
+        else           draw_stub_(ui, Menu::Inventory, "What your hero carries.");
+    }
     if (is_open(Menu::Items))     draw_stub_(ui, Menu::Items,     "Every item you have discovered, and how to make it.");
     if (is_open(Menu::Options))   draw_stub_(ui, Menu::Options,   "Video, sound and key bindings.");
     debug_.draw(ui, flags);

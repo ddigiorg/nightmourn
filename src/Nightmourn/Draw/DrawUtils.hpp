@@ -102,6 +102,11 @@ void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Nezumi::Position2D facin
 void draw_outline(DrawContext& ctx, const Nezumi::Area2D& box, glm::vec4 color,
                   float pixels, std::uint8_t layer);
 
+// Outline of the VIEW-space box `box` { x0, y0, x1, y1 } (e.g. a
+// sprite_view_box), with lines `pixels` wide: upright, screen-aligned
+void draw_view_outline(DrawContext& ctx, glm::vec4 box, glm::vec4 color,
+                       float pixels, std::uint8_t layer);
+
 // Circle of `radius` tiles around world `center` on the ground, with a line
 // `pixels` wide: a circle top-down, a 2:1 ellipse in iso
 void draw_ground_circle(DrawContext& ctx, glm::vec2 center, float radius, glm::vec4 color,

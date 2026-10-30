@@ -40,4 +40,20 @@ UIAtlas UIAtlas::load(Nezumi::Render::Renderer& renderer) {
     return a;
 }
 
+Nezumi::UI::SlotStyle UIAtlas::item_slot_style(glm::vec2 slot_size, float gap) const {
+    return {
+        .slot_size   = slot_size,
+        .spacing     = { gap, gap },
+        .frame       = slot,
+        .frame_over  = rim,
+        .icon_inset  = 2.0f,
+        .icon_radius = 2.0f,
+        .label_size  = 11.0f,
+        .label_color = { 0.86f, 0.90f, 0.96f, 1.0f },
+        .hover       = { 0.75f, 0.88f, 1.00f, 0.14f },
+        .drop_hover  = { 0.75f, 0.88f, 1.00f, 0.28f },
+        .highlight   = { 0.55f, 0.78f, 1.00f, 0.70f },
+    };
+}
+
 } // namespace Nightmourn

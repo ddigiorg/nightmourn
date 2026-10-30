@@ -24,6 +24,14 @@ struct CharacterConfig {
     // Movement
     float move_speed = 4.0f; // tiles per second
 
+    // Mining: a swing every `mine_interval` ticks at most, taking
+    // `mine_amount` from a resource whose collision box is within
+    // `mine_reach` tiles of the character's feet. The hit lands at the start
+    // of the swing for now (no wind-up until there are swing frames).
+    uint16_t mine_interval = 30; // 0.5 s at 60 UPS
+    uint16_t mine_amount   = 1;
+    float    mine_reach    = 2.0f;
+
     // Collision box, relative to the character's position (its feet)
     Nezumi::Area2D collision_bounds = { -0.25f, -0.25f, 0.25f, 0.25f };
 

@@ -280,9 +280,13 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
       or Shift+1..0 once `InputSource` has modifiers.
 - [ ] **Items that do something** when used, and cooldowns (`UI::Slot`
       has a cooldown shade; a clock sweep like WoW's needs a shader shape).
-- [ ] **Inventory** as a slot grid that drags into the bar with
-      `ActionBar::DRAG_TYPE`, and drops items on the ground from
-      `take_unclaimed_drop`.
+- [x] **Inventory** as a slot grid that drags into the bar with
+      `ActionBar::DRAG_TYPE` (`GUI/InventoryMenu`, demo 02-mining). Bar
+      slots are shortcuts showing the carried count.
+- [ ] **Drop items on the ground** from `take_unclaimed_drop` (today a
+      stack dragged out of the inventory stays put).
+- [ ] **Inventory controls**: shift-click to split a stack, right-click to
+      take half, ctrl-click to move to a chest (Factorio's).
 - [ ] **Hand-drawn art** to replace `tools/gen_ui.py`'s placeholders at the
       same pixel boxes (`GUI/UIAtlas.hpp`).
 
@@ -396,6 +400,16 @@ Resource, `subtype_id` what it is (`ResourceType::Tree`), `variety_id` which
 one (`TreeVariety::Oak`, `Pine`), and `item` the `Nezumi::ItemID` mining
 yields (`Items::Wood`). Decorative for now.
 
+- [x] The player mines trees: `CharacterCommand::mine_target`, a cooldown
+      swing (`CharacterConfig::mine_*`), credited to `Player`'s
+      `Inventory` through `OnEntityMined` (demo 02-mining).
+- [ ] **Swing wind-up and frames**: the hit lands at the start of the
+      swing; move it to the swing frame once Animation exists. The arc in
+      `CharacterDrawer` is a placeholder.
+- [ ] **Click-to-walk mining**: clicking a tree out of reach walks the hero
+      into reach, then swings (needs pathing around trunks).
+- [ ] Mining feedback: tree shake on hit, a chopping sound, and a cursor
+      that changes over a minable resource.
 - [ ] Storage system (Nezumi `World/Item/`), then a gatherer: find a
       resource with `EntitySearchFilter::resources(Resource::TYPE_ID)` (and
       the subtype it wants), mine it on an interval, add

@@ -4,12 +4,12 @@
 // The player's top-level menus, opened from the action bar's buttons or
 // their hotkeys: skills, equipment, inventory, items (a codex of every item
 // type discovered, with its recipes), options, debug and the main menu.
-// Only the debug menu and the main menu do anything yet; the others open an
-// empty panel saying what they will hold.
+// The debug menu, the main menu and (given an InventoryMenu) the inventory
+// do something; the others open an empty panel saying what they will hold.
 //
 //   on_tick:  menus_.handle_input(engine.input());
 //             if (menus_.quit_requested()) ...quit...
-//   on_draw:  menus_.draw(*engine.ui(), debug_flags_);
+//   on_draw:  menus_.draw(*engine.ui(), debug_flags_, &inventory_menu_);
 //
 // Escape closes every open menu, or opens the main menu when none is open,
 // like most games.
@@ -36,6 +36,8 @@ namespace Nightmourn {
 // Title of `menu` ("Inventory"), and the action that toggles it
 std::string_view menu_title (Menu menu);
 Nezumi::ActionID menu_action(Menu menu);
+
+class InventoryMenu;
 
 class GameMenus {
 public:
@@ -67,10 +69,11 @@ public:
     // -------------------------------------------------------------------------
     // Draw
     //
-    // Call from on_draw. Draws the open menus.
+    // Call from on_draw. Draws the open menus. Without an `inventory`, the
+    // inventory menu is a placeholder.
     // -------------------------------------------------------------------------
 
-    void draw(Nezumi::UI::Context& ui, DebugFlags& flags);
+    void draw(Nezumi::UI::Context& ui, DebugFlags& flags, InventoryMenu* inventory = nullptr);
 
 private:
     void draw_stub_(Nezumi::UI::Context& ui, Menu menu, std::string_view about);
