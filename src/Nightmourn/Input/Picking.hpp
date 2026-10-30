@@ -24,6 +24,7 @@
 #include <glm/glm.hpp> // vec2
 
 namespace Nezumi {
+    class Entity;
     class Surface;
 }
 
@@ -45,10 +46,16 @@ Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
                           glm::vec2                         screen);
 
 // Front-most drawable entity with a sprite (unit, character, tree) that
-// covers screen position `screen`, or a null handle
+// covers screen position `screen`, or a null handle. With `accept`, only
+// entities it accepts count, so e.g. a tree is picked through the hero
+// standing in front of it:
+//
+//   pick_entity(surface, camera, proj, mouse,
+//               [](const Nezumi::Entity& e) { return e.is_resource(); });
 Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
                                  const Nezumi::Render::Camera&     camera,
                                  const Nezumi::Render::Projection& proj,
-                                 glm::vec2                         screen);
+                                 glm::vec2                         screen,
+                                 bool (*accept)(const Nezumi::Entity&) = nullptr);
 
 } // namespace Nightmourn

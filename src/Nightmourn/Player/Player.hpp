@@ -25,20 +25,35 @@
 // world direction; the command itself is in world space like the rest of the
 // sim.
 //
+// Mining: pass update() the entity under the cursor. While the mine action
+// is held (or was clicked) over a resource, the character swings at it (see
+// Character), unless the inventory has no room for what it yields. Credit
+// the player from the game's OnEntityMined listener:
+//
+//   events.subscribe<OnEntityMined>([this](const OnEntityMined& e) {
+//       player_.on_entity_mined(e);
+//   });
+//
+// The inventory belongs to the player, not the character, so it survives
+// the character dying and respawning.
+//
 // Possession is just a handle: possess() another character to switch, and a
 // character that dies (World removes it) leaves the player with nothing to
 // control until the game possesses a new one.
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Item/Inventory.hpp"
 #include "Nezumi/Render/View/Projection.hpp"
 #include "Nezumi/World/Entity/EntityID.hpp"
+#include <cstddef>     // size_t
 #include <glm/glm.hpp> // vec2
 #include <optional>    // optional
 
 namespace Nezumi {
     class InputMap;
     class World;
+    struct OnEntityMined;
 }
 
 namespace Nightmourn {
@@ -47,6 +62,14 @@ class Character;
 
 class Player {
 public:
+
+    // -------------------------------------------------------------------------
+    // Statics
+    // -------------------------------------------------------------------------
+
+    // The inventory grid: 10 wide, 4 high
+    static constexpr std::size_t INVENTORY_COLUMNS = 10;
+    static constexpr std::size_t INVENTORY_ROWS    = 4;
 
     // -------------------------------------------------------------------------
     // Possession
@@ -65,11 +88,25 @@ public:
     // Update (between ticks)
     //
     // Reads the move actions and commands the possessed character: 8
-    // directions on screen, diagonals as fast as straight lines.
+    // directions on screen, diagonals as fast as straight lines. `hovered`
+    // is the entity under the cursor (null for none, or while the UI has the
+    // mouse): a resource there is mined while the mine action is held.
     // -------------------------------------------------------------------------
 
     void update(Nezumi::World& world, const Nezumi::InputMap& input,
-                const Nezumi::Render::Projection& proj);
+                const Nezumi::Render::Projection& proj,
+                Nezumi::EntityHandle hovered = {});
+
+    // -------------------------------------------------------------------------
+    // Inventory
+    // -------------------------------------------------------------------------
+
+    Inventory&       inventory()       { return inventory_; }
+    const Inventory& inventory() const { return inventory_; }
+
+    // Credits a mine by the possessed character: adds what it took to the
+    // inventory. Mines by anyone else are ignored.
+    void on_entity_mined(const Nezumi::OnEntityMined& event);
 
     // -------------------------------------------------------------------------
     // View
@@ -82,6 +119,7 @@ public:
 
 private:
     Nezumi::EntityHandle character_ = {};
+    Inventory            inventory_ { INVENTORY_COLUMNS * INVENTORY_ROWS };
 };
 
 } // namespace Nightmourn

@@ -6,6 +6,7 @@
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/Input/Actions.hpp"
+#include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/Item/Items.hpp"
 #include "Nezumi/Input/InputMap.hpp"
 #include "Nezumi/Input/KeyName.hpp"
@@ -109,7 +110,7 @@ void ActionBar::use_(std::size_t i) {
 // -----------------------------------------------------------------------------
 
 void ActionBar::draw(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
-                     GameMenus& menus, const Character* hero)
+                     GameMenus& menus, const Character* hero, const Inventory* inventory)
 {
     using Nezumi::UI::PanelFlags;
 
@@ -134,7 +135,7 @@ void ActionBar::draw(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
     ui.draw_nine_slice(at({ PLATE_X, PLATE_Y }, PLATE_SIZE), atlas_->plate);
     draw_hp_bar_(ui, at({ CONTENT_X, HP_Y }, { CONTENT_W, HP_H }), hero);
     ui.draw_image(at({ CONTENT_X + SLOTS_W, SLOTS_Y }, { DIVIDER_W, SLOT_SIZE.y }), atlas_->divider);
-    draw_slots_(ui, input);
+    draw_slots_(ui, input, inventory);
     draw_buttons_(ui, input, menus);
 
     ui.draw_image(at({ 0.0f, 0.0f }, EAGLE_SIZE), atlas_->eagle);
@@ -178,32 +179,30 @@ void ActionBar::draw_hp_bar_(Nezumi::UI::Context& ui, const Rect& r, const Chara
     }
 }
 
-void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& input) {
+void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
+                            const Inventory* inventory)
+{
     std::array<Nezumi::UI::Slot, SLOT_COUNT> slots;
     for (std::size_t i = 0; i < SLOT_COUNT; i++) {
         Nezumi::UI::Slot& s = slots[i];
         if (slots_[i]) {
             s.icon  = atlas_->item_icon(*slots_[i]);
             s.value = slots_[i]->value();
+
+            // How many the player carries; none: dimmed, but still a shortcut
+            if (inventory) {
+                const unsigned n = inventory->count(*slots_[i]);
+                std::snprintf(counts_[i].data(), counts_[i].size(), "%u", n);
+                s.count    = counts_[i].data();
+                s.disabled = n == 0;
+            }
         }
         if (const auto key = input.first_binding(Action::use_slot(i)))
             s.label = Nezumi::input_name(*key);
         s.flash = flash_[i] > 0 || input.is_held(Action::use_slot(i));
     }
 
-    const Nezumi::UI::SlotStyle style = {
-        .slot_size   = SLOT_SIZE,
-        .spacing     = { SLOT_GAP, SLOT_GAP },
-        .frame       = atlas_->slot,
-        .frame_over  = atlas_->rim,
-        .icon_inset  = 2.0f,
-        .icon_radius = 2.0f,
-        .label_size  = 11.0f,
-        .label_color = { 0.86f, 0.90f, 0.96f, 1.0f },
-        .hover       = { 0.75f, 0.88f, 1.00f, 0.14f },
-        .drop_hover  = { 0.75f, 0.88f, 1.00f, 0.28f },
-        .highlight   = { 0.55f, 0.78f, 1.00f, 0.70f },
-    };
+    const Nezumi::UI::SlotStyle style = atlas_->item_slot_style(SLOT_SIZE, SLOT_GAP);
 
     ui.set_next_pos({ CONTENT_X, SLOTS_Y });
     const Nezumi::UI::Context::ID grid = ui.get_id("slots");
@@ -211,8 +210,8 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
 
     if (r.clicked >= 0) use_(static_cast<std::size_t>(r.clicked));
 
-    // A drop from another slot swaps the two; from elsewhere (an inventory,
-    // later) it puts that item here
+    // A drop from another slot swaps the two; from elsewhere (the inventory)
+    // it points this slot at that item
     if (r.dropped >= 0) {
         const std::size_t to = static_cast<std::size_t>(r.dropped);
         if (r.payload.source == grid && r.payload.index >= 0) {
@@ -222,7 +221,9 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         }
     }
 
-    // Dragged off the bar and dropped where nothing took it: the slot empties
+    // Dragged off the bar and dropped where nothing took it: the slot empties.
+    // A drop from anywhere else is taken and ignored: the inventory keeps a
+    // stack dragged out of it, until items can be dropped on the ground.
     if (const auto drop = ui.take_unclaimed_drop(DRAG_TYPE);
         drop && drop->payload.source == grid && drop->payload.index >= 0) {
         slots_[static_cast<std::size_t>(drop->payload.index)].reset();

@@ -149,6 +149,28 @@ void draw_outline(DrawContext& ctx, const Nezumi::Area2D& box, glm::vec4 color,
     }
 }
 
+void draw_view_outline(DrawContext& ctx, glm::vec4 box, glm::vec4 color,
+                       float pixels, std::uint8_t layer)
+{
+    const float width = pixels * ctx.pixel_size;
+    const float h     = width * 0.5f;
+    const Nezumi::Render::DrawParams params = world_layer(layer);
+
+    // Centered on the box's edges, each running half a width past the
+    // corners so they close
+    const glm::vec2 a = { box.x, box.y }, b = { box.z, box.y };
+    const glm::vec2 c = { box.z, box.w }, d = { box.x, box.w };
+    const auto line = [&](glm::vec2 p, glm::vec2 q) {
+        ctx.renderer.draw_line(
+            Nezumi::Render::Line{ .position_a = p, .position_b = q, .color = color, .width = width },
+            params);
+    };
+    line(a - glm::vec2(h, 0.0f), b + glm::vec2(h, 0.0f));
+    line(d - glm::vec2(h, 0.0f), c + glm::vec2(h, 0.0f));
+    line(a - glm::vec2(0.0f, h), d + glm::vec2(0.0f, h));
+    line(b - glm::vec2(0.0f, h), c + glm::vec2(0.0f, h));
+}
+
 void draw_ground_circle(DrawContext& ctx, glm::vec2 center, float radius, glm::vec4 color,
                         float pixels, std::uint8_t layer)
 {

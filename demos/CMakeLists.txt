@@ -42,3 +42,4 @@ endfunction()
 
 add_demo(00-hello-world)
 add_demo(01-player-armies)
+add_demo(02-mining)

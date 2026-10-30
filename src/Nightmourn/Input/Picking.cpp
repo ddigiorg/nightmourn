@@ -28,7 +28,8 @@ Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
 Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
                                  const Nezumi::Render::Camera&     camera,
                                  const Nezumi::Render::Projection& proj,
-                                 glm::vec2                         screen)
+                                 glm::vec2                         screen,
+                                 bool (*accept)(const Nezumi::Entity&))
 {
     const glm::vec2 cursor = camera.screen_to_world(screen); // view space
 
@@ -46,6 +47,7 @@ Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
 
     surface.visit_entities_in(Nezumi::Area2D(area.x, area.y, area.z, area.w), [&](const Nezumi::Entity& entity) {
         if (!entity.is_drawable()) return true;
+        if (accept && !accept(entity)) return true;
 
         const glm::vec4* bounds = sprite_bounds(entity);
         if (!bounds) return true;

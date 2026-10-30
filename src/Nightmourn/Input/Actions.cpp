@@ -16,6 +16,8 @@ void bind_default_actions(Nezumi::InputMap& input) {
     input.bind(Action::MoveDown,  ScanCode::S);
     input.bind(Action::MoveUp,    ScanCode::W);
 
+    input.bind(Action::Mine, Nezumi::MouseButton::Left);
+
     input.bind(Action::ToggleDebugMenu,     ScanCode::Grave);
     input.bind(Action::ToggleSkillsMenu,    ScanCode::K);
     input.bind(Action::ToggleEquipmentMenu, ScanCode::C);

@@ -33,6 +33,9 @@ namespace Action {
     inline constexpr Nezumi::ActionID ToggleOptionsMenu   = 9;
     inline constexpr Nezumi::ActionID ToggleMainMenu      = 10; // Escape: also closes open menus
 
+    // Swing at the resource under the cursor (held: keep swinging)
+    inline constexpr Nezumi::ActionID Mine = 11;
+
     // Action bar slots: one action per slot, contiguous from UseSlotFirst, so
     // a bar that grows (MAX_ACTION_SLOTS) needs no new ids
     inline constexpr std::size_t      MAX_ACTION_SLOTS = 48;
@@ -43,7 +46,8 @@ namespace Action {
     }
 }
 
-// Bind every action to its default keys: W/A/S/D for movement, 1-9 and 0 for
+// Bind every action to its default keys: W/A/S/D for movement, the left
+// mouse button for mining, 1-9 and 0 for
 // the first ten action bar slots, K / C / B / I / O for the skill,
 // equipment, inventory, items and options menus, Escape for the main menu,
 // and the tilde key (the one left of 1, whatever the layout prints on it)
