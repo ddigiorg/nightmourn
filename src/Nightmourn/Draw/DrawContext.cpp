@@ -3,16 +3,16 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/DrawContext.hpp"
-#include "Nezumi/Render/View/Camera.hpp"
+#include "Nezumi/Render/2D/Camera/Camera2D.hpp"
 #include "Nezumi/World/World.hpp"
 
 namespace Nightmourn {
 
 DrawContext DrawContext::make(
-    Nezumi::Render::Renderer&         renderer,
+    Nezumi::Render::Renderer2D&       renderer,
     const Nezumi::World&              world,
-    const Nezumi::Render::Camera&     camera,
-    const Nezumi::Render::Projection& proj,
+    const Nezumi::Render::Camera2D&   camera,
+    const Nezumi::Projection&         proj,
     const DebugFlags&                 debug)
 {
     // The camera only knows view space, so its "world" bounds are view bounds

@@ -44,7 +44,7 @@
 
 #pragma once
 #include "Nightmourn/Item/Inventory.hpp"
-#include "Nezumi/Render/View/Projection.hpp"
+#include "Nezumi/World/Projection.hpp"
 #include "Nezumi/World/Entity/EntityID.hpp"
 #include <cstddef>     // size_t
 #include <glm/glm.hpp> // vec2
@@ -94,7 +94,7 @@ public:
     // -------------------------------------------------------------------------
 
     void update(Nezumi::World& world, const Nezumi::InputMap& input,
-                const Nezumi::Render::Projection& proj,
+                const Nezumi::Projection&         proj,
                 Nezumi::EntityHandle hovered = {});
 
     // -------------------------------------------------------------------------
@@ -115,7 +115,7 @@ public:
     // Where the camera should look (view space): the possessed character's
     // projected position, if any
     std::optional<glm::vec2> view_target(const Nezumi::World& world,
-                                         const Nezumi::Render::Projection& proj) const;
+                                         const Nezumi::Projection& proj) const;
 
 private:
     Nezumi::EntityHandle character_ = {};

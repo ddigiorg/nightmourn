@@ -6,7 +6,7 @@
 // the same pixel boxes). Painted at 2x, so every image is drawn at density 2:
 // a 160x120 px eagle is 80x60 UI points.
 //
-//   ui_atlas_ = Nightmourn::UIAtlas::load(*engine.renderer());
+//   ui_atlas_ = Nightmourn::UIAtlas::load(*engine.renderer2d());
 //   ui.draw_image(rect, ui_atlas_.eagle);
 //
 // The pixel boxes below and the ones in tools/gen_ui.py must match.
@@ -22,7 +22,7 @@
 #include <glm/glm.hpp> // vec2, vec4
 
 namespace Nezumi::Render {
-    class Renderer;
+    class Renderer2D;
 }
 
 namespace Nightmourn {
@@ -85,7 +85,7 @@ struct UIAtlas {
 
     // Creates the atlas through the renderer (which owns it) and fills in
     // every image. Throws if ui.png can't be loaded.
-    static UIAtlas load(Nezumi::Render::Renderer& renderer);
+    static UIAtlas load(Nezumi::Render::Renderer2D& renderer);
 };
 
 } // namespace Nightmourn

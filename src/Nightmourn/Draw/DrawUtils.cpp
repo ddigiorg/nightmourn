@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/DrawUtils.hpp"
-#include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entity/EntityDamageable.hpp"
 #include "Nightmourn/Character/Character.hpp"
@@ -51,7 +51,7 @@ const glm::vec4* sprite_bounds(const Nezumi::Entity& entity) {
     return nullptr;
 }
 
-glm::vec4 sprite_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos, glm::vec4 bounds) {
+glm::vec4 sprite_view_box(const Nezumi::Projection&         proj, glm::vec2 pos, glm::vec4 bounds) {
     const glm::vec2 feet = proj.to_view(pos);
     return glm::vec4{ feet, feet } + bounds * proj.tile_size().x;
 }

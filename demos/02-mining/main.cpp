@@ -197,7 +197,7 @@ public:
 
     void on_init(Nezumi::Engine& engine) override {
         Nezumi::World&    world    = engine.world();
-        Render::Renderer* renderer = engine.renderer();
+        Render::Renderer2D* renderer = engine.renderer2d();
 
         InputMap& input = engine.input();
         Nightmourn::bind_default_actions(input);
@@ -334,10 +334,10 @@ public:
     // -------------------------------------------------------------------------
 
     void on_draw(Nezumi::Engine& engine) override {
-        Render::Renderer* r = engine.renderer();
+        Render::Renderer2D* r = engine.renderer2d();
         const Nezumi::World& world = engine.world();
 
-        const Render::Projection proj = projection_();
+        const Projection proj = projection_();
         if (proj != last_projection_) {
             last_projection_ = proj;
             snap_camera_     = true;
@@ -485,7 +485,7 @@ private:
     // Projection
     // -------------------------------------------------------------------------
 
-    Render::Projection projection_() const { return DrawContext::projection(debug_flags_); }
+    Projection projection_() const { return DrawContext::projection(debug_flags_); }
 
     // -------------------------------------------------------------------------
     // Draw HUD
@@ -493,7 +493,7 @@ private:
 
     float screen_top_() const { return screen_camera_->get_size().y / screen_camera_->get_scale(); }
 
-    void draw_hud_(Render::Renderer* r, Nezumi::Engine& engine, float top) {
+    void draw_hud_(Render::Renderer2D* r, Nezumi::Engine& engine, float top) {
         const Nezumi::World& world = engine.world();
 
         size_t trees = 0;
@@ -544,8 +544,8 @@ private:
     // Members
     // -------------------------------------------------------------------------
 
-    Render::Camera* world_camera_  = nullptr;
-    Render::Camera* screen_camera_ = nullptr;
+    Render::Camera2D* world_camera_  = nullptr;
+    Render::Camera2D* screen_camera_ = nullptr;
     Render::Atlas*  atlas_         = nullptr;
     Render::Font*   font_          = nullptr;
 
@@ -561,7 +561,7 @@ private:
     std::vector<EventListenerID> listeners_       = {};
     glm::vec2                    cursor_          = {}; // window pixels
     bool                         has_cursor_      = false;
-    Render::Projection           last_projection_ = {};
+    Projection                   last_projection_ = {};
     std::vector<Popup>           popups_          = {};
 
     Player player_      = {};

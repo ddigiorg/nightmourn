@@ -3,22 +3,22 @@
 // =============================================================================
 
 #include "Nightmourn/Input/Picking.hpp"
-#include "Nezumi/Render/View/Camera.hpp"
+#include "Nezumi/Render/2D/Camera/Camera2D.hpp"
 #include "Nezumi/World/Surface/Surface.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 
 namespace Nightmourn {
 
-glm::vec2 screen_to_world(const Nezumi::Render::Camera&     camera,
-                          const Nezumi::Render::Projection& proj,
+glm::vec2 screen_to_world(const Nezumi::Render::Camera2D&   camera,
+                          const Nezumi::Projection&         proj,
                           glm::vec2                         screen)
 {
     // The camera only knows view space
     return proj.to_world(camera.screen_to_world(screen));
 }
 
-Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
-                          const Nezumi::Render::Projection& proj,
+Nezumi::TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
+                          const Nezumi::Projection&         proj,
                           glm::vec2                         screen)
 {
     const glm::vec2 world = screen_to_world(camera, proj, screen);
@@ -26,8 +26,8 @@ Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
 }
 
 Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
-                                 const Nezumi::Render::Camera&     camera,
-                                 const Nezumi::Render::Projection& proj,
+                                 const Nezumi::Render::Camera2D&   camera,
+                                 const Nezumi::Projection&         proj,
                                  glm::vec2                         screen,
                                  bool (*accept)(const Nezumi::Entity&))
 {

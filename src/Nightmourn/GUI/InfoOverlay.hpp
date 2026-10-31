@@ -25,7 +25,7 @@
 
 #pragma once
 #include "Nezumi/Core/Stopwatch.hpp"
-#include "Nezumi/Render/View/Projection.hpp"
+#include "Nezumi/World/Projection.hpp"
 #include <cstdint>     // uint64_t
 #include <glm/glm.hpp> // vec2
 #include <optional>    // optional
@@ -35,7 +35,7 @@ namespace Nezumi {
 }
 
 namespace Nezumi::Render {
-    class Camera;
+    class Camera2D;
 }
 
 namespace Nightmourn {
@@ -62,8 +62,8 @@ public:
     // -------------------------------------------------------------------------
 
     float draw(Nezumi::Engine&                   engine,
-               const Nezumi::Render::Camera&     camera,
-               const Nezumi::Render::Projection& proj,
+               const Nezumi::Render::Camera2D&   camera,
+               const Nezumi::Projection&         proj,
                std::optional<glm::vec2>          cursor) const;
 
 private:

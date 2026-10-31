@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/UnitGroupDrawer.hpp"
-#include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/Entities/UnitGroup.hpp"
 #include "Nezumi/World/World.hpp"
@@ -40,7 +40,7 @@ void UnitGroupDrawer::draw(DrawContext& ctx, const Nezumi::UnitGroup& group) con
     const Nezumi::Area2D frame = Nezumi::Area2D(group.collision_box()).grow(BOUNDS_PADDING);
     if (!frame.overlaps(ctx.world_view)) return;
 
-    Nezumi::Render::Renderer& r = ctx.renderer;
+    Nezumi::Render::Renderer2D& r = ctx.renderer;
     const float px = ctx.pixel_size;
 
     const glm::vec4 side_color  = config_.faction_colors[group.faction_index()];

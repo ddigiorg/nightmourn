@@ -3,11 +3,11 @@
 // =============================================================================
 
 #include "Nightmourn/GUI/UIAtlas.hpp"
-#include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/Render/2D/Renderer2D.hpp"
 
 namespace Nightmourn {
 
-UIAtlas UIAtlas::load(Nezumi::Render::Renderer& renderer) {
+UIAtlas UIAtlas::load(Nezumi::Render::Renderer2D& renderer) {
     using Nezumi::UI::Image;
     namespace P = UIAtlasPixels;
 
