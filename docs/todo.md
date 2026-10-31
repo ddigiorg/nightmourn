@@ -8,7 +8,7 @@ Nightmourn, deduplicated and grouped by area. Items that are already done on
 Two longer roadmaps already live in the engine and aren't repeated here.
 Items below point to them where they overlap:
 
-- `nezumi/src/Nezumi/Render/Renderer.hpp`, "Future Improvements" (Renderer #N)
+- `nezumi/src/Nezumi/Render/2D/Renderer2D.hpp`, "Future Improvements" (Renderer #N)
 - `nezumi/src/Nezumi/World/ROADMAP.md` (ROADMAP §N)
 
 ---
@@ -40,7 +40,7 @@ These change how later items are built, so they come first.
 
 ## Isometric
 
-Phases 0 and 1 of the isometric plan are done: `Render::Projection`, the
+Phases 0 and 1 of the isometric plan are done: `Nezumi::Projection`, the
 `Quad` kind, every drawer in view space, screen-relative WASD, tile and
 figure picking, and a `use-top-down-view` debug toggle. Decided: projection
 on the CPU in the drawers, square textures projected onto diamonds, flat

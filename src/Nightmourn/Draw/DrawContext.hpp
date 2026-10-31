@@ -25,8 +25,8 @@
 
 #pragma once
 #include "Nezumi/Core/Tick.hpp"
-#include "Nezumi/World/Projection.hpp"
 #include "Nezumi/World/Physics/Area2D.hpp"
+#include "Nezumi/World/Projection.hpp"
 #include "Nightmourn/Draw/DebugFlags.hpp"
 
 namespace Nezumi {
