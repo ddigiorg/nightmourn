@@ -5,7 +5,7 @@
 #include "Nightmourn/Draw/CharacterDrawer.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
-#include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/Render/2D/Renderer2D.hpp"
 #include <algorithm> // min
 #include <cassert>   // assert
 #include <cmath>     // atan2, cos, sin

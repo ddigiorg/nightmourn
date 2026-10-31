@@ -286,7 +286,7 @@ public:
 
     void on_init(Nezumi::Engine& engine) override {
         Nezumi::World&    world    = engine.world();
-        Render::Renderer* renderer = engine.renderer();
+        Render::Renderer2D* renderer = engine.renderer2d();
 
         // Input: the game's default bindings, plus the demo's own
         InputMap& input = engine.input();
@@ -439,12 +439,12 @@ public:
     // -------------------------------------------------------------------------
 
     void on_draw(Nezumi::Engine& engine) override {
-        Render::Renderer* r = engine.renderer();
+        Render::Renderer2D* r = engine.renderer2d();
         const Nezumi::World& world = engine.world();
 
         // The camera looks at view space, so switching projections moves
         // everything on screen: jump to the hero instead of sliding there
-        const Render::Projection proj = projection_();
+        const Projection proj = projection_();
         if (proj != last_projection_) {
             last_projection_ = proj;
             snap_camera_     = true;
@@ -664,7 +664,7 @@ private:
 
     // Iso unless use-top-down-view is on. Drawing, the move keys and picking
     // all ask here, so they always agree.
-    Render::Projection projection_() const { return DrawContext::projection(debug_flags_); }
+    Projection projection_() const { return DrawContext::projection(debug_flags_); }
 
     // -------------------------------------------------------------------------
     // Draw Pointer
@@ -696,7 +696,7 @@ private:
     float screen_top_() const { return screen_camera_->get_size().y / screen_camera_->get_scale(); }
 
     // `top`: screen-view y of the HUD's first line
-    void draw_hud_(Render::Renderer* r, Nezumi::Engine& engine, float top) {
+    void draw_hud_(Render::Renderer2D* r, Nezumi::Engine& engine, float top) {
         const Nezumi::World& world = engine.world();
 
         std::array<size_t, SIDE_COUNT> units = {};
@@ -727,7 +727,7 @@ private:
         std::snprintf(line, sizeof line, "trees %4zu\n", trees);
         text += line;
 
-        const Render::Projection proj = projection_();
+        const Projection proj = projection_();
         if (has_cursor_) {
             const TileCoord tile = Nightmourn::tile_at(*world_camera_, proj, cursor_);
             std::snprintf(line, sizeof line, "\ntile  %d, %d  (%s view)\n",
@@ -776,8 +776,8 @@ private:
     // Members
     // -------------------------------------------------------------------------
 
-    Render::Camera* world_camera_  = nullptr;
-    Render::Camera* screen_camera_ = nullptr;
+    Render::Camera2D* world_camera_  = nullptr;
+    Render::Camera2D* screen_camera_ = nullptr;
     Render::Atlas*  atlas_         = nullptr;
     Render::Font*   font_          = nullptr;
 
@@ -794,7 +794,7 @@ private:
     glm::vec2                      cursor_          = {}; // window pixels
     bool                           has_cursor_      = false;
     EntityHandle                   selected_        = {};
-    Render::Projection             last_projection_ = {};
+    Projection                     last_projection_ = {};
 
     Player   player_        = {};
     uint16_t respawn_ticks_ = 0;     // counting down while the hero is dead

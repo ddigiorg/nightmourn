@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/ChunkDrawer.hpp"
-#include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/World/Chunk/Chunk.hpp"
 #include "Nezumi/World/Constants.hpp"
 #include "Nezumi/World/Physics/TileCoord.hpp"

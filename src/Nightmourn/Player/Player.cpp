@@ -31,7 +31,7 @@ const Character* Player::character(const Nezumi::World& world) const {
 // -----------------------------------------------------------------------------
 
 void Player::update(Nezumi::World& world, const Nezumi::InputMap& input,
-                    const Nezumi::Render::Projection& proj,
+                    const Nezumi::Projection&         proj,
                     Nezumi::EntityHandle hovered)
 {
     Character* c = character(world);
@@ -72,7 +72,7 @@ void Player::on_entity_mined(const Nezumi::OnEntityMined& event) {
 // -----------------------------------------------------------------------------
 
 std::optional<glm::vec2> Player::view_target(const Nezumi::World& world,
-                                             const Nezumi::Render::Projection& proj) const
+                                             const Nezumi::Projection& proj) const
 {
     const Character* c = character(world);
     if (!c) return std::nullopt;

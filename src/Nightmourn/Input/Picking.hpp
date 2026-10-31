@@ -2,8 +2,8 @@
 // Input/Picking.hpp
 //
 // What is under the mouse. The world camera looks at view space (projected,
-// see Nezumi::Render::Projection), so a screen position goes screen -> view
-// (Camera::screen_to_world) -> world (Projection::to_world):
+// see Nezumi::Projection), so a screen position goes screen -> view
+// (Camera2D::screen_to_world) -> world (Projection::to_world):
 //
 //   const Nezumi::TileCoord tile = tile_at(camera, proj, mouse);
 //
@@ -18,7 +18,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/Render/View/Projection.hpp"
+#include "Nezumi/World/Projection.hpp"
 #include "Nezumi/World/Entity/EntityID.hpp"
 #include "Nezumi/World/Physics/TileCoord.hpp"
 #include <glm/glm.hpp> // vec2
@@ -29,20 +29,20 @@ namespace Nezumi {
 }
 
 namespace Nezumi::Render {
-    class Camera;
+    class Camera2D;
 }
 
 namespace Nightmourn {
 
 // World position (tiles) of the ground under screen position `screen`
 // (window pixels, y down, as the mouse reports it)
-glm::vec2 screen_to_world(const Nezumi::Render::Camera&     camera,
-                          const Nezumi::Render::Projection& proj,
+glm::vec2 screen_to_world(const Nezumi::Render::Camera2D&   camera,
+                          const Nezumi::Projection&         proj,
                           glm::vec2                         screen);
 
 // Tile under screen position `screen`
-Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
-                          const Nezumi::Render::Projection& proj,
+Nezumi::TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
+                          const Nezumi::Projection&         proj,
                           glm::vec2                         screen);
 
 // Front-most drawable entity with a sprite (unit, character, tree) that
@@ -53,8 +53,8 @@ Nezumi::TileCoord tile_at(const Nezumi::Render::Camera&     camera,
 //   pick_entity(surface, camera, proj, mouse,
 //               [](const Nezumi::Entity& e) { return e.is_resource(); });
 Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
-                                 const Nezumi::Render::Camera&     camera,
-                                 const Nezumi::Render::Projection& proj,
+                                 const Nezumi::Render::Camera2D&   camera,
+                                 const Nezumi::Projection&         proj,
                                  glm::vec2                         screen,
                                  bool (*accept)(const Nezumi::Entity&) = nullptr);
 

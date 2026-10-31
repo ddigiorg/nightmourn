@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/ResourceDrawer.hpp"
-#include "Nezumi/Render/Atlas/Atlas.hpp"
+#include "Nezumi/Render/2D/Atlas/Atlas.hpp"
 #include "Nezumi/World/Physics/TileCoord.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include <algorithm> // min

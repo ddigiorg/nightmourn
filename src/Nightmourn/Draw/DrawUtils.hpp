@@ -12,7 +12,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/Render/Atlas/Atlas.hpp"
+#include "Nezumi/Render/2D/Atlas/Atlas.hpp"
 #include "Nezumi/World/Physics/Area2D.hpp"
 #include "Nezumi/World/Physics/Position2D.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
@@ -62,10 +62,10 @@ inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -1.00f, -1.00f, 1.00f, 3.00f
 const glm::vec4* sprite_bounds(const Nezumi::Entity& entity);
 
 // View-space box of a sprite with `bounds` whose feet are at world `pos`
-glm::vec4 sprite_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos, glm::vec4 bounds);
+glm::vec4 sprite_view_box(const Nezumi::Projection&         proj, glm::vec2 pos, glm::vec4 bounds);
 
 // View-space sprite box of a figure standing at world `pos`
-inline glm::vec4 figure_view_box(const Nezumi::Render::Projection& proj, glm::vec2 pos) {
+inline glm::vec4 figure_view_box(const Nezumi::Projection&         proj, glm::vec2 pos) {
     return sprite_view_box(proj, pos, FIGURE_SPRITE_BOUNDS);
 }
 

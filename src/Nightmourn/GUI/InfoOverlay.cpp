@@ -4,7 +4,7 @@
 
 #include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nezumi/Engine.hpp"
-#include "Nezumi/Render/View/Camera.hpp"
+#include "Nezumi/Render/2D/Camera/Camera2D.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include <cmath>  // lround
@@ -73,12 +73,12 @@ void InfoOverlay::update(Nezumi::Engine& engine) {
 // -----------------------------------------------------------------------------
 
 float InfoOverlay::draw(Nezumi::Engine&                   engine,
-                        const Nezumi::Render::Camera&     camera,
-                        const Nezumi::Render::Projection& proj,
+                        const Nezumi::Render::Camera2D&   camera,
+                        const Nezumi::Projection&         proj,
                         std::optional<glm::vec2>          cursor) const
 {
-    Nezumi::Render::Renderer* r      = engine.renderer();
-    Nezumi::Render::Camera*   screen = r->get_view_camera(Nezumi::Render::View::Screen);
+    Nezumi::Render::Renderer2D* r      = engine.renderer2d();
+    Nezumi::Render::Camera2D*   screen = r->get_view_camera(Nezumi::Render::View::Screen);
     const Nezumi::Render::Font* font = engine.ui()->font();
     if (!screen || !font) return 0.0f;
 

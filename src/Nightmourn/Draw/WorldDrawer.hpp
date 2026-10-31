@@ -6,7 +6,7 @@
 // type. The game calls it once per frame:
 //
 //   void on_draw(Engine& engine) override {
-//       DrawContext ctx = DrawContext::make(*engine.renderer(), engine.world(),
+//       DrawContext ctx = DrawContext::make(*engine.renderer2d(), engine.world(),
 //                                           *world_camera_,
 //                                           DrawContext::projection(debug_flags_),
 //                                           debug_flags_);

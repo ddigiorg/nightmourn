@@ -11,7 +11,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/Render/DrawParams.hpp"
+#include "Nezumi/Render/2D/DrawParams.hpp"
 #include <cstdint> // int32_t, uint8_t
 
 namespace Nightmourn {

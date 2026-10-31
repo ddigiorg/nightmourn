@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/UnitDrawer.hpp"
-#include "Nezumi/Render/Renderer.hpp"
+#include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/World/Entities/Unit.hpp"
 #include "Nezumi/World/World.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
