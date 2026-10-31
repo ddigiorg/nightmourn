@@ -48,10 +48,10 @@
 #include "Nezumi/Engine.hpp"
 #include "Nezumi/Input/Events/OnMouseButtonDown.hpp"
 #include "Nezumi/Input/Events/OnMouseMotion.hpp"
-#include "Nezumi/World/Entities/Resource.hpp"
-#include "Nezumi/World/Entities/Unit.hpp"
-#include "Nezumi/World/Entities/UnitGroup.hpp"
-#include "Nezumi/World/Physics/Area2D.hpp"
+#include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Unit/Unit.hpp"
+#include "Nightmourn/Unit/UnitGroup.hpp"
+#include "Nightmourn/Geometry/Area2D.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DebugFlags.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
@@ -68,6 +68,7 @@
 #include "Nightmourn/Player/Player.hpp"
 #include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
+#include "Nightmourn/World/World.hpp"
 #include <algorithm>   // erase_if, max, min
 #include <array>       // array
 #include <cstdint>     // int32_t, uint16_t, uint32_t
@@ -83,16 +84,7 @@
 #include <vector>      // vector
 
 using namespace Nezumi;
-using Nightmourn::Character;
-using Nightmourn::CharacterConfig;
-using Nightmourn::DebugFlags;
-using Nightmourn::DrawContext;
-using Nightmourn::GameMenus;
-using Nightmourn::InfoOverlay;
-using Nightmourn::Player;
-using Nightmourn::ResourceType;
-using Nightmourn::TreeVariety;
-using Nightmourn::WorldDrawer;
+using namespace Nightmourn;
 
 // -----------------------------------------------------------------------------
 // Demo Actions
@@ -285,7 +277,10 @@ public:
     // -------------------------------------------------------------------------
 
     void on_init(Nezumi::Engine& engine) override {
-        Nezumi::World&    world    = engine.world();
+        // The game owns its world; the engine only supplies the clock and bus
+        world_ = std::make_unique<Nightmourn::World>(engine.clock(), engine.event_bus());
+
+        Nightmourn::World&    world    = *world_;
         Render::Renderer2D* renderer = engine.renderer2d();
 
         // Input: the game's default bindings, plus the demo's own
@@ -361,7 +356,7 @@ public:
             [this, &engine](const OnMouseButtonDown& e) {
                 if (e.button != MouseButton::Left || !has_cursor_) return;
                 if (engine.input().is_mouse_captured()) return;
-                if (const Nezumi::Surface* surface = engine.world().get_surface(surface_id_))
+                if (const Nightmourn::Surface* surface = world_->get_surface(surface_id_))
                     selected_ = Nightmourn::pick_entity(*surface, *world_camera_, projection_(), cursor_);
             }
         );
@@ -403,7 +398,7 @@ public:
     // -------------------------------------------------------------------------
 
     void on_tick(Nezumi::Engine& engine) override {
-        Nezumi::World& world = engine.world();
+        Nightmourn::World& world = *world_;
 
         menus_.handle_input(engine.input());
         if (menus_.quit_requested()) engine.event_bus().dispatch(OnGameExited{});
@@ -432,6 +427,9 @@ public:
 
         prune_groups_(world);
         retarget_idle_groups_(world);
+
+        // Advance the simulation once, after the player has issued commands
+        world.tick();
     }
 
     // -------------------------------------------------------------------------
@@ -440,7 +438,7 @@ public:
 
     void on_draw(Nezumi::Engine& engine) override {
         Render::Renderer2D* r = engine.renderer2d();
-        const Nezumi::World& world = engine.world();
+        const Nightmourn::World& world = *world_;
 
         // The camera looks at view space, so switching projections moves
         // everything on screen: jump to the hero instead of sliding there
@@ -457,7 +455,7 @@ public:
         }
         camera_controller_->update(engine.clock().get_real_dt());
 
-        if (const Nezumi::Surface* surface = world.get_surface(surface_id_)) {
+        if (const Nightmourn::Surface* surface = world.get_surface(surface_id_)) {
             DrawContext ctx = DrawContext::make(*r, world, *world_camera_, proj, debug_flags_);
             world_drawer_->draw(ctx, *surface);
             draw_pointer_(ctx, !engine.input().is_mouse_captured());
@@ -471,7 +469,7 @@ public:
             hud_top = info_overlay_.draw(engine, *world_camera_, proj, cursor) - HUD_GAP;
         }
 
-        draw_hud_(r, engine, hud_top);
+        draw_hud_(r, hud_top);
         action_bar_->draw(*engine.ui(), engine.input(), menus_, player_.character(world));
         menus_.draw(*engine.ui(), debug_flags_);
     }
@@ -493,10 +491,16 @@ public:
 private:
 
     // -------------------------------------------------------------------------
+    // World
+    // -------------------------------------------------------------------------
+
+    std::unique_ptr<Nightmourn::World> world_ = nullptr;
+
+    // -------------------------------------------------------------------------
     // Spawn
     // -------------------------------------------------------------------------
 
-    void spawn_hero_(Nezumi::World& world) {
+    void spawn_hero_(Nightmourn::World& world) {
         const EntityHandle hero = world.create_entity<Character>(
             /*.surface  = */surface_id_,
             /*.position = */HERO_SPAWN,
@@ -511,7 +515,7 @@ private:
     // One tree per cell at most, with a chance that grows into the edge
     // forests and the groves. The forests' inner edge is broken up by coarse
     // value noise, so it reads as a treeline rather than a ruler.
-    void spawn_trees_(Nezumi::World& world) {
+    void spawn_trees_(Nightmourn::World& world) {
         Random rng(TREE_SEED);
 
         // Value noise on a grid of 6-tile cells, in [0, 1]: one field for the
@@ -575,7 +579,7 @@ private:
     // start in their ranks, facing the march.
     void spawn_group_(Nezumi::Engine& engine, FactionIndex f, const UnitConfig& config,
                       float back, float lane_y) {
-        Nezumi::World& world = engine.world();
+        Nightmourn::World& world = *world_;
 
         const float      dir         = SIDES[f].direction;
         const Position2D center      = { -dir * back,    lane_y };
@@ -607,9 +611,9 @@ private:
     }
 
     // Everything but the trees
-    void clear_world_(Nezumi::World& world) {
+    void clear_world_(Nightmourn::World& world) {
         std::vector<EntityHandle> doomed;
-        world.each_entity([&](const Nezumi::Entity& entity) {
+        world.each_entity([&](const Nightmourn::Entity& entity) {
             if (!entity.is_pending_remove() && !entity.is_type<Resource>()) doomed.push_back(entity.handle);
         });
         for (EntityHandle handle : doomed) world.remove_entity(handle);
@@ -624,7 +628,7 @@ private:
 
     // Groups that finished their route and found nobody attack the nearest
     // enemy group, wherever it is
-    void retarget_idle_groups_(Nezumi::World& world) {
+    void retarget_idle_groups_(Nightmourn::World& world) {
         for_each_group_(world, [&](UnitGroup& group) {
             if (group.state() != UnitGroupState::Formed)       return;
             if (group.command().type != UnitCommandType::Stop) return;
@@ -643,7 +647,7 @@ private:
     }
 
     // Drop groups that removed themselves (no members left)
-    void prune_groups_(Nezumi::World& world) {
+    void prune_groups_(Nightmourn::World& world) {
         std::erase_if(groups_, [&](EntityHandle handle) {
             const UnitGroup* group = world.get_entity_as<UnitGroup>(handle);
             return !group || group->is_pending_remove();
@@ -651,7 +655,7 @@ private:
     }
 
     template <typename Fn>
-    void for_each_group_(Nezumi::World& world, Fn&& fn) {
+    void for_each_group_(Nightmourn::World& world, Fn&& fn) {
         for (EntityHandle handle : groups_) {
             UnitGroup* group = world.get_entity_as<UnitGroup>(handle);
             if (group && !group->is_pending_remove()) fn(*group);
@@ -681,7 +685,7 @@ private:
             Nightmourn::draw_outline(ctx, tile.bounds(), HOVER_COLOR, 2.0f, GroundOverlay);
         }
 
-        if (const Nezumi::Entity* entity = ctx.world.get_entity(selected_); entity && entity->is_alive()) {
+        if (const Nightmourn::Entity* entity = ctx.world.get_entity(selected_); entity && entity->is_alive()) {
             Nightmourn::draw_ground_circle(ctx, entity->position.to_vec2(), SELECTION_RADIUS,
                                            SELECTION_COLOR, 2.0f, GroundOverlay);
         }
@@ -696,12 +700,12 @@ private:
     float screen_top_() const { return screen_camera_->get_size().y / screen_camera_->get_scale(); }
 
     // `top`: screen-view y of the HUD's first line
-    void draw_hud_(Render::Renderer2D* r, Nezumi::Engine& engine, float top) {
-        const Nezumi::World& world = engine.world();
+    void draw_hud_(Render::Renderer2D* r, float top) {
+        const Nightmourn::World& world = *world_;
 
         std::array<size_t, SIDE_COUNT> units = {};
         size_t                         trees = 0; // every resource is a tree for now
-        world.each_entity([&](const Nezumi::Entity& entity) {
+        world.each_entity([&](const Nightmourn::Entity& entity) {
             if (!entity.is_alive()) return;
             if      (entity.is_type<Unit>()) units[entity.faction_index()]++;
             else if (entity.is_type<Resource>()) trees++;
@@ -735,7 +739,7 @@ private:
             text += line;
         }
 
-        if (const Nezumi::Entity* entity = world.get_entity(selected_); entity && entity->is_alive()) {
+        if (const Nightmourn::Entity* entity = world.get_entity(selected_); entity && entity->is_alive()) {
             std::string_view name = "entity";
             if (entity->is_type<Unit>())      name = entity->as_type<Unit>()->config().name;
             if (entity->is_type<Character>()) name = entity->as_type<Character>()->config().name;

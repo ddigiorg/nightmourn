@@ -4,32 +4,32 @@
 
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nezumi/Render/2D/Camera/Camera2D.hpp"
-#include "Nezumi/World/Surface/Surface.hpp"
+#include "Nightmourn/Surface/Surface.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 
 namespace Nightmourn {
 
 glm::vec2 screen_to_world(const Nezumi::Render::Camera2D&   camera,
-                          const Nezumi::Projection&         proj,
+                          const Projection&         proj,
                           glm::vec2                         screen)
 {
     // The camera only knows view space
     return proj.to_world(camera.screen_to_world(screen));
 }
 
-Nezumi::TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
-                          const Nezumi::Projection&         proj,
+TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
+                          const Projection&         proj,
                           glm::vec2                         screen)
 {
     const glm::vec2 world = screen_to_world(camera, proj, screen);
-    return Nezumi::TileCoord::from_position({ world.x, world.y });
+    return TileCoord::from_position({ world.x, world.y });
 }
 
-Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
+EntityHandle pick_entity(const Surface&            surface,
                                  const Nezumi::Render::Camera2D&   camera,
-                                 const Nezumi::Projection&         proj,
+                                 const Projection&         proj,
                                  glm::vec2                         screen,
-                                 bool (*accept)(const Nezumi::Entity&))
+                                 bool (*accept)(const Entity&))
 {
     const glm::vec2 cursor = camera.screen_to_world(screen); // view space
 
@@ -42,10 +42,10 @@ Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
                               cursor.x - reach.x, cursor.y - reach.y };
     const glm::vec4 area  = proj.box_to_world_bounds(feet);
 
-    Nezumi::EntityHandle best   = {};
+    EntityHandle best   = {};
     float                best_y = 0.0f;
 
-    surface.visit_entities_in(Nezumi::Area2D(area.x, area.y, area.z, area.w), [&](const Nezumi::Entity& entity) {
+    surface.visit_entities_in(Area2D(area.x, area.y, area.z, area.w), [&](const Entity& entity) {
         if (!entity.is_drawable()) return true;
         if (accept && !accept(entity)) return true;
 

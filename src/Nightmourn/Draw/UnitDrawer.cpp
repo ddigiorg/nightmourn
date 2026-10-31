@@ -4,8 +4,8 @@
 
 #include "Nightmourn/Draw/UnitDrawer.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
-#include "Nezumi/World/Entities/Unit.hpp"
-#include "Nezumi/World/World.hpp"
+#include "Nightmourn/Unit/Unit.hpp"
+#include "Nightmourn/World/World.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include <cassert> // assert
 
@@ -29,7 +29,7 @@ UnitDrawer::UnitDrawer(const Config& config)
     : atlas_(config.atlas)
 {
     assert(atlas_ && "UnitDrawer: config.atlas is null");
-    for (std::size_t f = 0; f < Nezumi::MAX_FACTIONS; f++)
+    for (std::size_t f = 0; f < MAX_FACTIONS; f++)
         frames_[f] = FigureFrames::from_row(*atlas_, config.faction_rows[f], config.frame_size);
 }
 
@@ -37,11 +37,11 @@ UnitDrawer::UnitDrawer(const Config& config)
 // Draw
 // -----------------------------------------------------------------------------
 
-void UnitDrawer::draw(DrawContext& ctx, const Nezumi::Unit& unit) const {
+void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
     const glm::vec2 pos = unit.position.to_vec2();
 
     // Units have one faction (faction_index asserts it); neutral ones use row 0
-    const Nezumi::FactionIndex faction = (unit.factions_mask == Nezumi::EntityFactionsMask::None)
+    const FactionIndex faction = (unit.factions_mask == EntityFactionsMask::None)
         ? 0 : unit.faction_index();
 
     draw_figure   (ctx, *atlas_, frames_[faction], pos, unit.facing());
@@ -54,12 +54,12 @@ void UnitDrawer::draw(DrawContext& ctx, const Nezumi::Unit& unit) const {
     if (ctx.show(DebugFlag::ShowUnitBehaviorInfo))    draw_behavior_    (ctx, unit);
 }
 
-void UnitDrawer::draw_behavior_(DrawContext& ctx, const Nezumi::Unit& unit) const {
+void UnitDrawer::draw_behavior_(DrawContext& ctx, const Unit& unit) const {
     const glm::vec2 pos   = ctx.to_view(unit.position.to_vec2());
     const glm::vec4 color = STATE_COLORS[static_cast<std::size_t>(unit.state())];
     const Nezumi::Render::DrawParams params = world_layer(DrawLayer::Debug);
 
-    if (const Nezumi::Entity* target = ctx.world.get_entity(unit.target()); target && target->is_alive()) {
+    if (const Entity* target = ctx.world.get_entity(unit.target()); target && target->is_alive()) {
         ctx.renderer.draw_line(
             Nezumi::Render::Line{
                 .position_a = pos,

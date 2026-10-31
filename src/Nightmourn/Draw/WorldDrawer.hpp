@@ -6,7 +6,7 @@
 // type. The game calls it once per frame:
 //
 //   void on_draw(Engine& engine) override {
-//       DrawContext ctx = DrawContext::make(*engine.renderer2d(), engine.world(),
+//       DrawContext ctx = DrawContext::make(*engine.renderer2d(), *world_,
 //                                           *world_camera_,
 //                                           DrawContext::projection(debug_flags_),
 //                                           debug_flags_);
@@ -27,12 +27,10 @@
 #include "Nightmourn/Draw/UnitDrawer.hpp"
 #include "Nightmourn/Draw/UnitGroupDrawer.hpp"
 
-namespace Nezumi {
-    class Entity;
-    class Surface;
-}
-
 namespace Nightmourn {
+
+class Entity;
+class Surface;
 
 class WorldDrawer {
 public:
@@ -59,7 +57,7 @@ public:
     // Draw
     // -------------------------------------------------------------------------
 
-    void draw(DrawContext& ctx, const Nezumi::Surface& surface) const;
+    void draw(DrawContext& ctx, const Surface& surface) const;
 
     // -------------------------------------------------------------------------
     // Drawers
@@ -78,10 +76,10 @@ private:
     // -------------------------------------------------------------------------
 
     // The drawer for the entity's type; entities with no drawer are skipped
-    void draw_entity_(DrawContext& ctx, const Nezumi::Entity& entity) const;
+    void draw_entity_(DrawContext& ctx, const Entity& entity) const;
 
     // UnitGroups near the view (ShowUnitGroupInfo)
-    void draw_unit_groups_(DrawContext& ctx, const Nezumi::Surface& surface) const;
+    void draw_unit_groups_(DrawContext& ctx, const Surface& surface) const;
 
     // -------------------------------------------------------------------------
     // Members

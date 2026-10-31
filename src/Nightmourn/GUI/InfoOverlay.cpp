@@ -74,7 +74,7 @@ void InfoOverlay::update(Nezumi::Engine& engine) {
 
 float InfoOverlay::draw(Nezumi::Engine&                   engine,
                         const Nezumi::Render::Camera2D&   camera,
-                        const Nezumi::Projection&         proj,
+                        const Projection&         proj,
                         std::optional<glm::vec2>          cursor) const
 {
     Nezumi::Render::Renderer2D* r      = engine.renderer2d();

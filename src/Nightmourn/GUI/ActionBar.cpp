@@ -217,7 +217,7 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         if (r.payload.source == grid && r.payload.index >= 0) {
             std::swap(slots_[to], slots_[static_cast<std::size_t>(r.payload.index)]);
         } else {
-            slots_[to] = Nezumi::ItemID{ static_cast<Nezumi::ItemID::value_t>(r.payload.value) };
+            slots_[to] = ItemID{ static_cast<ItemID::value_t>(r.payload.value) };
         }
     }
 

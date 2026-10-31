@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(NIGHTMOURN_BUILD_DEMOS "Build the Nightmourn demos" ON)
+option(NIGHTMOURN_BUILD_TESTS "Build the Nightmourn tests" ON)
 
 # ------------------------------------------------------------------------------
 # Nezumi
@@ -33,12 +34,14 @@ FetchContent_Declare(nezumi
 FetchContent_MakeAvailable(nezumi)
 
 # ------------------------------------------------------------------------------
-# Game library
+# Game code
 #
 # Everything the game and its demos share lives in src/Nightmourn/ and is
 # included as <Nightmourn/...>, the same way the engine is included as
-# <Nezumi/...>. The game executable and every demo link this library, so a
-# demo can try out game code without copying it.
+# <Nezumi/...>. It is built as two libraries, nightmourn_world (the headless
+# simulation) and nightmourn_game (everything that needs the full engine). The
+# game executable and every demo link nightmourn_game, so a demo can try out
+# game code without copying it; tests link only nightmourn_world.
 # ------------------------------------------------------------------------------
 
 # Same warnings as the engine (applied PRIVATE to game targets).
@@ -48,8 +51,43 @@ set(NIGHTMOURN_WARNINGS
     "$<$<CXX_COMPILER_ID:MSVC>:/W4;/we4062>"
 )
 
-add_library(nightmourn_game STATIC
+# ------------------------------------------------------------------------------
+# World library
+#
+# The simulation: World, surfaces, chunks, sectors, entities and everything
+# that ticks (units, resources, characters), plus items. No window, renderer,
+# input or UI, so it builds and tests headless. Links only the engine's
+# generic building blocks (Core, Object, Event, Logger).
+# ------------------------------------------------------------------------------
+
+add_library(nightmourn_world STATIC
     src/Nightmourn/Character/Character.cpp
+    src/Nightmourn/Chunk/Chunk.cpp
+    src/Nightmourn/Item/Inventory.cpp
+    src/Nightmourn/Sector/Sector.cpp
+    src/Nightmourn/Surface/Surface.cpp
+    src/Nightmourn/Unit/Unit.cpp
+    src/Nightmourn/Unit/UnitGroup.cpp
+    src/Nightmourn/World/World.cpp
+)
+
+target_include_directories(nightmourn_world PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_options(nightmourn_world PRIVATE ${NIGHTMOURN_WARNINGS})
+target_link_libraries(nightmourn_world
+    PUBLIC
+        nezumi_core
+        nezumi_logger
+        glm::glm
+)
+
+# ------------------------------------------------------------------------------
+# Game library
+#
+# Everything on top of the world that needs the full engine: drawing, GUI,
+# input and the Player.
+# ------------------------------------------------------------------------------
+
+add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/CharacterDrawer.cpp
     src/Nightmourn/Draw/ChunkDrawer.cpp
     src/Nightmourn/Draw/DebugFlags.cpp
@@ -68,13 +106,12 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/GUI/UIAtlas.cpp
     src/Nightmourn/Input/Actions.cpp
     src/Nightmourn/Input/Picking.cpp
-    src/Nightmourn/Item/Inventory.cpp
     src/Nightmourn/Player/Player.cpp
 )
 
 target_include_directories(nightmourn_game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_compile_options(nightmourn_game PRIVATE ${NIGHTMOURN_WARNINGS})
-target_link_libraries(nightmourn_game PUBLIC Nezumi::Engine)
+target_link_libraries(nightmourn_game PUBLIC nightmourn_world Nezumi::Engine)
 
 # ------------------------------------------------------------------------------
 # Game
@@ -94,4 +131,13 @@ nezumi_copy_assets(nightmourn ENGINE)
 
 if(NIGHTMOURN_BUILD_DEMOS)
     add_subdirectory(demos)
+endif()
+
+# ------------------------------------------------------------------------------
+# Tests
+# ------------------------------------------------------------------------------
+
+if(NIGHTMOURN_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()

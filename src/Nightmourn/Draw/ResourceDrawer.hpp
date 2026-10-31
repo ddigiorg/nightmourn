@@ -65,7 +65,7 @@ public:
     // Draw
     // -------------------------------------------------------------------------
 
-    void draw(DrawContext& ctx, const Nezumi::Resource& resource) const;
+    void draw(DrawContext& ctx, const Resource& resource) const;
 
 private:
 

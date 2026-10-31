@@ -4,8 +4,8 @@
 
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
-#include "Nezumi/World/Entities/Unit.hpp"
-#include "Nezumi/World/Entity/EntityDamageable.hpp"
+#include "Nightmourn/Unit/Unit.hpp"
+#include "Nightmourn/Entity/EntityDamageable.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
@@ -45,13 +45,13 @@ glm::vec4 FigureFrames::pick(glm::vec2 heading) const {
 // Sprites
 // -----------------------------------------------------------------------------
 
-const glm::vec4* sprite_bounds(const Nezumi::Entity& entity) {
-    if (entity.is_type<Nezumi::Unit>() || entity.is_type<Character>()) return &FIGURE_SPRITE_BOUNDS;
-    if (entity.is_type<Nezumi::Resource>() && is_tree(*entity.as_type<Nezumi::Resource>())) return &TREE_SPRITE_BOUNDS;
+const glm::vec4* sprite_bounds(const Entity& entity) {
+    if (entity.is_type<Unit>() || entity.is_type<Character>()) return &FIGURE_SPRITE_BOUNDS;
+    if (entity.is_type<Resource>() && is_tree(*entity.as_type<Resource>())) return &TREE_SPRITE_BOUNDS;
     return nullptr;
 }
 
-glm::vec4 sprite_view_box(const Nezumi::Projection&         proj, glm::vec2 pos, glm::vec4 bounds) {
+glm::vec4 sprite_view_box(const Projection&         proj, glm::vec2 pos, glm::vec4 bounds) {
     const glm::vec2 feet = proj.to_view(pos);
     return glm::vec4{ feet, feet } + bounds * proj.tile_size().x;
 }
@@ -71,7 +71,7 @@ void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
 }
 
 void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                 const FigureFrames& frames, glm::vec2 pos, Nezumi::Position2D facing)
+                 const FigureFrames& frames, glm::vec2 pos, Position2D facing)
 {
     const glm::vec4 tex_box = frames.pick(ctx.proj.dir_to_heading(facing.to_vec2()));
     draw_sprite_at(ctx, atlas, tex_box, pos, FIGURE_SPRITE_BOUNDS);
@@ -84,7 +84,7 @@ void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
 static constexpr glm::vec4 HEALTHBAR_BOUNDS = { -0.3f, 0.82f, 0.3f, 0.97f };
 static constexpr float     HEALTHBAR_BORDER = 0.04f;
 
-void draw_healthbar(DrawContext& ctx, const Nezumi::EntityDamageable& entity) {
+void draw_healthbar(DrawContext& ctx, const EntityDamageable& entity) {
     if (entity.is_full_health()) return;
 
     // Upright, like the figure it floats over
@@ -109,11 +109,11 @@ static constexpr glm::vec4 COLLISION_BOX_COLOR    = { 0.2f, 1.0f, 0.2f, 1.0f };
 static constexpr float     FACING_ARROW_SIZE      = 0.6f; // tiles
 static constexpr int       GROUND_CIRCLE_SEGMENTS = 24;
 
-void draw_collision_box(DrawContext& ctx, const Nezumi::Entity& entity) {
+void draw_collision_box(DrawContext& ctx, const Entity& entity) {
     draw_outline(ctx, entity.collision_box(), COLLISION_BOX_COLOR, 1.0f, DrawLayer::Debug);
 }
 
-void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Nezumi::Position2D facing, glm::vec4 color) {
+void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Position2D facing, glm::vec4 color) {
     // The arrow lies on the ground, so it points the way the projected
     // facing points on screen
     const glm::vec2 dir = ctx.proj.dir_to_view(facing.to_vec2());
@@ -129,7 +129,7 @@ void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Nezumi::Position2D facin
     );
 }
 
-void draw_outline(DrawContext& ctx, const Nezumi::Area2D& box, glm::vec4 color,
+void draw_outline(DrawContext& ctx, const Area2D& box, glm::vec4 color,
                   float pixels, std::uint8_t layer)
 {
     const float width = pixels * ctx.pixel_size;

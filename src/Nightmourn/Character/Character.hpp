@@ -2,7 +2,7 @@
 // Character/Character.hpp
 //
 // A person in the world: the hero the player controls, and later NPCs. It is
-// a damageable entity with a faction, so the engine's Units see it as a
+// a damageable entity with a faction, so Units see it as a
 // target like any other enemy, and World's damage phase hurts and removes it.
 //
 // A character never reads input. Its controller (see Player) issues a
@@ -17,40 +17,38 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/World/Entity/EntityDamageable.hpp"
-#include "Nezumi/World/Entity/EntityFactionsMask.hpp"
+#include "Nightmourn/Entity/EntityDamageable.hpp"
+#include "Nightmourn/Entity/EntityFactionsMask.hpp"
 #include "Nightmourn/Character/CharacterCommand.hpp"
 #include "Nightmourn/Character/CharacterConfig.hpp"
-#include "Nightmourn/World/EntityTypes.hpp"
+#include "Nightmourn/Entity/EntityTypes.hpp"
 #include "Nezumi/Core/Tick.hpp"
-
-namespace Nezumi {
-    struct WorldContext;
-}
 
 namespace Nightmourn {
 
-class Character : public Nezumi::EntityDamageable {
+struct WorldContext;
+
+class Character : public EntityDamageable {
 public:
 
     // -------------------------------------------------------------------------
     // Statics
     // -------------------------------------------------------------------------
 
-    static constexpr Nezumi::EntityTypeID TYPE_ID = EntityTypes::Character;
+    static constexpr EntityTypeID TYPE_ID = EntityTypes::Character;
 
     // -------------------------------------------------------------------------
     // Construction & Destruction
     // -------------------------------------------------------------------------
 
     // `config` must outlive the character
-    Character(const CharacterConfig& config, Nezumi::EntityFactionsMask factions);
+    Character(const CharacterConfig& config, EntityFactionsMask factions);
 
     // -------------------------------------------------------------------------
     // Tick
     // -------------------------------------------------------------------------
 
-    void tick(Nezumi::WorldContext& ctx) override;
+    void tick(WorldContext& ctx) override;
 
     // -------------------------------------------------------------------------
     // Commands (between ticks only)
@@ -67,7 +65,7 @@ public:
 
     // Unit vector the character faces (last movement direction, or the
     // resource it is mining)
-    Nezumi::Position2D facing() const { return facing_; }
+    Position2D facing() const { return facing_; }
 
     // -------------------------------------------------------------------------
     // Mining
@@ -75,7 +73,7 @@ public:
 
     // True if `resource` (any entity) is close enough to swing at: its
     // collision box within mine_reach of the feet
-    bool can_reach(const Nezumi::Entity& resource) const;
+    bool can_reach(const Entity& resource) const;
 
     // Ticks until the next swing may land (0: ready)
     uint16_t mine_cooldown() const { return mine_cooldown_; }
@@ -93,13 +91,13 @@ private:
 
     const CharacterConfig* config_  = nullptr;
     CharacterCommand       command_ = {};
-    Nezumi::Position2D     facing_  = { 0.0f, -1.0f }; // down
+    Position2D     facing_  = { 0.0f, -1.0f }; // down
 
     uint16_t     mine_cooldown_   = 0;
     Nezumi::Tick last_swing_tick_ = 0;
     bool         has_swung_       = false;
 
-    void mine_(Nezumi::WorldContext& ctx);
+    void mine_(WorldContext& ctx);
 };
 
 } // namespace Nightmourn

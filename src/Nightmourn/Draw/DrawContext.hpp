@@ -7,7 +7,7 @@
 // every drawer.
 //
 // Drawers submit in VIEW space: the world camera looks at projected
-// positions (Nezumi::Projection, top-down or 2:1 isometric). The
+// positions (Projection, top-down or 2:1 isometric). The
 // sim stays on the square tile grid, so a drawer projects what it reads:
 //
 //   ground things (tiles, grid, footprints, routes) project every point:
@@ -25,13 +25,9 @@
 
 #pragma once
 #include "Nezumi/Core/Tick.hpp"
-#include "Nezumi/World/Physics/Area2D.hpp"
-#include "Nezumi/World/Projection.hpp"
+#include "Nightmourn/Geometry/Area2D.hpp"
+#include "Nightmourn/Geometry/Projection.hpp"
 #include "Nightmourn/Draw/DebugFlags.hpp"
-
-namespace Nezumi {
-    class World;
-}
 
 namespace Nezumi::Render {
     class Camera2D;
@@ -40,22 +36,24 @@ namespace Nezumi::Render {
 
 namespace Nightmourn {
 
+class World;
+
 struct DrawContext {
     Nezumi::Render::Renderer2D& renderer;
-    const Nezumi::World&        world;
+    const World&        world;
     const DebugFlags&           debug;
 
     // World to view space
-    Nezumi::Projection proj = {};
+    Projection proj = {};
 
     // View-space rectangle to draw: what the camera sees, grown by
     // VIEW_OVERHANG so figures standing just off screen still poke in
-    Nezumi::Area2D view = {};
+    Area2D view = {};
 
     // World-space bounds of `view` (tiles). Iso sees a diamond of the world,
     // so this box holds about twice the area on screen: use it to pick
     // chunks, then test against `view`.
-    Nezumi::Area2D world_view = {};
+    Area2D world_view = {};
 
     // Size of one screen pixel in view units, for lines that should stay N
     // pixels wide at any zoom: Line{ .width = 2.0f * ctx.pixel_size }
@@ -71,18 +69,18 @@ struct DrawContext {
     // The projection the game draws with: 2:1 isometric, or top-down while
     // use-top-down-view is on. Input and picking use the same one, so call
     // this wherever the game needs it rather than caching it across frames.
-    static Nezumi::Projection projection(const DebugFlags& debug) {
-        return debug.is_on(DebugFlag::UseTopDownView) ? Nezumi::Projection::top_down()
-                                                      : Nezumi::Projection::iso_2to1();
+    static Projection projection(const DebugFlags& debug) {
+        return debug.is_on(DebugFlag::UseTopDownView) ? Projection::top_down()
+                                                      : Projection::iso_2to1();
     }
 
     // Context for drawing `world` through `camera` (the World view's camera)
     // and `proj`
     static DrawContext make(
         Nezumi::Render::Renderer2D&       renderer,
-        const Nezumi::World&              world,
+        const World&              world,
         const Nezumi::Render::Camera2D&   camera,
-        const Nezumi::Projection&         proj,
+        const Projection&         proj,
         const DebugFlags&                 debug);
 
     bool show(DebugFlag flag) const { return debug.is_on(flag); }
