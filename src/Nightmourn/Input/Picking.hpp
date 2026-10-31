@@ -18,9 +18,9 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/World/Projection.hpp"
 #include "Nezumi/World/Entity/EntityID.hpp"
 #include "Nezumi/World/Physics/TileCoord.hpp"
+#include "Nezumi/World/Projection.hpp"
 #include <glm/glm.hpp> // vec2
 
 namespace Nezumi {

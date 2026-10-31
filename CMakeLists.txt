@@ -11,13 +11,13 @@ option(NIGHTMOURN_BUILD_DEMOS "Build the Nightmourn demos" ON)
 # ------------------------------------------------------------------------------
 # Nezumi
 #
-# Fetched at configure time, pinned to a commit on Nezumi's dev branch. Nezumi
-# in turn fetches its own dependencies, and builds only the engine (no
-# examples or tests) because it is not the top-level project here.
+# Fetched at configure time from Nezumi's main branch. Nezumi in turn fetches
+# its own dependencies, and builds only the engine (no examples or tests)
+# because it is not the top-level project here.
 #
-# To move to a newer engine, change GIT_TAG to the new commit SHA. A branch
-# name would also work, but then two configures a day apart can build against
-# different engines.
+# GIT_TAG tracks `main`, so a fresh configure always gets the latest engine,
+# and an engine change that renames things breaks the game until it catches
+# up. To freeze the engine instead, set GIT_TAG to a commit SHA.
 #
 # To develop against a local engine checkout instead, use the `dev-local`
 # preset from CMakeUserPresets.json (see README.md), or:

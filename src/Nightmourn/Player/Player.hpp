@@ -44,8 +44,8 @@
 
 #pragma once
 #include "Nightmourn/Item/Inventory.hpp"
-#include "Nezumi/World/Projection.hpp"
 #include "Nezumi/World/Entity/EntityID.hpp"
+#include "Nezumi/World/Projection.hpp"
 #include <cstddef>     // size_t
 #include <glm/glm.hpp> // vec2
 #include <optional>    // optional

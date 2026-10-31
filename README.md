@@ -29,12 +29,13 @@ Demos are built next to the game:
 
 ## Engine Version
 
-Nezumi is fetched by CMake and pinned to a commit SHA (`GIT_TAG` in
-`CMakeLists.txt`). To update the engine, change that SHA.
+Nezumi is fetched by CMake from its `main` branch (`GIT_TAG` in
+`CMakeLists.txt`). To freeze the engine at a known version, set `GIT_TAG` to a
+commit SHA instead.
 
 ## Developing the Engine and Game Together
 
-To build against a local Nezumi checkout instead of the pinned commit, clone
+To build against a local Nezumi checkout instead of the fetched one, clone
 both repositories side by side:
 
 ```
