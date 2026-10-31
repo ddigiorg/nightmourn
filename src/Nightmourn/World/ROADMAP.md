@@ -205,6 +205,21 @@ locality for neighbor queries.
 
 ---
 
+## 9. Chunk data: pheromones, smoke, decorations
+
+Per-chunk data is baked into `Chunk`, not a layer system.
+
+- **Pheromones (done):** `Chunk/Pheromones.hpp`. 16 `uint16_t` strengths
+  per chunk with integer lazy decay; deposits in tick phase 7; reads through
+  `Surface::pheromone_at` and `pheromone_gradient`. Still to do: include
+  `values` and `epoch` in save/load and in the desync checksum (§4), and
+  have unit AI follow the gradient.
+- **Smoke and decorations:** add a flat array to `Chunk` when a feature
+  needs one (Factorio keeps smoke and decoratives per chunk the same way).
+  Neither is planned yet.
+
+---
+
 ## Suggested order
 
 1. Random (§3): small, self-contained, fixes a real desync source.

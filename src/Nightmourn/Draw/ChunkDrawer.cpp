@@ -6,6 +6,7 @@
 #include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nightmourn/Chunk/Chunk.hpp"
 #include "Nightmourn/World/Constants.hpp"
+#include "Nightmourn/World/World.hpp"
 #include "Nightmourn/Geometry/TileCoord.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
@@ -75,6 +76,9 @@ void ChunkDrawer::draw(DrawContext& ctx, const Chunk& chunk) const {
 
     if (ctx.show(DebugFlag::ShowWorldGrid))
         draw_grid_(ctx, chunk);
+
+    if (ctx.show(DebugFlag::ShowPheromones))
+        draw_pheromones_(ctx, chunk);
 }
 
 // Columns [first, last] of tile row `y` whose projected tile overlaps the
@@ -192,6 +196,34 @@ void ChunkDrawer::draw_grid_(DrawContext& ctx, const Chunk& chunk) const {
     // drawing all 4 keeps the edge of the map closed.
     draw_outline(ctx, bounds, config_.grid_color, config_.chunk_line_pixels,
                  DrawLayer::GroundOverlay);
+}
+
+void ChunkDrawer::draw_pheromones_(DrawContext& ctx, const Chunk& chunk) const {
+    const PheromoneEpoch  now   = ctx.world.pheromone_epoch();
+    const PheromoneDecay& decay = ctx.world.pheromone_decay();
+
+    const Area2D&   bounds = chunk.bounds();
+    const glm::vec2 center = (bounds.min.to_vec2() + bounds.max.to_vec2()) * 0.5f;
+    const float     reach  = CHUNK_SIZE.x * 0.5f;
+
+    for (FactionIndex f = 0; f < MAX_FACTIONS; f++) {
+        const PheromoneValue value = chunk.pheromone(f, now, decay);
+        if (value == 0) continue;
+
+        const glm::vec4 color  = config_.faction_colors[f].a > 0.0f ? config_.faction_colors[f]
+                                                                    : glm::vec4(1.0f); // unset: white
+        const float     radius = reach * static_cast<float>(value) / static_cast<float>(PHEROMONE_MAX);
+        draw_ground_circle(ctx, center, std::max(radius, 0.25f), color,
+                           config_.pheromone_line_pixels, DrawLayer::GroundOverlay);
+
+        const int best = chunk.strongest_neighbour(f, now, decay);
+        if (best < 0) continue;
+        const std::size_t i = static_cast<std::size_t>(best);
+        if (chunk.neighbour(i)->pheromone(f, now, decay) <= value) continue;
+
+        const ChunkOffset o = NEIGHBOUR_OFFSETS[i];
+        draw_facing_arrow(ctx, center, Position2D{ static_cast<float>(o.x), static_cast<float>(o.y) }, color);
+    }
 }
 
 } // namespace Nightmourn

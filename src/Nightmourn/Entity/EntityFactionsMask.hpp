@@ -4,11 +4,9 @@
 // Entity factions.
 //
 // An entity stores its factions as a mask so friend/enemy checks are one AND.
-// Per-faction data (pheromone grids, stats, AI) lives in arrays indexed by
-// FactionIndex, the bit position in the mask:
-//
-//   std::array<PheromoneGrid, MAX_FACTIONS> pheromones;
-//   pheromones[unit.faction_index()].deposit(...);
+// Per-faction data (pheromones, stats, AI) lives in arrays indexed by
+// FactionIndex, the bit position in the mask, e.g. each chunk's
+// Pheromones::values[unit.faction_index()].
 // =============================================================================
 
 #pragma once

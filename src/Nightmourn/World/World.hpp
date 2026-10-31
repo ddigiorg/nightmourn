@@ -9,6 +9,7 @@
 #include "Nezumi/Core/Tick.hpp"
 #include "Nezumi/Event/EventBus.hpp"
 #include "Nezumi/Object/SlotMap.hpp"
+#include "Nightmourn/Chunk/Pheromones.hpp"
 #include "Nightmourn/Command/CommandRegistry.hpp"
 #include "Nightmourn/Entity/Entity.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
@@ -54,6 +55,16 @@ public:
     void tick();
 
     Nezumi::Tick get_tick() const { return tick_; }
+
+    // -------------------------------------------------------------------------
+    // Pheromones
+    //
+    // The decay curve every chunk shares, and the epoch reads use now.
+    // Surface::pheromone_at and pheromone_gradient pass both for you.
+    // -------------------------------------------------------------------------
+
+    const PheromoneDecay& pheromone_decay() const { return pheromone_decay_; }
+    PheromoneEpoch        pheromone_epoch() const { return pheromone_decay_.epoch(tick_); }
 
     // -------------------------------------------------------------------------
     // Surfaces
@@ -146,7 +157,8 @@ private:
     // 4. Interaction  apply damage, then mine commands, each in issue order
     // 5. Movement     integrate velocity, then update chunk/sector membership
     // 6. Activation   update chunk active/inactive state again
-    // 7. Sweep        drop empty sectors every `sector_sweep_interval` ticks
+    // 7. Pheromones   active emitters deposit into their chunk (staggered)
+    // 8. Sweep        drop empty sectors every `sector_sweep_interval` ticks
     // -------------------------------------------------------------------------
 
     WorldContext make_context_();
@@ -158,6 +170,7 @@ private:
     void apply_damage_       ();
     void apply_mining_       ();
     void integrate_movement_ (float dt);
+    void deposit_pheromones_ ();
     void sweep_sectors_      ();
 
     // -------------------------------------------------------------------------
@@ -189,6 +202,7 @@ private:
     Nezumi::SlotMap<Entity>  entities_ = {};
     Nezumi::SlotMap<Surface> surfaces_ = {};
     CommandRegistry  commands_ = {};
+    PheromoneDecay   pheromone_decay_;
 
     // Scratch (reused every tick to avoid allocation)
     std::vector<Entity*> moved_ = {};

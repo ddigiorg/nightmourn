@@ -36,6 +36,7 @@ Chunk* Surface::create_chunk(ChunkID id) {
 
     Chunk* chunk = chunks_.create(id).object;
     chunk_lookup_.emplace(id, chunk);
+    link_neighbours_(chunk);
 
     OnChunkCreated event;
     event.surface_id = id_;
@@ -59,6 +60,47 @@ Chunk* Surface::get_chunk(ChunkID id) {
 const Chunk* Surface::get_chunk(ChunkID id) const {
     auto it = chunk_lookup_.find(id);
     return it != chunk_lookup_.end() ? it->second : nullptr;
+}
+
+void Surface::link_neighbours_(Chunk* chunk) {
+    const ChunkID id = chunk->id();
+    for (std::size_t i = 0; i < NEIGHBOUR_COUNT; i++) {
+        const int x = id.x + NEIGHBOUR_OFFSETS[i].x;
+        const int y = id.y + NEIGHBOUR_OFFSETS[i].y;
+        if (x < CHUNK_MIN_X || x > CHUNK_MAX_X || y < CHUNK_MIN_Y || y > CHUNK_MAX_Y) continue;
+
+        Chunk* other = get_chunk(ChunkID{ static_cast<ChunkID::value_t>(x), static_cast<ChunkID::value_t>(y) });
+        if (!other) continue;
+
+        chunk->neighbours_[i]                     = other;
+        other->neighbours_[opposite_neighbour(i)] = chunk;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Pheromones
+// -----------------------------------------------------------------------------
+
+PheromoneValue Surface::pheromone_at(Position2D position, FactionIndex faction) const {
+    const Chunk* chunk = get_chunk(ChunkID::pos_to_id(position));
+    if (!chunk) return 0;
+    return chunk->pheromone(faction, world_.pheromone_epoch(), world_.pheromone_decay());
+}
+
+ChunkOffset Surface::pheromone_gradient(Position2D position, FactionIndex faction) const {
+    const Chunk* chunk = get_chunk(ChunkID::pos_to_id(position));
+    if (!chunk) return {};
+
+    const PheromoneEpoch  now   = world_.pheromone_epoch();
+    const PheromoneDecay& decay = world_.pheromone_decay();
+
+    const int best = chunk->strongest_neighbour(faction, now, decay);
+    if (best < 0) return {};
+
+    const std::size_t i = static_cast<std::size_t>(best);
+    if (chunk->neighbour(i)->pheromone(faction, now, decay) <= chunk->pheromone(faction, now, decay))
+        return {};
+    return NEIGHBOUR_OFFSETS[i];
 }
 
 // -----------------------------------------------------------------------------
@@ -220,6 +262,17 @@ void Surface::update_chunk_activation_() {
     // loaded from a save ticks in the same order as one that never stopped.
     std::sort(active_chunks_.begin(), active_chunks_.end(),
               [](const Chunk* a, const Chunk* b) { return a->id() < b->id(); });
+}
+
+// Runs after the second activation phase, so every chunk that holds an
+// active entity is in active_chunks_ (an entity that just walked into a
+// sleeping chunk woke it). Each chunk only writes its own field.
+void Surface::deposit_pheromones_(Nezumi::Tick tick, Nezumi::Tick interval, PheromoneValue amount) {
+    const PheromoneEpoch  now   = world_.pheromone_epoch();
+    const PheromoneDecay& decay = world_.pheromone_decay();
+    for (Chunk* chunk : active_chunks_) {
+        chunk->deposit_pheromones_(tick, interval, amount, now, decay);
+    }
 }
 
 void Surface::sweep_empty_sectors_() {
