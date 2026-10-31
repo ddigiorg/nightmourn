@@ -28,7 +28,7 @@ struct EntitySearchFilter {
     // (no faction) are skipped.
     static EntitySearchFilter enemies_of(const Entity& self) {
         return {
-            .require_flags    = EntityFlagsMask::Flag24, // Damageable
+            .require_flags    = EntityFlagsMask::Damageable,
             .any_factions     = EntityFactionsMask::All,
             .exclude_factions = self.factions_mask,
             .exclude          = self.handle,
@@ -40,7 +40,7 @@ struct EntitySearchFilter {
     static EntitySearchFilter resources(EntityTypeID type = {}) {
         return {
             .type          = type,
-            .require_flags = EntityFlagsMask::Flag23, // Resource
+            .require_flags = EntityFlagsMask::Resource,
         };
     }
 
