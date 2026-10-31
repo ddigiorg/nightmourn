@@ -15,7 +15,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/World/Item/ItemID.hpp"
+#include "Nightmourn/Item/ItemID.hpp"
 #include <cstddef>  // size_t
 #include <cstdint>  // uint16_t, uint32_t
 #include <optional> // optional
@@ -24,7 +24,7 @@
 namespace Nightmourn {
 
 struct ItemStack {
-    Nezumi::ItemID item  = {};
+    ItemID item  = {};
     std::uint16_t  count = 0; // 1 .. item_stack_size(item)
 };
 
@@ -50,19 +50,19 @@ public:
     // -------------------------------------------------------------------------
 
     // Total of `item` over every slot
-    std::uint32_t count(Nezumi::ItemID item) const;
+    std::uint32_t count(ItemID item) const;
 
     // How many of `item` would fit: room on its stacks plus empty slots
-    std::uint32_t room_for(Nezumi::ItemID item) const;
-    bool          can_add (Nezumi::ItemID item) const { return room_for(item) > 0; }
+    std::uint32_t room_for(ItemID item) const;
+    bool          can_add (ItemID item) const { return room_for(item) > 0; }
 
     // Adds up to `amount` of `item`: first onto its stacks that aren't full,
     // in slot order, then into empty slots. Returns how many fit.
-    std::uint32_t add(Nezumi::ItemID item, std::uint32_t amount);
+    std::uint32_t add(ItemID item, std::uint32_t amount);
 
     // Takes up to `amount` of `item`, from the last slots first (so the
     // stacks at the top stay put). Returns how many were taken.
-    std::uint32_t remove(Nezumi::ItemID item, std::uint32_t amount);
+    std::uint32_t remove(ItemID item, std::uint32_t amount);
 
     // -------------------------------------------------------------------------
     // Rearranging

@@ -14,21 +14,19 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/World/Entity/EntityFactionsMask.hpp"
+#include "Nightmourn/Entity/EntityFactionsMask.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include <array>       // array
 #include <glm/glm.hpp> // vec2
-
-namespace Nezumi {
-    class Unit;
-}
 
 namespace Nezumi::Render {
     class Atlas;
 }
 
 namespace Nightmourn {
+
+class Unit;
 
 class UnitDrawer {
 public:
@@ -45,7 +43,7 @@ public:
 
         // Top-left pixel of each faction's row of frames (see FigureFrames).
         // A unit with no faction uses row 0.
-        std::array<glm::vec2, Nezumi::MAX_FACTIONS> faction_rows = {};
+        std::array<glm::vec2, MAX_FACTIONS> faction_rows = {};
     };
 
     // -------------------------------------------------------------------------
@@ -59,7 +57,7 @@ public:
     // Draw
     // -------------------------------------------------------------------------
 
-    void draw(DrawContext& ctx, const Nezumi::Unit& unit) const;
+    void draw(DrawContext& ctx, const Unit& unit) const;
 
 private:
 
@@ -67,14 +65,14 @@ private:
     // Helpers
     // -------------------------------------------------------------------------
 
-    void draw_behavior_(DrawContext& ctx, const Nezumi::Unit& unit) const;
+    void draw_behavior_(DrawContext& ctx, const Unit& unit) const;
 
     // -------------------------------------------------------------------------
     // Members
     // -------------------------------------------------------------------------
 
     const Nezumi::Render::Atlas*                   atlas_  = nullptr;
-    std::array<FigureFrames, Nezumi::MAX_FACTIONS> frames_ = {};
+    std::array<FigureFrames, MAX_FACTIONS> frames_ = {};
 };
 
 } // namespace Nightmourn

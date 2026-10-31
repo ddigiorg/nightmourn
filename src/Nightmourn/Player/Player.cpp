@@ -4,9 +4,9 @@
 
 #include "Nightmourn/Player/Player.hpp"
 #include "Nezumi/Input/InputMap.hpp"
-#include "Nezumi/World/Entity/EntityResource.hpp"
-#include "Nezumi/World/Events/OnEntityMined.hpp"
-#include "Nezumi/World/World.hpp"
+#include "Nightmourn/Entity/EntityResource.hpp"
+#include "Nightmourn/Events/OnEntityMined.hpp"
+#include "Nightmourn/World/World.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 
@@ -16,12 +16,12 @@ namespace Nightmourn {
 // Possession
 // -----------------------------------------------------------------------------
 
-Character* Player::character(Nezumi::World& world) const {
+Character* Player::character(World& world) const {
     Character* c = world.get_entity_as<Character>(character_);
     return c && !c->is_pending_remove() ? c : nullptr;
 }
 
-const Character* Player::character(const Nezumi::World& world) const {
+const Character* Player::character(const World& world) const {
     const Character* c = world.get_entity_as<Character>(character_);
     return c && !c->is_pending_remove() ? c : nullptr;
 }
@@ -30,9 +30,9 @@ const Character* Player::character(const Nezumi::World& world) const {
 // Update
 // -----------------------------------------------------------------------------
 
-void Player::update(Nezumi::World& world, const Nezumi::InputMap& input,
-                    const Nezumi::Projection&         proj,
-                    Nezumi::EntityHandle hovered)
+void Player::update(World& world, const Nezumi::InputMap& input,
+                    const Projection&         proj,
+                    EntityHandle hovered)
 {
     Character* c = character(world);
     if (!c) return;
@@ -44,11 +44,11 @@ void Player::update(Nezumi::World& world, const Nezumi::InputMap& input,
     if (dir != glm::vec2(0.0f)) dir = glm::normalize(dir);
 
     // A click between ticks counts too, so a quick tap still swings
-    Nezumi::EntityHandle mine_target = {};
+    EntityHandle mine_target = {};
     if (input.is_held(Action::Mine) || input.was_pressed(Action::Mine)) {
-        const Nezumi::Entity* e = world.get_entity(hovered);
+        const Entity* e = world.get_entity(hovered);
         if (e && e->is_alive() && e->is_resource() &&
-            inventory_.can_add(static_cast<const Nezumi::EntityResource*>(e)->item))
+            inventory_.can_add(static_cast<const EntityResource*>(e)->item))
             mine_target = hovered;
     }
 
@@ -59,7 +59,7 @@ void Player::update(Nezumi::World& world, const Nezumi::InputMap& input,
 // Inventory
 // -----------------------------------------------------------------------------
 
-void Player::on_entity_mined(const Nezumi::OnEntityMined& event) {
+void Player::on_entity_mined(const OnEntityMined& event) {
     if (!character_ || event.source != character_ || !event.item) return;
 
     // update() only mines what fits, so nothing is lost unless the inventory
@@ -71,8 +71,8 @@ void Player::on_entity_mined(const Nezumi::OnEntityMined& event) {
 // View
 // -----------------------------------------------------------------------------
 
-std::optional<glm::vec2> Player::view_target(const Nezumi::World& world,
-                                             const Nezumi::Projection& proj) const
+std::optional<glm::vec2> Player::view_target(const World& world,
+                                             const Projection& proj) const
 {
     const Character* c = character(world);
     if (!c) return std::nullopt;

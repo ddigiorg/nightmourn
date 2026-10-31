@@ -4,9 +4,9 @@
 
 #include "Nightmourn/Draw/ChunkDrawer.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
-#include "Nezumi/World/Chunk/Chunk.hpp"
-#include "Nezumi/World/Constants.hpp"
-#include "Nezumi/World/Physics/TileCoord.hpp"
+#include "Nightmourn/Chunk/Chunk.hpp"
+#include "Nightmourn/World/Constants.hpp"
+#include "Nightmourn/Geometry/TileCoord.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include <algorithm> // max, min
@@ -70,7 +70,7 @@ glm::vec4 ChunkDrawer::grass_cell_(std::int32_t x, std::int32_t y) const {
 // Draw
 // -----------------------------------------------------------------------------
 
-void ChunkDrawer::draw(DrawContext& ctx, const Nezumi::Chunk& chunk) const {
+void ChunkDrawer::draw(DrawContext& ctx, const Chunk& chunk) const {
     draw_tiles_(ctx, chunk);
 
     if (ctx.show(DebugFlag::ShowWorldGrid))
@@ -108,16 +108,16 @@ static bool overlap_columns(float ax, float by, float vmin, float vmax, int32_t 
 // view: a chunk on the edge of the screen is mostly off it, and in iso even
 // the world box of the view holds twice the tiles on screen. Rows are culled
 // exactly, one span per row.
-void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Nezumi::Chunk& chunk) const {
-    const Nezumi::Area2D& bounds = chunk.bounds();
-    const Nezumi::Area2D& world  = ctx.world_view;
-    const Nezumi::Area2D& view   = ctx.view;
+void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Chunk& chunk) const {
+    const Area2D& bounds = chunk.bounds();
+    const Area2D& world  = ctx.world_view;
+    const Area2D& view   = ctx.view;
 
-    const Nezumi::TileCoord min = Nezumi::TileCoord::from_position({
+    const TileCoord min = TileCoord::from_position({
         std::max(bounds.min.x, world.min.x),
         std::max(bounds.min.y, world.min.y),
     });
-    const Nezumi::TileCoord max = Nezumi::TileCoord::from_position({
+    const TileCoord max = TileCoord::from_position({
         std::min(bounds.max.x, world.max.x) - 0.001f,
         std::min(bounds.max.y, world.max.y) - 0.001f,
     });
@@ -129,7 +129,7 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Nezumi::Chunk& chunk) cons
     Nezumi::Render::DrawParams params = world_layer(DrawLayer::Ground);
     params.material = config_.atlas->material();
 
-    Nezumi::TileCoord tile;
+    TileCoord tile;
     for (tile.y = min.y; tile.y <= max.y; tile.y++) {
         int32_t first = min.x;
         int32_t last  = max.x;
@@ -148,8 +148,8 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Nezumi::Chunk& chunk) cons
     }
 }
 
-void ChunkDrawer::draw_grid_(DrawContext& ctx, const Nezumi::Chunk& chunk) const {
-    const Nezumi::Area2D& bounds = chunk.bounds();
+void ChunkDrawer::draw_grid_(DrawContext& ctx, const Chunk& chunk) const {
+    const Area2D& bounds = chunk.bounds();
     const Nezumi::Render::DrawParams params = world_layer(DrawLayer::GroundOverlay);
 
     // Tile lines: the 31 interior lines on each axis, each the chunk's full
@@ -160,7 +160,7 @@ void ChunkDrawer::draw_grid_(DrawContext& ctx, const Nezumi::Chunk& chunk) const
     if (tile_pixels >= config_.min_tile_grid_pixels) {
         const float width = config_.tile_line_pixels * ctx.pixel_size;
 
-        for (uint32_t i = 1; i < Nezumi::CHUNK_TILE_COUNT.x; i++) {
+        for (uint32_t i = 1; i < CHUNK_TILE_COUNT.x; i++) {
             const float x = bounds.min.x + static_cast<float>(i);
             ctx.renderer.draw_line(
                 Nezumi::Render::Line{
@@ -173,7 +173,7 @@ void ChunkDrawer::draw_grid_(DrawContext& ctx, const Nezumi::Chunk& chunk) const
             );
         }
 
-        for (uint32_t i = 1; i < Nezumi::CHUNK_TILE_COUNT.y; i++) {
+        for (uint32_t i = 1; i < CHUNK_TILE_COUNT.y; i++) {
             const float y = bounds.min.y + static_cast<float>(i);
             ctx.renderer.draw_line(
                 Nezumi::Render::Line{

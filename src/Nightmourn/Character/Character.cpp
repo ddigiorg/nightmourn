@@ -3,8 +3,8 @@
 // =============================================================================
 
 #include "Nightmourn/Character/Character.hpp"
-#include "Nezumi/World/World.hpp"
-#include "Nezumi/World/WorldContext.hpp"
+#include "Nightmourn/World/World.hpp"
+#include "Nightmourn/World/WorldContext.hpp"
 #include <algorithm> // clamp, min
 #include <cmath>     // sqrt
 
@@ -14,8 +14,8 @@ namespace Nightmourn {
 // Construction & Destruction
 // -----------------------------------------------------------------------------
 
-Character::Character(const CharacterConfig& config, Nezumi::EntityFactionsMask factions)
-    : Nezumi::EntityDamageable(config.max_health)
+Character::Character(const CharacterConfig& config, EntityFactionsMask factions)
+    : EntityDamageable(config.max_health)
     , config_(&config)
 {
     this->set_active();
@@ -30,10 +30,10 @@ Character::Character(const CharacterConfig& config, Nezumi::EntityFactionsMask f
 // Tick
 // -----------------------------------------------------------------------------
 
-void Character::tick(Nezumi::WorldContext& ctx) {
+void Character::tick(WorldContext& ctx) {
     // Only velocity is written: the movement phase moves the character and
     // updates its chunk once every entity has ticked
-    const Nezumi::Position2D dir = command_.move_dir;
+    const Position2D dir = command_.move_dir;
 
     const float length = std::sqrt(dir.x * dir.x + dir.y * dir.y);
     if (length == 0.0f) {
@@ -51,25 +51,25 @@ void Character::tick(Nezumi::WorldContext& ctx) {
 // Mining
 // -----------------------------------------------------------------------------
 
-bool Character::can_reach(const Nezumi::Entity& resource) const {
+bool Character::can_reach(const Entity& resource) const {
     // Distance from the feet to the nearest point of the resource's box, so
     // a big trunk is reached from its edge, not its middle
-    const Nezumi::Area2D box = resource.collision_box();
+    const Area2D box = resource.collision_box();
     const float dx = position.x - std::clamp(position.x, box.min.x, box.max.x);
     const float dy = position.y - std::clamp(position.y, box.min.y, box.max.y);
     return dx * dx + dy * dy <= config_->mine_reach * config_->mine_reach;
 }
 
-void Character::mine_(Nezumi::WorldContext& ctx) {
+void Character::mine_(WorldContext& ctx) {
     if (mine_cooldown_ > 0) mine_cooldown_--;
     if (!command_.mine_target) return;
 
-    const Nezumi::Entity* target = ctx.world->get_entity(command_.mine_target);
+    const Entity* target = ctx.world->get_entity(command_.mine_target);
     if (!target || !target->is_alive() || !target->is_resource() || !can_reach(*target)) return;
 
     // Face the resource while swinging at it, unless walking somewhere
     if (velocity.x == 0.0f && velocity.y == 0.0f) {
-        const Nezumi::Position2D to = target->position - position;
+        const Position2D to = target->position - position;
         const float d = std::sqrt(to.x * to.x + to.y * to.y);
         if (d > 0.0f) facing_ = to / d;
     }

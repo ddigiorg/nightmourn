@@ -13,14 +13,14 @@ namespace Nightmourn {
 // Items
 // -----------------------------------------------------------------------------
 
-std::uint32_t Inventory::count(Nezumi::ItemID item) const {
+std::uint32_t Inventory::count(ItemID item) const {
     std::uint32_t total = 0;
     for (const auto& s : slots_)
         if (s && s->item == item) total += s->count;
     return total;
 }
 
-std::uint32_t Inventory::room_for(Nezumi::ItemID item) const {
+std::uint32_t Inventory::room_for(ItemID item) const {
     const std::uint32_t stack = item_stack_size(item);
     std::uint32_t room = 0;
     for (const auto& s : slots_) {
@@ -30,7 +30,7 @@ std::uint32_t Inventory::room_for(Nezumi::ItemID item) const {
     return room;
 }
 
-std::uint32_t Inventory::add(Nezumi::ItemID item, std::uint32_t amount) {
+std::uint32_t Inventory::add(ItemID item, std::uint32_t amount) {
     const std::uint16_t stack = item_stack_size(item);
     std::uint32_t left = amount;
 
@@ -52,7 +52,7 @@ std::uint32_t Inventory::add(Nezumi::ItemID item, std::uint32_t amount) {
     return amount - left;
 }
 
-std::uint32_t Inventory::remove(Nezumi::ItemID item, std::uint32_t amount) {
+std::uint32_t Inventory::remove(ItemID item, std::uint32_t amount) {
     std::uint32_t left = amount;
     for (auto it = slots_.rbegin(); it != slots_.rend() && left > 0; ++it) {
         auto& s = *it;

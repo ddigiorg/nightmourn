@@ -27,15 +27,13 @@
 #include <glm/glm.hpp> // vec4
 #include <vector>      // vector
 
-namespace Nezumi {
-    class Chunk;
-}
-
 namespace Nezumi::Render {
     class Atlas;
 }
 
 namespace Nightmourn {
+
+class Chunk;
 
 class ChunkDrawer {
 public:
@@ -74,7 +72,7 @@ public:
     // Draw
     // -------------------------------------------------------------------------
 
-    void draw(DrawContext& ctx, const Nezumi::Chunk& chunk) const;
+    void draw(DrawContext& ctx, const Chunk& chunk) const;
 
 private:
 
@@ -82,8 +80,8 @@ private:
     // Helpers
     // -------------------------------------------------------------------------
 
-    void draw_tiles_(DrawContext& ctx, const Nezumi::Chunk& chunk) const;
-    void draw_grid_ (DrawContext& ctx, const Nezumi::Chunk& chunk) const;
+    void draw_tiles_(DrawContext& ctx, const Chunk& chunk) const;
+    void draw_grid_ (DrawContext& ctx, const Chunk& chunk) const;
 
     // Texture box of the grass cell tile (x, y) draws (see the header comment)
     glm::vec4 grass_cell_(std::int32_t x, std::int32_t y) const;

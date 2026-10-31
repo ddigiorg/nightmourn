@@ -4,9 +4,9 @@
 
 #include "Nightmourn/Draw/UnitGroupDrawer.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
-#include "Nezumi/World/Entities/Unit.hpp"
-#include "Nezumi/World/Entities/UnitGroup.hpp"
-#include "Nezumi/World/World.hpp"
+#include "Nightmourn/Unit/Unit.hpp"
+#include "Nightmourn/Unit/UnitGroup.hpp"
+#include "Nightmourn/World/World.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include <cstdint> // uint16_t
@@ -34,10 +34,10 @@ static constexpr float ANCHOR_RADIUS    = 0.2f;
 static constexpr float WAYPOINT_RADIUS  = 0.35f;
 static constexpr float SLOT_RADIUS      = 0.22f;
 
-void UnitGroupDrawer::draw(DrawContext& ctx, const Nezumi::UnitGroup& group) const {
+void UnitGroupDrawer::draw(DrawContext& ctx, const UnitGroup& group) const {
     if (!ctx.show(DebugFlag::ShowUnitGroupInfo)) return;
 
-    const Nezumi::Area2D frame = Nezumi::Area2D(group.collision_box()).grow(BOUNDS_PADDING);
+    const Area2D frame = Area2D(group.collision_box()).grow(BOUNDS_PADDING);
     if (!frame.overlaps(ctx.world_view)) return;
 
     Nezumi::Render::Renderer2D& r = ctx.renderer;
@@ -45,7 +45,7 @@ void UnitGroupDrawer::draw(DrawContext& ctx, const Nezumi::UnitGroup& group) con
 
     const glm::vec4 side_color  = config_.faction_colors[group.faction_index()];
     const glm::vec4 state_color = STATE_COLORS[static_cast<std::size_t>(group.state())];
-    const Nezumi::UnitGroup::Plan& plan = group.plan(ctx.tick);
+    const UnitGroup::Plan& plan = group.plan(ctx.tick);
 
     const Nezumi::Render::DrawParams ground = world_layer(DrawLayer::GroundOverlay);
     const Nezumi::Render::DrawParams debug  = world_layer(DrawLayer::Debug);
@@ -54,7 +54,7 @@ void UnitGroupDrawer::draw(DrawContext& ctx, const Nezumi::UnitGroup& group) con
 
     // Route: anchor -> waypoints, on the ground
     glm::vec2 from = group.position.to_vec2();
-    for (Nezumi::Position2D waypoint : group.waypoints()) {
+    for (Position2D waypoint : group.waypoints()) {
         const glm::vec2 to = waypoint.to_vec2();
         r.draw_line(Nezumi::Render::Line{ .position_a = ctx.to_view(from), .position_b = ctx.to_view(to),
                                   .color = side_color * glm::vec4(1, 1, 1, 0.6f), .width = ROUTE_PIXELS * px },
@@ -74,7 +74,7 @@ void UnitGroupDrawer::draw(DrawContext& ctx, const Nezumi::UnitGroup& group) con
                                   .radius = ANCHOR_RADIUS * ctx.upright_scale() },
                   debug);
 
-    if (group.state() == Nezumi::UnitGroupState::Engaged) {
+    if (group.state() == UnitGroupState::Engaged) {
         r.draw_line(Nezumi::Render::Line{ .position_a = anchor, .position_b = ctx.to_view(plan.engage_position.to_vec2()),
                                   .color = state_color * glm::vec4(1, 1, 1, 0.5f), .width = LINK_PIXELS * px },
                     debug);
@@ -83,10 +83,10 @@ void UnitGroupDrawer::draw(DrawContext& ctx, const Nezumi::UnitGroup& group) con
 
     // Slots, and stragglers' lines to theirs
     const float straggle2 = group.config().straggler_distance * group.config().straggler_distance;
-    const std::vector<Nezumi::EntityHandle>& members = group.members();
+    const std::vector<EntityHandle>& members = group.members();
 
     for (std::size_t i = 0; i < members.size(); i++) {
-        const Nezumi::Unit* unit = ctx.world.get_entity_as<Nezumi::Unit>(members[i]);
+        const Unit* unit = ctx.world.get_entity_as<Unit>(members[i]);
         if (!unit || unit->group() != group.handle) continue;
 
         const glm::vec2 slot = group.slot_position(ctx.tick, static_cast<uint16_t>(i)).to_vec2();

@@ -22,10 +22,10 @@ Demos are built next to the game:
 | Path | What lives there |
 | --- | --- |
 | `src/main.cpp` | The game executable |
-| `src/Nightmourn/` | Game code shared by the game and the demos, included as `<Nightmourn/...>` |
+| `src/Nightmourn/` | Game code shared by the game and the demos, included as `<Nightmourn/...>`. The simulation (`World/`, `Surface/`, `Chunk/`, `Sector/`, `Entity/`, `Unit/`, `Resource/`, ...) builds as the headless `nightmourn_world` library; drawing, GUI, input and `Player` build as `nightmourn_game` on top |
 | `demos/` | One small prototype per feature, the game's version of Nezumi's `examples/` |
 | `assets/` | Game assets, copied over the engine's assets next to each executable |
-| `tests/` | Tests (none yet) |
+| `tests/` | Headless simulation tests (link `nightmourn_world` only); run with `ctest --test-dir .build/debug` |
 
 ## Engine Version
 

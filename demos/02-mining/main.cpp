@@ -31,9 +31,9 @@
 #include "Nezumi/Core/Events/OnGameExited.hpp"
 #include "Nezumi/Engine.hpp"
 #include "Nezumi/Input/Events/OnMouseMotion.hpp"
-#include "Nezumi/World/Entities/Resource.hpp"
-#include "Nezumi/World/Events/OnEntityMined.hpp"
-#include "Nezumi/World/Physics/Area2D.hpp"
+#include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Events/OnEntityMined.hpp"
+#include "Nightmourn/Geometry/Area2D.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DebugFlags.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
@@ -51,6 +51,7 @@
 #include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
+#include "Nightmourn/World/World.hpp"
 #include <algorithm>   // erase_if
 #include <array>       // array
 #include <cstdio>      // snprintf
@@ -64,16 +65,7 @@
 #include <vector>      // vector
 
 using namespace Nezumi;
-using Nightmourn::Character;
-using Nightmourn::CharacterConfig;
-using Nightmourn::DebugFlags;
-using Nightmourn::DrawContext;
-using Nightmourn::GameMenus;
-using Nightmourn::InfoOverlay;
-using Nightmourn::Player;
-using Nightmourn::ResourceType;
-using Nightmourn::TreeVariety;
-using Nightmourn::WorldDrawer;
+using namespace Nightmourn;
 
 // -----------------------------------------------------------------------------
 // Demo Actions
@@ -196,7 +188,10 @@ public:
     // -------------------------------------------------------------------------
 
     void on_init(Nezumi::Engine& engine) override {
-        Nezumi::World&    world    = engine.world();
+        // The game owns its world; the engine only supplies the clock and bus
+        world_ = std::make_unique<Nightmourn::World>(engine.clock(), engine.event_bus());
+
+        Nightmourn::World&    world    = *world_;
         Render::Renderer2D* renderer = engine.renderer2d();
 
         InputMap& input = engine.input();
@@ -268,7 +263,7 @@ public:
                 player_.on_entity_mined(e);
                 if (e.source != player_.character_handle() || e.amount == 0) return;
 
-                const Nezumi::Entity* tree = engine.world().get_entity(e.target);
+                const Nightmourn::Entity* tree = world_->get_entity(e.target);
                 if (tree) popups_.push_back({ tree->position.to_vec2(), e.item, e.amount, e.tick });
             }
         ));
@@ -308,7 +303,7 @@ public:
     // -------------------------------------------------------------------------
 
     void on_tick(Nezumi::Engine& engine) override {
-        Nezumi::World& world = engine.world();
+        Nightmourn::World& world = *world_;
 
         menus_.handle_input(engine.input());
         if (menus_.quit_requested()) engine.event_bus().dispatch(OnGameExited{});
@@ -327,6 +322,9 @@ public:
         player_.update(world, engine.input(), projection_(), hovered_tree_(engine));
 
         std::erase_if(popups_, [&](const Popup& p) { return world.get_tick() - p.tick > POPUP_TICKS; });
+
+        // Advance the simulation once, after the player has issued commands
+        world.tick();
     }
 
     // -------------------------------------------------------------------------
@@ -335,7 +333,7 @@ public:
 
     void on_draw(Nezumi::Engine& engine) override {
         Render::Renderer2D* r = engine.renderer2d();
-        const Nezumi::World& world = engine.world();
+        const Nightmourn::World& world = *world_;
 
         const Projection proj = projection_();
         if (proj != last_projection_) {
@@ -348,7 +346,7 @@ public:
         }
         camera_controller_->update(engine.clock().get_real_dt());
 
-        if (const Nezumi::Surface* surface = world.get_surface(surface_id_)) {
+        if (const Nightmourn::Surface* surface = world.get_surface(surface_id_)) {
             DrawContext ctx = DrawContext::make(*r, world, *world_camera_, proj, debug_flags_);
             world_drawer_->draw(ctx, *surface);
             draw_hover_(ctx, engine);
@@ -386,10 +384,16 @@ public:
 private:
 
     // -------------------------------------------------------------------------
+    // World
+    // -------------------------------------------------------------------------
+
+    std::unique_ptr<Nightmourn::World> world_ = nullptr;
+
+    // -------------------------------------------------------------------------
     // Spawn
     // -------------------------------------------------------------------------
 
-    void spawn_hero_(Nezumi::World& world) {
+    void spawn_hero_(Nightmourn::World& world) {
         player_.possess(world.create_entity<Character>(
             /*.surface  = */surface_id_,
             /*.position = */HERO_SPAWN,
@@ -399,15 +403,15 @@ private:
         snap_camera_ = true;
     }
 
-    void spawn_trees_(Nezumi::World& world) {
+    void spawn_trees_(Nightmourn::World& world) {
         for (const TreeSpawn& t : TREES)
             world.create_entity<Resource>(surface_id_, t.position, t.pine ? PINE : OAK);
     }
 
     // Removes what is left of every tree and plants them all again, full
-    void regrow_trees_(Nezumi::World& world) {
+    void regrow_trees_(Nightmourn::World& world) {
         std::vector<EntityHandle> doomed;
-        world.each_entity([&](const Nezumi::Entity& entity) {
+        world.each_entity([&](const Nightmourn::Entity& entity) {
             if (entity.is_alive() && entity.is_type<Resource>()) doomed.push_back(entity.handle);
         });
         for (EntityHandle handle : doomed) world.remove_entity(handle);
@@ -422,15 +426,15 @@ private:
     // front; none while the UI has the mouse
     EntityHandle hovered_tree_(Nezumi::Engine& engine) const {
         if (!has_cursor_ || engine.input().is_mouse_captured()) return {};
-        const Nezumi::Surface* surface = engine.world().get_surface(surface_id_);
+        const Nightmourn::Surface* surface = world_->get_surface(surface_id_);
         if (!surface) return {};
         return Nightmourn::pick_entity(*surface, *world_camera_, projection_(), cursor_,
-                                       [](const Nezumi::Entity& e) { return e.is_resource(); });
+                                       [](const Nightmourn::Entity& e) { return e.is_resource(); });
     }
 
     // White box around the hovered tree, faint while it's out of reach
     void draw_hover_(DrawContext& ctx, Nezumi::Engine& engine) const {
-        const Nezumi::Entity* tree = ctx.world.get_entity(hovered_tree_(engine));
+        const Nightmourn::Entity* tree = ctx.world.get_entity(hovered_tree_(engine));
         if (!tree || !tree->is_alive()) return;
 
         const Character* hero  = player_.character(ctx.world);
@@ -494,10 +498,10 @@ private:
     float screen_top_() const { return screen_camera_->get_size().y / screen_camera_->get_scale(); }
 
     void draw_hud_(Render::Renderer2D* r, Nezumi::Engine& engine, float top) {
-        const Nezumi::World& world = engine.world();
+        const Nightmourn::World& world = *world_;
 
         size_t trees = 0;
-        world.each_entity([&](const Nezumi::Entity& entity) {
+        world.each_entity([&](const Nightmourn::Entity& entity) {
             if (entity.is_alive() && entity.is_type<Resource>()) trees++;
         });
 

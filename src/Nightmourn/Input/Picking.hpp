@@ -2,10 +2,10 @@
 // Input/Picking.hpp
 //
 // What is under the mouse. The world camera looks at view space (projected,
-// see Nezumi::Projection), so a screen position goes screen -> view
+// see Projection), so a screen position goes screen -> view
 // (Camera2D::screen_to_world) -> world (Projection::to_world):
 //
-//   const Nezumi::TileCoord tile = tile_at(camera, proj, mouse);
+//   const TileCoord tile = tile_at(camera, proj, mouse);
 //
 // Tiles are exact: the inverse projection lands on the one tile under the
 // cursor, with no "which half of the diamond" lookup.
@@ -18,15 +18,10 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/World/Entity/EntityID.hpp"
-#include "Nezumi/World/Physics/TileCoord.hpp"
-#include "Nezumi/World/Projection.hpp"
+#include "Nightmourn/Entity/EntityID.hpp"
+#include "Nightmourn/Geometry/TileCoord.hpp"
+#include "Nightmourn/Geometry/Projection.hpp"
 #include <glm/glm.hpp> // vec2
-
-namespace Nezumi {
-    class Entity;
-    class Surface;
-}
 
 namespace Nezumi::Render {
     class Camera2D;
@@ -34,15 +29,18 @@ namespace Nezumi::Render {
 
 namespace Nightmourn {
 
+class Entity;
+class Surface;
+
 // World position (tiles) of the ground under screen position `screen`
 // (window pixels, y down, as the mouse reports it)
 glm::vec2 screen_to_world(const Nezumi::Render::Camera2D&   camera,
-                          const Nezumi::Projection&         proj,
+                          const Projection&         proj,
                           glm::vec2                         screen);
 
 // Tile under screen position `screen`
-Nezumi::TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
-                          const Nezumi::Projection&         proj,
+TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
+                          const Projection&         proj,
                           glm::vec2                         screen);
 
 // Front-most drawable entity with a sprite (unit, character, tree) that
@@ -51,11 +49,11 @@ Nezumi::TileCoord tile_at(const Nezumi::Render::Camera2D&   camera,
 // standing in front of it:
 //
 //   pick_entity(surface, camera, proj, mouse,
-//               [](const Nezumi::Entity& e) { return e.is_resource(); });
-Nezumi::EntityHandle pick_entity(const Nezumi::Surface&            surface,
+//               [](const Entity& e) { return e.is_resource(); });
+EntityHandle pick_entity(const Surface&            surface,
                                  const Nezumi::Render::Camera2D&   camera,
-                                 const Nezumi::Projection&         proj,
+                                 const Projection&         proj,
                                  glm::vec2                         screen,
-                                 bool (*accept)(const Nezumi::Entity&) = nullptr);
+                                 bool (*accept)(const Entity&) = nullptr);
 
 } // namespace Nightmourn

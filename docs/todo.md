@@ -9,7 +9,7 @@ Two longer roadmaps already live in the engine and aren't repeated here.
 Items below point to them where they overlap:
 
 - `nezumi/src/Nezumi/Render/2D/Renderer2D.hpp`, "Future Improvements" (Renderer #N)
-- `nezumi/src/Nezumi/World/ROADMAP.md` (ROADMAP §N)
+- `src/Nightmourn/World/ROADMAP.md` (ROADMAP §N)
 
 ---
 
@@ -32,15 +32,15 @@ These change how later items are built, so they come first.
 - [ ] **Multiplayer or replays.** If either is planned, turn the
       between-ticks command convention into a real per-tick `PlayerCommand`
       stream keyed by `PlayerID`, applied in the command phase.
-- [ ] **Where Unit/UnitGroup live.** Current choice: keep them in the engine.
-      Revisit if Nightmourn's units need their own rules (move to the game,
-      or split into an optional `nezumi_units` library).
+- [x] **Where Unit/UnitGroup live.** Decided: the whole world (units,
+      resources, items, chunks, sectors) lives in Nightmourn. It can move back
+      to the engine if another game ever needs it.
 
 ---
 
 ## Isometric
 
-Phases 0 and 1 of the isometric plan are done: `Nezumi::Projection`, the
+Phases 0 and 1 of the isometric plan are done: `Nightmourn::Projection`, the
 `Quad` kind, every drawer in view space, screen-relative WASD, tile and
 figure picking, and a `use-top-down-view` debug toggle. Decided: projection
 on the CPU in the drawers, square textures projected onto diamonds, flat
@@ -394,10 +394,10 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 
 ### Resources and trees
 
-Trees are `Nezumi::Resource`s (an `EntityResource`: they never tick; mining
+Trees are `Nightmourn::Resource`s (an `EntityResource`: they never tick; mining
 goes through `World::mine_entity` and `OnEntityMined`). `type_id` is
 Resource, `subtype_id` what it is (`ResourceType::Tree`), `variety_id` which
-one (`TreeVariety::Oak`, `Pine`), and `item` the `Nezumi::ItemID` mining
+one (`TreeVariety::Oak`, `Pine`), and `item` the `Nightmourn::ItemID` mining
 yields (`Items::Wood`). Decorative for now.
 
 - [x] The player mines trees: `CharacterCommand::mine_target`, a cooldown

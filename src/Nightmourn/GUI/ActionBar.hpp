@@ -8,7 +8,7 @@
 //   [eagle] [ hp bar ...................................... ] [eagle]
 //           [ 1 ][ 2 ][ 3 ] ... [ 0 ]  |  [sk][eq][in][it][op][db][mm]
 //
-// Slots hold items (Nezumi::ItemID, empty for none). Each slot is an input
+// Slots hold items (ItemID, empty for none). Each slot is an input
 // action (Action::use_slot), shown by its key in the slot's corner, so
 // rebinding a key relabels its slot. The player uses a slot with its key or
 // a click, rearranges slots by dragging icons between them, and empties one
@@ -31,7 +31,7 @@
 #pragma once
 #include "Nightmourn/GUI/UIAtlas.hpp"
 #include "Nezumi/UI/Rect.hpp"
-#include "Nezumi/World/Item/ItemID.hpp"
+#include "Nightmourn/Item/ItemID.hpp"
 #include <array>    // array
 #include <cstddef>  // size_t
 #include <cstdint>  // uint8_t, uint32_t
@@ -78,8 +78,8 @@ public:
     // Slots
     // -------------------------------------------------------------------------
 
-    std::optional<Nezumi::ItemID> slot(std::size_t i) const { return slots_[i]; }
-    void set_slot(std::size_t i, std::optional<Nezumi::ItemID> item) { slots_[i] = item; }
+    std::optional<ItemID> slot(std::size_t i) const { return slots_[i]; }
+    void set_slot(std::size_t i, std::optional<ItemID> item) { slots_[i] = item; }
 
     // -------------------------------------------------------------------------
     // Tick
@@ -115,7 +115,7 @@ private:
 
     const UIAtlas* atlas_ = nullptr;
 
-    std::array<std::optional<Nezumi::ItemID>, SLOT_COUNT> slots_  = {};
+    std::array<std::optional<ItemID>, SLOT_COUNT> slots_  = {};
     std::array<std::uint8_t, SLOT_COUNT>                  flash_  = {}; // frames left drawn pressed
     std::vector<std::size_t>                              used_   = {};
     std::array<std::array<char, 8>, SLOT_COUNT>           counts_ = {}; // slot count text, for Slot::count

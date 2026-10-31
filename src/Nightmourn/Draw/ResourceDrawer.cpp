@@ -4,7 +4,7 @@
 
 #include "Nightmourn/Draw/ResourceDrawer.hpp"
 #include "Nezumi/Render/2D/Atlas/Atlas.hpp"
-#include "Nezumi/World/Physics/TileCoord.hpp"
+#include "Nightmourn/Geometry/TileCoord.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include <algorithm> // min
 #include <cassert>   // assert
@@ -15,7 +15,7 @@ namespace Nightmourn {
 // Which of `looks` a resource on `tile` wears: a hash of the tile, so
 // neighbors differ and a resource keeps its look wherever and whenever it is
 // drawn
-static std::size_t look_index(Nezumi::TileCoord tile, std::size_t looks) {
+static std::size_t look_index(TileCoord tile, std::size_t looks) {
     std::uint32_t h = static_cast<std::uint32_t>(tile.x) * 0x9E3779B1u
                     ^ static_cast<std::uint32_t>(tile.y) * 0x85EBCA77u;
     h ^= h >> 15;
@@ -51,7 +51,7 @@ ResourceDrawer::ResourceDrawer(const Config& config)
 // Draw
 // -----------------------------------------------------------------------------
 
-void ResourceDrawer::draw(DrawContext& ctx, const Nezumi::Resource& resource) const {
+void ResourceDrawer::draw(DrawContext& ctx, const Resource& resource) const {
     if (!is_tree(resource)) return; // no art for other resources yet
 
     const std::size_t variety = resource.variety_id.value();
@@ -59,7 +59,7 @@ void ResourceDrawer::draw(DrawContext& ctx, const Nezumi::Resource& resource) co
 
     const VarietyFrames& frames = trees_[variety];
     const glm::vec2      pos    = resource.position.to_vec2();
-    const std::size_t    look   = look_index(Nezumi::TileCoord::from_position(resource.position), frames.count);
+    const std::size_t    look   = look_index(TileCoord::from_position(resource.position), frames.count);
 
     draw_sprite_at(ctx, *atlas_, frames.tex_boxes[look], pos, TREE_SPRITE_BOUNDS);
 

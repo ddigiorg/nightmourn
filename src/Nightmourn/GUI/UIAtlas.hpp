@@ -15,7 +15,7 @@
 #pragma once
 #include "Nezumi/UI/Image.hpp"
 #include "Nezumi/UI/SlotGrid.hpp"
-#include "Nezumi/World/Item/ItemID.hpp"
+#include "Nightmourn/Item/ItemID.hpp"
 #include <array>       // array
 #include <cstddef>     // size_t
 #include <cstdint>     // uint8_t
@@ -75,7 +75,7 @@ struct UIAtlas {
     }
 
     // No image for an item without an icon yet
-    Nezumi::UI::Image item_icon(Nezumi::ItemID item) const {
+    Nezumi::UI::Image item_icon(ItemID item) const {
         return item.value() < item_icons.size() ? item_icons[item.value()] : Nezumi::UI::Image{};
     }
 

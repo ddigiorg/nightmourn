@@ -11,11 +11,11 @@
 // where the camera should look:
 //
 //   void on_tick(Engine& engine) override {
-//       player_.update(engine.world(), engine.input(), projection);
+//       player_.update(*world_, engine.input(), projection);
 //   }
 //
 //   void on_draw(Engine& engine) override {
-//       if (auto target = player_.view_target(engine.world(), projection))
+//       if (auto target = player_.view_target(*world_, projection))
 //           camera_controller_->set_follow_target(*target);
 //       camera_controller_->update(engine.clock().get_real_dt());
 //   }
@@ -44,19 +44,20 @@
 
 #pragma once
 #include "Nightmourn/Item/Inventory.hpp"
-#include "Nezumi/World/Entity/EntityID.hpp"
-#include "Nezumi/World/Projection.hpp"
+#include "Nightmourn/Entity/EntityID.hpp"
+#include "Nightmourn/Geometry/Projection.hpp"
 #include <cstddef>     // size_t
 #include <glm/glm.hpp> // vec2
 #include <optional>    // optional
 
 namespace Nezumi {
     class InputMap;
-    class World;
-    struct OnEntityMined;
 }
 
 namespace Nightmourn {
+
+class World;
+struct OnEntityMined;
 
 class Character;
 
@@ -75,14 +76,14 @@ public:
     // Possession
     // -------------------------------------------------------------------------
 
-    void possess(Nezumi::EntityHandle character) { character_ = character; }
+    void possess(EntityHandle character) { character_ = character; }
     void release()                               { character_ = {};        }
 
-    Nezumi::EntityHandle character_handle() const { return character_; }
+    EntityHandle character_handle() const { return character_; }
 
     // The possessed character, or nullptr if there is none or it is gone
-    Character*       character(Nezumi::World& world) const;
-    const Character* character(const Nezumi::World& world) const;
+    Character*       character(World& world) const;
+    const Character* character(const World& world) const;
 
     // -------------------------------------------------------------------------
     // Update (between ticks)
@@ -93,9 +94,9 @@ public:
     // mouse): a resource there is mined while the mine action is held.
     // -------------------------------------------------------------------------
 
-    void update(Nezumi::World& world, const Nezumi::InputMap& input,
-                const Nezumi::Projection&         proj,
-                Nezumi::EntityHandle hovered = {});
+    void update(World& world, const Nezumi::InputMap& input,
+                const Projection&         proj,
+                EntityHandle hovered = {});
 
     // -------------------------------------------------------------------------
     // Inventory
@@ -106,7 +107,7 @@ public:
 
     // Credits a mine by the possessed character: adds what it took to the
     // inventory. Mines by anyone else are ignored.
-    void on_entity_mined(const Nezumi::OnEntityMined& event);
+    void on_entity_mined(const OnEntityMined& event);
 
     // -------------------------------------------------------------------------
     // View
@@ -114,11 +115,11 @@ public:
 
     // Where the camera should look (view space): the possessed character's
     // projected position, if any
-    std::optional<glm::vec2> view_target(const Nezumi::World& world,
-                                         const Nezumi::Projection& proj) const;
+    std::optional<glm::vec2> view_target(const World& world,
+                                         const Projection& proj) const;
 
 private:
-    Nezumi::EntityHandle character_ = {};
+    EntityHandle character_ = {};
     Inventory            inventory_ { INVENTORY_COLUMNS * INVENTORY_ROWS };
 };
 

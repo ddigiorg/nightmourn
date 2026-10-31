@@ -9,7 +9,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/World/Physics/Area2D.hpp"
+#include "Nightmourn/Geometry/Area2D.hpp"
 #include <cstdint>     // uint16_t
 #include <string_view> // string_view
 
@@ -33,7 +33,7 @@ struct CharacterConfig {
     float    mine_reach    = 2.0f;
 
     // Collision box, relative to the character's position (its feet)
-    Nezumi::Area2D collision_bounds = { -0.25f, -0.25f, 0.25f, 0.25f };
+    Area2D collision_bounds = { -0.25f, -0.25f, 0.25f, 0.25f };
 
     // TODO: mana, attributes, level, etc. as the design settles
 };

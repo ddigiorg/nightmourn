@@ -13,19 +13,17 @@
 
 #pragma once
 #include "Nezumi/Render/2D/Atlas/Atlas.hpp"
-#include "Nezumi/World/Physics/Area2D.hpp"
-#include "Nezumi/World/Physics/Position2D.hpp"
+#include "Nightmourn/Geometry/Area2D.hpp"
+#include "Nightmourn/Geometry/Position2D.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include <array>       // array
 #include <cstdint>     // uint8_t
 #include <glm/glm.hpp> // vec2, vec4
 
-namespace Nezumi {
-    class Entity;
-    class EntityDamageable;
-}
-
 namespace Nightmourn {
+
+class Entity;
+class EntityDamageable;
 
 // -----------------------------------------------------------------------------
 // FigureFrames
@@ -59,13 +57,13 @@ inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -1.00f, -1.00f, 1.00f, 3.00f
 
 // Sprite bounds of a drawable entity (above), or nullptr for types without a
 // sprite. Picking (Input/Picking) asks here, so a click hits what is drawn.
-const glm::vec4* sprite_bounds(const Nezumi::Entity& entity);
+const glm::vec4* sprite_bounds(const Entity& entity);
 
 // View-space box of a sprite with `bounds` whose feet are at world `pos`
-glm::vec4 sprite_view_box(const Nezumi::Projection&         proj, glm::vec2 pos, glm::vec4 bounds);
+glm::vec4 sprite_view_box(const Projection&         proj, glm::vec2 pos, glm::vec4 bounds);
 
 // View-space sprite box of a figure standing at world `pos`
-inline glm::vec4 figure_view_box(const Nezumi::Projection&         proj, glm::vec2 pos) {
+inline glm::vec4 figure_view_box(const Projection&         proj, glm::vec2 pos) {
     return sprite_view_box(proj, pos, FIGURE_SPRITE_BOUNDS);
 }
 
@@ -76,30 +74,30 @@ void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
 
 // Draws a figure sprite at its feet, y-sorted on DrawLayer::Entities
 void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                 const FigureFrames& frames, glm::vec2 pos, Nezumi::Position2D facing);
+                 const FigureFrames& frames, glm::vec2 pos, Position2D facing);
 
 // -----------------------------------------------------------------------------
 // Healthbars
 // -----------------------------------------------------------------------------
 
 // Healthbar above a figure's sprite, only once it is hurt
-void draw_healthbar(DrawContext& ctx, const Nezumi::EntityDamageable& entity);
+void draw_healthbar(DrawContext& ctx, const EntityDamageable& entity);
 
 // -----------------------------------------------------------------------------
 // Debug Shapes
 // -----------------------------------------------------------------------------
 
 // 1 px outline of the entity's collision box (ShowCollisionRectangles)
-void draw_collision_box(DrawContext& ctx, const Nezumi::Entity& entity);
+void draw_collision_box(DrawContext& ctx, const Entity& entity);
 
 // 1 px arrow centered on `pos`, pointing along `facing` on screen
 // (ShowFacingArrows)
-void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Nezumi::Position2D facing,
+void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Position2D facing,
                        glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f });
 
 // Outline of the world box `box` on the ground, with lines `pixels` wide:
 // a rectangle top-down, a diamond in iso
-void draw_outline(DrawContext& ctx, const Nezumi::Area2D& box, glm::vec4 color,
+void draw_outline(DrawContext& ctx, const Area2D& box, glm::vec4 color,
                   float pixels, std::uint8_t layer);
 
 // Outline of the VIEW-space box `box` { x0, y0, x1, y1 } (e.g. a
