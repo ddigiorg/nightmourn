@@ -24,6 +24,7 @@ Unit::Unit(const UnitConfig& config, EntityFactionsMask factions)
     this->set_active();
     this->set_tickable();
     this->set_drawable();
+    this->set_emits_pheromone();
 
     subtype_id       = config.subtype;
     factions_mask    = factions;

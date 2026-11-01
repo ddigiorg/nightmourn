@@ -36,3 +36,4 @@ endfunction()
 # ------------------------------------------------------------------------------
 
 add_world_test(test_unit_group)
+add_world_test(test_pheromones)

@@ -15,7 +15,7 @@
 // run out. Two miners on the same tick take from the resource in issue
 // order, and never more than it holds between them.
 //
-// The constructor sets the reserved Resource flag, which is how World
+// The constructor sets the Resource flag, which is how World
 // recognises a resource without RTTI or a virtual call:
 //
 //   if (entity->is_resource())

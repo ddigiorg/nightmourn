@@ -85,46 +85,43 @@ public:
     // Query flags
     bool has_flags(EntityFlagsMask mask) const { return has_all(flags_mask, mask); }
 
-    bool is_resource()       const { return has_all(flags_mask, EntityFlagsMask::Flag23); }
-    bool is_damageable()     const { return has_all(flags_mask, EntityFlagsMask::Flag24); }
-    bool is_active()         const { return has_all(flags_mask, EntityFlagsMask::Flag25); }
-    bool is_tickable()       const { return has_all(flags_mask, EntityFlagsMask::Flag26); }
-    bool is_drawable()       const { return has_all(flags_mask, EntityFlagsMask::Flag27); }
-    bool is_collidable()     const { return has_all(flags_mask, EntityFlagsMask::Flag28); }
-    bool is_selectable()     const { return has_all(flags_mask, EntityFlagsMask::Flag29); }
-    bool is_pending_create() const { return has_all(flags_mask, EntityFlagsMask::Flag30); }
-    bool is_pending_remove() const { return has_all(flags_mask, EntityFlagsMask::Flag31); }
+    bool is_resource()       const { return has_all(flags_mask, EntityFlagsMask::Resource); }
+    bool is_damageable()     const { return has_all(flags_mask, EntityFlagsMask::Damageable); }
+    bool is_active()         const { return has_all(flags_mask, EntityFlagsMask::Active); }
+    bool is_tickable()       const { return has_all(flags_mask, EntityFlagsMask::Tickable); }
+    bool is_drawable()       const { return has_all(flags_mask, EntityFlagsMask::Drawable); }
+    bool is_collidable()     const { return has_all(flags_mask, EntityFlagsMask::Collidable); }
+    bool is_selectable()     const { return has_all(flags_mask, EntityFlagsMask::Selectable); }
+    bool emits_pheromone()   const { return has_all(flags_mask, EntityFlagsMask::EmitsPheromone); }
+    bool is_pending_create() const { return has_all(flags_mask, EntityFlagsMask::PendingCreate); }
+    bool is_pending_remove() const { return has_all(flags_mask, EntityFlagsMask::PendingRemove); }
     bool is_alive()          const { return !is_pending_create() && !is_pending_remove(); }
 
     // Set flags
-    void set_flags(EntityFlagsMask mask) {
-        // TODO: assert not reserved flag
-        flags_mask |= mask;
-    }
+    void set_flags(EntityFlagsMask mask) { flags_mask |= mask; }
 
-    void set_resource()       { flags_mask |= EntityFlagsMask::Flag23; }
-    void set_damageable()     { flags_mask |= EntityFlagsMask::Flag24; }
-    void set_active()         { flags_mask |= EntityFlagsMask::Flag25; }
-    void set_tickable()       { flags_mask |= EntityFlagsMask::Flag26; }
-    void set_drawable()       { flags_mask |= EntityFlagsMask::Flag27; }
-    void set_collidable()     { flags_mask |= EntityFlagsMask::Flag28; }
-    void set_selectable()     { flags_mask |= EntityFlagsMask::Flag29; }
-    void set_pending_create() { flags_mask |= EntityFlagsMask::Flag30; }
-    void set_pending_remove() { flags_mask |= EntityFlagsMask::Flag31; }
+    void set_resource()       { flags_mask |= EntityFlagsMask::Resource; }
+    void set_damageable()     { flags_mask |= EntityFlagsMask::Damageable; }
+    void set_active()         { flags_mask |= EntityFlagsMask::Active; }
+    void set_tickable()       { flags_mask |= EntityFlagsMask::Tickable; }
+    void set_drawable()       { flags_mask |= EntityFlagsMask::Drawable; }
+    void set_collidable()     { flags_mask |= EntityFlagsMask::Collidable; }
+    void set_selectable()     { flags_mask |= EntityFlagsMask::Selectable; }
+    void set_emits_pheromone() { flags_mask |= EntityFlagsMask::EmitsPheromone; }
+    void set_pending_create() { flags_mask |= EntityFlagsMask::PendingCreate; }
+    void set_pending_remove() { flags_mask |= EntityFlagsMask::PendingRemove; }
 
     // Clear flags
-    void clear_flags(EntityFlagsMask mask) {
-        // TODO: assert not reserved flag
-        flags_mask &= ~mask;
-    }
+    void clear_flags(EntityFlagsMask mask) { flags_mask &= ~mask; }
 
-    void clear_active()         { flags_mask &= ~EntityFlagsMask::Flag25; }
-    void clear_tickable()       { flags_mask &= ~EntityFlagsMask::Flag26; }
-    void clear_drawable()       { flags_mask &= ~EntityFlagsMask::Flag27; }
-    void clear_collidable()     { flags_mask &= ~EntityFlagsMask::Flag28; }
-    void clear_selectable()     { flags_mask &= ~EntityFlagsMask::Flag29; }
-    void clear_pending_create() { flags_mask &= ~EntityFlagsMask::Flag30; }
-    void clear_pending_remove() { flags_mask &= ~EntityFlagsMask::Flag31; }
+    void clear_active()         { flags_mask &= ~EntityFlagsMask::Active; }
+    void clear_tickable()       { flags_mask &= ~EntityFlagsMask::Tickable; }
+    void clear_drawable()       { flags_mask &= ~EntityFlagsMask::Drawable; }
+    void clear_collidable()     { flags_mask &= ~EntityFlagsMask::Collidable; }
+    void clear_selectable()     { flags_mask &= ~EntityFlagsMask::Selectable; }
+    void clear_emits_pheromone() { flags_mask &= ~EntityFlagsMask::EmitsPheromone; }
+    void clear_pending_create() { flags_mask &= ~EntityFlagsMask::PendingCreate; }
+    void clear_pending_remove() { flags_mask &= ~EntityFlagsMask::PendingRemove; }
 
     // -------------------------------------------------------------------------
     // Factions

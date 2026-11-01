@@ -9,7 +9,7 @@
 // reaches zero. Two units that hit each other on the same tick both take the
 // hit, whatever order they ticked in.
 //
-// The constructor sets the reserved Damageable flag, which is how World
+// The constructor sets the Damageable flag, which is how World
 // recognises a damageable entity without RTTI or a virtual call:
 //
 //   if (entity->is_damageable())

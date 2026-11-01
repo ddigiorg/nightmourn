@@ -64,6 +64,7 @@ public:
     // here (e.g. to pre-create a region). Chunks are never unloaded yet.
     // -------------------------------------------------------------------------
 
+    // Creating a chunk links it with its existing neighbours (Chunk::neighbour)
     Chunk*       create_chunk (ChunkID   id  );
     void         create_chunks(ChunkSpan span);
     Chunk*       get_chunk    (ChunkID   id  );
@@ -88,6 +89,21 @@ public:
             if (const Chunk* chunk = get_chunk(id)) fn(*chunk);
         });
     }
+
+    // -------------------------------------------------------------------------
+    // Pheromones (const, safe to call while ticking: deposits only happen in
+    // World tick phase 7)
+    // -------------------------------------------------------------------------
+
+    // `faction`'s pheromone in the chunk holding `position`, or 0 if that
+    // chunk was never created
+    PheromoneValue pheromone_at(Position2D position, FactionIndex faction) const;
+
+    // Way to the neighbour chunk with the most of `faction`'s pheromone, as a
+    // chunk offset ({ 1, 0 } is east), if it has more than the chunk holding
+    // `position`; { 0, 0 } at a peak or where there is none. Ties go to the
+    // lower NEIGHBOUR_OFFSETS index.
+    ChunkOffset pheromone_gradient(Position2D position, FactionIndex faction) const;
 
     // -------------------------------------------------------------------------
     // Sectors
@@ -150,6 +166,7 @@ private:
     void tick_entities_          (WorldContext& ctx);
     void integrate_movement_     (float dt, std::vector<Entity*>& moved);
     void update_chunk_activation_();
+    void deposit_pheromones_     (Nezumi::Tick tick, Nezumi::Tick interval, PheromoneValue amount);
     void sweep_empty_sectors_    ();
 
     // -------------------------------------------------------------------------
@@ -169,6 +186,7 @@ private:
     void    insert_into_sectors_ (Entity* entity, SectorSpan span);
     void    remove_from_sectors_ (Entity* entity, SectorSpan span);
     void    mark_dirty_          (Chunk* chunk);
+    void    link_neighbours_     (Chunk* chunk);
 
     // -------------------------------------------------------------------------
     // Members

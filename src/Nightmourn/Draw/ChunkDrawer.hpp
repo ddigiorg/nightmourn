@@ -19,10 +19,17 @@
 //
 // Every tile is grass until surfaces store tile types; then the tile type
 // picks the texture here, and nothing outside this class changes.
+//
+// show-pheromones draws, for every faction with pheromone in the chunk, a
+// ring around the chunk's center in the faction's color, as wide as the
+// strength (a full-strength ring touches the chunk's edges), and an arrow
+// toward the stronger neighbour when the gradient points away.
 // =============================================================================
 
 #pragma once
 #include "Nightmourn/Draw/DrawContext.hpp"
+#include "Nightmourn/Entity/EntityFactionsMask.hpp"
+#include <array>       // array
 #include <cstdint>     // int32_t, uint32_t
 #include <glm/glm.hpp> // vec4
 #include <vector>      // vector
@@ -59,6 +66,11 @@ public:
         // Below this many screen pixels per tile the tile lines would cover
         // most of the ground, so only the chunk edges are drawn
         float     min_tile_grid_pixels = 8.0f;
+
+        // Pheromone overlay (show-pheromones): one color per faction; a color
+        // left at alpha 0 draws white
+        std::array<glm::vec4, MAX_FACTIONS> faction_colors = {};
+        float     pheromone_line_pixels = 2.0f;
     };
 
     // -------------------------------------------------------------------------
@@ -82,6 +94,7 @@ private:
 
     void draw_tiles_(DrawContext& ctx, const Chunk& chunk) const;
     void draw_grid_ (DrawContext& ctx, const Chunk& chunk) const;
+    void draw_pheromones_(DrawContext& ctx, const Chunk& chunk) const;
 
     // Texture box of the grass cell tile (x, y) draws (see the header comment)
     glm::vec4 grass_cell_(std::int32_t x, std::int32_t y) const;

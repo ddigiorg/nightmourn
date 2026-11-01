@@ -14,6 +14,7 @@ std::string_view DebugFlags::name(DebugFlag flag) {
         case DebugFlag::ShowFacingArrows:        return "show-facing-arrows";
         case DebugFlag::ShowUnitBehaviorInfo:    return "show-unit-behavior-info";
         case DebugFlag::ShowUnitGroupInfo:       return "show-unit-group-info";
+        case DebugFlag::ShowPheromones:          return "show-pheromones";
         case DebugFlag::UseTopDownView:          return "use-top-down-view";
         case DebugFlag::Count:                   break;
     }

@@ -339,6 +339,7 @@ public:
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
             draw_config.units.faction_rows[f]         = SIDES[f].atlas_origin;
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
+            draw_config.chunks.faction_colors[f]      = SIDES[f].color;
         }
         draw_config.resources.trees[static_cast<size_t>(TreeVariety::Oak )] = { AtlasPixels::OakOrigin,  2 };
         draw_config.resources.trees[static_cast<size_t>(TreeVariety::Pine)] = { AtlasPixels::PineOrigin, 1 };

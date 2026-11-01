@@ -25,6 +25,7 @@ World::World(Nezumi::Clock& clock, Nezumi::EventBus& event_bus, const WorldConfi
     , event_bus_(event_bus  )
     , config_   (config     )
     , random_   (config.seed)
+    , pheromone_decay_(config.pheromone_decay_period, config.pheromone_half_life_epochs)
 {}
 
 World::~World() {
@@ -55,7 +56,8 @@ void World::tick() {
     apply_interactions_();      // 4. Interaction
     integrate_movement_(ctx.dt);// 5. Movement + spatial update
     update_activation_();       // 6. Activation
-    sweep_sectors_    ();       // 7. Sector sweep
+    deposit_pheromones_();      // 7. Pheromones
+    sweep_sectors_    ();       // 8. Sector sweep
 
     tick_++;
     in_tick_ = false;
@@ -296,7 +298,23 @@ void World::integrate_movement_(float dt) {
 }
 
 // -----------------------------------------------------------------------------
-// Tick Phase 7: Sector Sweep
+// Tick Phase 7: Pheromones
+//
+// After movement and activation, so an emitter deposits into the chunk it
+// ended the tick in, and that chunk is already in its surface's active list.
+// -----------------------------------------------------------------------------
+
+void World::deposit_pheromones_() {
+    const Nezumi::Tick interval = config_.pheromone_deposit_interval;
+    if (interval == 0 || config_.pheromone_deposit_amount == 0) return;
+
+    surfaces_.for_each([&](Surface& surface) {
+        surface.deposit_pheromones_(tick_, interval, config_.pheromone_deposit_amount);
+    });
+}
+
+// -----------------------------------------------------------------------------
+// Tick Phase 8: Sector Sweep
 // -----------------------------------------------------------------------------
 
 void World::sweep_sectors_() {

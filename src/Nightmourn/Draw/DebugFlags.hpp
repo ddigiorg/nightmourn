@@ -29,6 +29,7 @@ enum class DebugFlag : std::uint8_t {
     ShowFacingArrows,        // arrow on units and characters, the way they face
     ShowUnitBehaviorInfo,    // unit state dot, line to its target
     ShowUnitGroupInfo,       // group bounds, route, slots and stragglers
+    ShowPheromones,          // per-chunk pheromone rings and gradient arrows
     UseTopDownView,          // draw the world top-down instead of isometric
 
     Count
