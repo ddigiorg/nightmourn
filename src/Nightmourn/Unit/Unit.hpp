@@ -109,6 +109,10 @@ public:
     // Lets the app react to long idles, and the future Animation pick frames.
     uint16_t           state_ticks() const { return state_ticks_; }
 
+    // Ticks until the next hit may land (0: ready). A hit resets it to
+    // config().attack_interval, so drawing can time the attack swing to it.
+    uint16_t           attack_cooldown() const { return attack_cooldown_; }
+
     // UnitGroup the unit follows (null if none), and its slot in it
     EntityHandle       group()       const { return group_;      }
     uint16_t           group_slot()  const { return group_slot_; }

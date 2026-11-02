@@ -7,7 +7,8 @@
 #include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/World/World.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
-#include <cassert> // assert
+#include <algorithm> // clamp
+#include <cassert>   // assert
 
 namespace Nightmourn {
 
@@ -29,10 +30,14 @@ UnitDrawer::UnitDrawer(const Config& config)
     : sheet_(config.sheet)
 {
     assert(sheet_ && "UnitDrawer: config.sheet is null");
-    assert(config.faction_figures[0] && "UnitDrawer: faction 0 needs a figure");
+    assert(config.figures[0][0] && "UnitDrawer: faction 0 needs a figure");
     for (std::size_t f = 0; f < MAX_FACTIONS; f++) {
-        const char* name = config.faction_figures[f] ? config.faction_figures[f] : config.faction_figures[0];
-        figures_[f] = sheet_->animation(name);
+        for (std::size_t s = 0; s < MAX_SUBTYPES; s++) {
+            const char* name = config.figures[f][s];
+            if (!name) name = config.figures[f][0];
+            if (!name) name = config.figures[0][0];
+            figures_[f][s] = FigureAnimations::find(*sheet_, name);
+        }
     }
 }
 
@@ -48,7 +53,38 @@ void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
     const FactionIndex faction = (unit.factions_mask == EntityFactionsMask::None)
         ? 0 : unit.faction_index();
 
-    draw_figure   (ctx, *sheet_, figures_[faction], pos, unit.facing());
+    const EntitySubtypeID subtype = unit.subtype_id;
+    const std::size_t     look    = (subtype.is_valid() && subtype.value() < MAX_SUBTYPES) ? subtype.value() : 0;
+    const FigureAnimations& figure = figures_[faction][look];
+
+    // Idle and walk loop on the clock, each unit at its own phase; the
+    // attack runs once per attack_interval, starting at the hit
+    const float   now  = static_cast<float>(ctx.tick) * TICK_SECONDS;
+    const std::uint32_t seed = unit.handle.index();
+    Nezumi::Render::AnimationID anim = figure.idle;
+    float seconds = 0.0f;
+    switch (unit.state()) {
+        case UnitState::Idle:
+            anim    = figure.idle;
+            seconds = figure_seconds(*sheet_, anim, now, seed);
+            break;
+        case UnitState::Moving:
+            anim    = figure.walk;
+            seconds = figure_seconds(*sheet_, anim, now, seed);
+            break;
+        case UnitState::Attacking: {
+            anim = figure.attack;
+            const Nezumi::Render::Animation& a = sheet_->anim(anim);
+            const float interval = static_cast<float>(unit.config().attack_interval);
+            if (interval > 0.0f && a.fps > 0.0f) {
+                const float since = interval - static_cast<float>(unit.attack_cooldown());
+                seconds = std::clamp(since / interval, 0.0f, 0.999f) * static_cast<float>(a.frames) / a.fps;
+            }
+            break;
+        }
+    }
+
+    draw_figure   (ctx, *sheet_, anim, pos, unit.facing(), seconds);
     draw_healthbar(ctx, unit);
 
     if (!ctx.debug.any()) return;

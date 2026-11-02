@@ -11,6 +11,7 @@
 #include "Nightmourn/Resource/ResourceTypes.hpp"
 #include <cmath>   // atan2, cos, lround, sin
 #include <cstdint> // int64_t, uint32_t
+#include <string>  // string
 
 namespace Nightmourn {
 
@@ -58,6 +59,31 @@ void draw_figure(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
     const std::uint32_t heading  = heading_index(ctx.proj.dir_to_heading(facing.to_vec2()), headings);
     const auto frame = sheet.frame(animation, heading, seconds);
     draw_sprite_at(ctx, sheet, frame.sprite, pos, frame.mirrored);
+}
+
+FigureAnimations FigureAnimations::find(const Nezumi::Render::SpriteSheet& sheet, std::string_view figure) {
+    const std::string prefix = "figure/" + std::string(figure) + "/";
+    FigureAnimations out;
+    out.idle = sheet.animation(prefix + "idle");
+    const auto pick = [&](const char* name) {
+        const Nezumi::Render::AnimationID* id = sheet.find_animation(prefix + name);
+        return id ? *id : out.idle;
+    };
+    out.walk   = pick("walk");
+    out.attack = pick("attack");
+    out.death  = pick("death");
+    return out;
+}
+
+float figure_seconds(const Nezumi::Render::SpriteSheet& sheet, Nezumi::Render::AnimationID animation,
+                     float seconds, std::uint32_t seed)
+{
+    const Nezumi::Render::Animation& a = sheet.anim(animation);
+    if (a.fps <= 0.0f || a.frames <= 1) return 0.0f;
+    const float length = static_cast<float>(a.frames) / a.fps;
+    // Golden-ratio steps spread consecutive seeds over the cycle
+    const float phase = static_cast<float>(seed) * 0.6180339887f;
+    return seconds + (phase - std::floor(phase)) * length;
 }
 
 // -----------------------------------------------------------------------------

@@ -11,7 +11,7 @@
 //   data/
 //     base/                       the game's own mod; later mods sit beside it
 //       graphics/                 PNGs (straight alpha, as editors save them)
-//         entity/figure/red/idle.png
+//         entity/figure/hero/idle.png
 //         entity/tree/oak-01.png
 //         terrain/meadow.png
 //         gui/eagle.png
@@ -33,16 +33,19 @@
 //            one sheet PNG each, a column per frame and a row per stored
 //            direction (see Nezumi's SpritePacker.hpp)
 //
-//     { "type": "figure", "name": "red",
+//     { "type": "figure", "name": "hero",
 //       "animations": {
-//         "idle": { "filename": "__base__/graphics/entity/figure/red/idle.png",
-//                   "width": 64, "height": 128,     // one frame, px
-//                   "frame_count": 1,               // columns (default 1)
+//         "idle": { "filename": "__base__/graphics/entity/figure/hero/idle.png",
+//                   "width": 128, "height": 160,    // one frame, px
+//                   "frame_count": 8,               // columns (default 1)
 //                   "direction_count": 5,           // rows (default 1): down,
 //                   "headings": 8,                  //   down-right, right, up-right,
 //                                                   //   up; the rest mirrored
-//                   "fps": 0, "loop": true,         // (defaults)
-//                   "pivot": [32, 96] } } }         // feet, px in a frame, y down
+//                   "fps": 6, "loop": true,         // (defaults 0, true)
+//                   "pivot": [64, 128] } } }        // feet, px in a frame, y down
+//
+//            Animations the drawers play: idle, walk, attack (frame 0 is
+//            the hit) and death; any but idle may be left out
 //
 //   tree     a tree variety and its looks, one PNG each; a tree picks one
 //
