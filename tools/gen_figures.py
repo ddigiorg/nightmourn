@@ -14,10 +14,10 @@
 # data/base/configs/entity/figures.json names them.
 #
 # Figures (original designs, dark fantasy):
-#   hero             a knight in blackened plate, horned great helm, ragged
-#                    crimson cape and a greatsword
-#   human-warrior    a man-at-arms: mail, blue tabard, kettle hat, round
-#                    shield and arming sword
+#   hero             a knight in blackened plate, horned and plumed great
+#                    helm, ragged crimson cape and a greatsword
+#   human-warrior    a man-at-arms: mail, blue tabard, crusader great helm
+#                    with a T-visor, round shield and arming sword
 #   human-archer     a hooded longbowman in leather
 #   zombie-warrior   a gaunt dead soldier in rusted scraps, cold eyes
 #   skeleton-archer  bones in a tattered hood with a black bow, cold eyes
@@ -152,7 +152,7 @@ class Figure:
         return P
 
 # ------------------------------------------------------------------------------
-# Hero: blackened plate, horned great helm, crimson cape, greatsword
+# Hero: blackened plate, horned and plumed great helm, crimson cape, greatsword
 # ------------------------------------------------------------------------------
 
 class Hero(Figure):
@@ -169,6 +169,7 @@ class Hero(Figure):
     cloth2 = Mat("#3e0d0f", noise=0.4, nfreq=7, spec=0.05)
     leath  = Mat("#2b2119", noise=0.3, spec=0.1)
     fur    = Mat("#463c33", noise=0.7, nfreq=26, spec=0.0)
+    plume  = Mat("#8a1a1a", noise=0.75, nfreq=30, spec=0.1, power=10)
     blade  = Mat("#b4bcc6", metal=0.95, spec=1.1, power=90, noise=0.05)
     slit   = Mat("#040404", spec=0.0, rim=0.0, noise=0.0)
     eyes   = Mat("#000000", emissive=srgb("#ffb070") * 0.9, noise=0.0, rim=0.0)
@@ -258,6 +259,17 @@ class Hero(Figure):
         ball(P, J.head + Rh @ v(-0.035, 0.006, 0.128), 0.007, self.eyes)
         ball(P, J.head + Rh @ v( 0.035, 0.006, 0.128), 0.007, self.eyes)
         box(P, J.head + Rh @ v(0, 0.13, -0.01), Rh, (0.012, 0.03, 0.115), gd)
+        # Plume: crimson horsehair rising from the crest and falling back,
+        # trailing as he moves
+        drag = J.p["drag"] * 0.12
+        pts = [J.head + Rh @ v(0, 0.15, 0.03)]
+        for k, d in enumerate((v(0, 0.06, -0.02), v(0, 0.035, -0.06), v(0, 0.0, -0.075),
+                               v(0, -0.045, -0.065), v(0, -0.08, -0.04), v(0, -0.09, -0.02))):
+            pts.append(pts[-1] + Rh @ d * 1.25 + drag * (k / 5))
+        radii = (0.036, 0.052, 0.062, 0.062, 0.054, 0.042, 0.02)
+        for k, (a, b) in enumerate(zip(pts, pts[1:])):
+            seg(P, a, b, radii[k], radii[k + 1], self.plume, zhint=Rh @ v(1, 0, 0), fz=0.6)
+        ball(P, pts[0], 0.022, gd)
         for k in (-1, 1):
             a = J.head + Rh @ v(k * 0.1, 0.06, -0.02)
             b = a + Rh @ v(k * 0.07, 0.08, -0.06)
@@ -271,7 +283,7 @@ class Hero(Figure):
         return P
 
 # ------------------------------------------------------------------------------
-# Human warrior: mail, blue tabard, kettle hat, round shield, arming sword
+# Human warrior: mail, blue tabard, crusader helm, round shield, arming sword
 # ------------------------------------------------------------------------------
 
 def shield_face(q):
@@ -304,6 +316,8 @@ class HumanWarrior(Figure):
     wood   = Mat("#5a4027", noise=0.4)
     face   = Mat("#24406e", pattern=shield_face, noise=0.25, nfreq=6, spec=0.1)
     blade  = Mat("#a9b1ba", metal=0.95, spec=1.0, power=80, noise=0.06)
+    brass  = Mat("#9c8450", metal=0.85, spec=0.8, power=45, noise=0.12)
+    slit   = Mat("#050505", spec=0.0, rim=0.0, noise=0.0)
 
     def stance(self):
         return dict(hand_r=v(-0.25, -0.4, 0.14), wdir=v(0.05, 0.42, 0.9), wflat=v(1, 0, 0),
@@ -356,14 +370,22 @@ class HumanWarrior(Figure):
             sphere(P, sh + Rc @ v(k * 0.02, 0.02, 0), Rc @ rot_z(k * 0.4), (0.09, 0.07, 0.09), self.steel)
         for sd in "rl":
             arm(P, J, sd, self.mail, self.mail, self.leath, r=(0.053, 0.047, 0.046, 0.04), hand_r=0.043)
-        # Head: face, beard, mail coif, kettle hat
+        # Head: a crusader's great helm over a mail coif: flat topped, with a
+        # T-shaped visor (eye slit over a breathing slot) edged in brass
         Rh = J.Rh
         seg(P, J.neck, J.head, 0.05, 0.048, self.mail)
-        sphere(P, J.head, Rh, (0.097, 0.115, 0.107), self.skin)
-        sphere(P, J.head + Rh @ v(0, -0.06, 0.06), Rh, (0.07, 0.06, 0.05), self.beard)
-        sphere(P, J.head + Rh @ v(0, -0.03, -0.035), Rh, (0.115, 0.12, 0.11), self.mail)
-        sphere(P, J.head + Rh @ v(0, 0.055, 0), Rh, (0.118, 0.1, 0.118), self.steel)
-        sphere(P, J.head + Rh @ v(0, 0.052, 0), Rh @ rot_x(0.05), (0.175, 0.02, 0.175), self.steel)
+        sphere(P, J.head + Rh @ v(0, -0.08, -0.01), Rh, (0.13, 0.07, 0.12), self.mail)
+        # The barrel: an octagonal prism (four crossed slabs), flat on top
+        a = 0.114
+        for k in range(4):
+            box(P, J.head + Rh @ v(0, -0.015, 0), Rh @ rot_y(k * math.pi / 4) @ np.diag([1.0, 1.0, 1.0]),
+                (a, 0.1, a * 0.4142), self.steel)
+        box(P, J.head + Rh @ v(0, 0.075, 0.0), Rh, (0.004, 0.012, a * 1.02), self.brass)  # crown ridge
+        box(P, J.head + Rh @ v(0, 0.012, 0.104), Rh, (0.09, 0.013, 0.02), self.slit)
+        box(P, J.head + Rh @ v(0, -0.045, 0.104), Rh, (0.014, 0.055, 0.02), self.slit)
+        box(P, J.head + Rh @ v(0, 0.034, 0.112), Rh, (0.096, 0.007, 0.012), self.brass)
+        box(P, J.head + Rh @ v(-0.024, -0.045, 0.113), Rh, (0.006, 0.05, 0.012), self.brass)
+        box(P, J.head + Rh @ v( 0.024, -0.045, 0.113), Rh, (0.006, 0.05, 0.012), self.brass)
         # Sword and shield
         sword(P, J, 0.7, 0.036, self.blade, self.steel, self.leath, self.steel, guard_w=0.1, grip_len=0.1)
         shield(P, J, self.face, self.steel, self.steel, radius=0.26)
