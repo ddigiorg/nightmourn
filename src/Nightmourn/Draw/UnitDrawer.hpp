@@ -12,8 +12,9 @@
 // Each unit has a look picked by its faction and its subtype
 // (UnitConfig::subtype): a unit config's sprites (data/base/configs/entity/
 // units.json) and the color they are tinted with. It plays the animation for
-// its UnitState: idle, walk, or attack, the attack timed so its frame 0 (the
-// hit) lands as the unit's hit does.
+// its UnitState: idle, walk, or attack, the attack stretched over
+// attack_interval from the start of the attack, so the hit or release
+// lands UnitConfig::attack_windup ticks into it.
 // =============================================================================
 
 #pragma once

@@ -12,6 +12,7 @@
 #pragma once
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/Area2D.hpp"
+#include "Nightmourn/Projectile/ProjectileConfig.hpp"
 #include <cstdint>     // uint16_t
 #include <string_view> // string_view
 
@@ -33,6 +34,15 @@ struct UnitConfig {
     float    attack_range    = 1.0f; // tiles, center to center
     float    aggro_radius    = 6.0f; // tiles; enemies inside are engaged when idle
                                      // or attack-moving (0: only on command)
+
+    // Ticks from the start of an attack to the hit (melee) or the release
+    // (ranged): the frame of the attack animation where the blow lands or
+    // the arrow leaves the bow. 0 hits at once. Must be < attack_interval.
+    uint16_t attack_windup   = 0;
+
+    // Fired at the target on release, carrying attack_damage. Null: melee,
+    // the damage lands on release instead.
+    const ProjectileConfig* projectile = nullptr;
 
     // Collision box, relative to the unit's position (its feet)
     Area2D collision_bounds = { -0.25f, -0.25f, 0.25f, 0.25f };

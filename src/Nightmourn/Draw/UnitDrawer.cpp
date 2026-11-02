@@ -59,7 +59,8 @@ void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
     const FigureAnimations& figure = look.anims;
 
     // Idle and walk loop on the clock, each unit at its own phase; the
-    // attack runs once per attack_interval, starting at the hit
+    // attack runs once per attack_interval, starting when the attack does (the
+    // hit or release comes attack_windup ticks later)
     const float   now  = static_cast<float>(ctx.tick) * TICK_SECONDS;
     const std::uint32_t seed = unit.handle.index();
     Nezumi::Render::AnimationID anim = figure.idle;

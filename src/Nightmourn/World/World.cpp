@@ -12,7 +12,9 @@
 #include "Nightmourn/Events/OnEntityDamaged.hpp"
 #include "Nightmourn/Events/OnEntityMined.hpp"
 #include "Nightmourn/Events/OnEntityRemoved.hpp"
-#include <cstdint> // uint32_t
+#include <algorithm> // max, min
+#include <cmath>     // lround, sqrt
+#include <cstdint>   // uint32_t
 
 namespace Nightmourn {
 
@@ -53,11 +55,12 @@ void World::tick() {
     apply_commands_   ();       // 1. Commands
     update_activation_();       // 2. Activation
     tick_entities_    (ctx);    // 3. Entity tick
-    apply_interactions_();      // 4. Interaction
-    integrate_movement_(ctx.dt);// 5. Movement + spatial update
-    update_activation_();       // 6. Activation
-    deposit_pheromones_();      // 7. Pheromones
-    sweep_sectors_    ();       // 8. Sector sweep
+    update_projectiles_();      // 4. Projectiles
+    apply_interactions_();      // 5. Interaction
+    integrate_movement_(ctx.dt);// 6. Movement + spatial update
+    update_activation_();       // 7. Activation
+    deposit_pheromones_();      // 8. Pheromones
+    sweep_sectors_    ();       // 9. Sector sweep
 
     tick_++;
     in_tick_ = false;
@@ -130,6 +133,48 @@ void World::mine_entity(EntityHandle target, uint16_t amount, EntityHandle sourc
 }
 
 // -----------------------------------------------------------------------------
+// Projectiles
+// -----------------------------------------------------------------------------
+
+void World::launch_projectile(
+    const ProjectileConfig& config,
+    const Entity&           source,
+    const Entity&           target,
+    uint16_t                damage)
+{
+    assert(config.speed > 0.0f && "ProjectileConfig::speed must be positive");
+
+    const float dt = static_cast<float>(clock_.get_fixed_dt());
+
+    // Ground projectiles may lead a moving target: aim where it will be
+    // after the flight to where it is now (one refinement is plenty at
+    // these speeds)
+    Position2D destination = target.position;
+    float      distance    = std::sqrt(source.position.distance2(destination));
+    if (config.guidance == ProjectileGuidance::Ground && config.lead_target) {
+        destination = target.position + target.velocity * (distance / config.speed);
+        distance    = std::sqrt(source.position.distance2(destination));
+    }
+
+    const long ticks = std::lround(distance / config.speed / dt);
+
+    Projectile p;
+    p.config          = &config;
+    p.origin          = source.position;
+    p.destination     = destination;
+    p.source          = source.handle;
+    p.target          = target.handle;
+    p.launch_tick     = tick_;
+    p.peak_height     = std::min(config.arc * distance, config.max_height);
+    p.launch_height   = config.launch_height;
+    p.flight_ticks    = static_cast<uint16_t>(std::clamp(ticks, 1L, 65535L));
+    p.damage          = damage;
+    p.source_factions = source.factions_mask;
+
+    launches_.push_back({ source.surface_id, p });
+}
+
+// -----------------------------------------------------------------------------
 // Tick Phase 1: Commands
 // -----------------------------------------------------------------------------
 
@@ -192,7 +237,7 @@ void World::apply_commands_() {
 }
 
 // -----------------------------------------------------------------------------
-// Tick Phases 2 and 6: Activation
+// Tick Phases 2 and 7: Activation
 // -----------------------------------------------------------------------------
 
 void World::update_activation_() {
@@ -215,7 +260,28 @@ void World::tick_entities_(WorldContext& ctx) {
 }
 
 // -----------------------------------------------------------------------------
-// Tick Phase 4: Interaction
+// Tick Phase 4: Projectiles
+//
+// Before Interaction, so a projectile that lands this tick has its damage
+// applied this tick. Launches join their surface after the landings, so a
+// projectile always flies at least one tick. Surfaces in SurfaceID order,
+// launches in launch order.
+// -----------------------------------------------------------------------------
+
+void World::update_projectiles_() {
+    surfaces_.for_each([&](Surface& surface) {
+        surface.update_projectiles_(tick_);
+    });
+
+    for (const Launch& launch : launches_) {
+        if (Surface* surface = get_surface(launch.surface))
+            surface->projectiles_.push_back(launch.projectile);
+    }
+    launches_.clear();
+}
+
+// -----------------------------------------------------------------------------
+// Tick Phase 5: Interaction
 //
 // Damage and mining issued during the entity tick, each applied in issue
 // order. Commands issued outside a tick (e.g. from the app) wait here for the
@@ -282,7 +348,7 @@ void World::apply_mining_() {
 }
 
 // -----------------------------------------------------------------------------
-// Tick Phase 5: Movement
+// Tick Phase 6: Movement
 //
 // Integrate every moving entity first, then update spatial membership, so
 // no chunk list is modified while it is being walked.
@@ -298,7 +364,7 @@ void World::integrate_movement_(float dt) {
 }
 
 // -----------------------------------------------------------------------------
-// Tick Phase 7: Pheromones
+// Tick Phase 8: Pheromones
 //
 // After movement and activation, so an emitter deposits into the chunk it
 // ended the tick in, and that chunk is already in its surface's active list.
@@ -314,7 +380,7 @@ void World::deposit_pheromones_() {
 }
 
 // -----------------------------------------------------------------------------
-// Tick Phase 8: Sector Sweep
+// Tick Phase 9: Sector Sweep
 // -----------------------------------------------------------------------------
 
 void World::sweep_sectors_() {

@@ -14,6 +14,8 @@
 #include "Nightmourn/Entity/Entity.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/Position2D.hpp"
+#include "Nightmourn/Projectile/Projectile.hpp"
+#include "Nightmourn/Projectile/ProjectileConfig.hpp"
 #include "Nightmourn/Surface/Surface.hpp"
 #include "Nightmourn/Surface/SurfaceConfig.hpp"
 #include "Nightmourn/Surface/SurfaceID.hpp"
@@ -116,6 +118,16 @@ public:
         uint16_t     amount,
         EntityHandle source = {});
 
+    // Fire a projectile from `source` at `target`. It joins `source`'s
+    // surface in the next projectile phase (this tick's if called while
+    // ticking) and deals `damage` where it lands (see ProjectileConfig.hpp).
+    // Flight time is the ground distance over config.speed, at least 1 tick.
+    void launch_projectile(
+        const ProjectileConfig& config,
+        const Entity&           source,
+        const Entity&           target,
+        uint16_t                damage);
+
     Entity* get_entity(EntityHandle handle) {
         return entities_.get(handle);
     }
@@ -154,11 +166,13 @@ private:
     // 2. Activation   update chunk active/inactive state
     // 3. Entity tick  active chunks in ChunkID order; entities write only
     //                 themselves and issue commands
-    // 4. Interaction  apply damage, then mine commands, each in issue order
-    // 5. Movement     integrate velocity, then update chunk/sector membership
-    // 6. Activation   update chunk active/inactive state again
-    // 7. Pheromones   active emitters deposit into their chunk (staggered)
-    // 8. Sweep        drop empty sectors every `sector_sweep_interval` ticks
+    // 4. Projectiles  land the ones due this tick (queueing their damage),
+    //                 steer tracking ones, then add this tick's launches
+    // 5. Interaction  apply damage, then mine commands, each in issue order
+    // 6. Movement     integrate velocity, then update chunk/sector membership
+    // 7. Activation   update chunk active/inactive state again
+    // 8. Pheromones   active emitters deposit into their chunk (staggered)
+    // 9. Sweep        drop empty sectors every `sector_sweep_interval` ticks
     // -------------------------------------------------------------------------
 
     WorldContext make_context_();
@@ -166,6 +180,7 @@ private:
     void apply_commands_     ();
     void update_activation_  ();
     void tick_entities_      (WorldContext& ctx);
+    void update_projectiles_ ();
     void apply_interactions_ ();
     void apply_damage_       ();
     void apply_mining_       ();
@@ -203,6 +218,14 @@ private:
     Nezumi::SlotMap<Surface> surfaces_ = {};
     CommandRegistry  commands_ = {};
     PheromoneDecay   pheromone_decay_;
+
+    // Projectiles launched since the last projectile phase, in launch order
+    // (each knows its surface through its source)
+    struct Launch {
+        SurfaceID  surface;
+        Projectile projectile;
+    };
+    std::vector<Launch> launches_ = {};
 
     // Scratch (reused every tick to avoid allocation)
     std::vector<Entity*> moved_ = {};

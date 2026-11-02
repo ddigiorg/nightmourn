@@ -46,6 +46,8 @@ void WorldDrawer::draw(DrawContext& ctx, const Surface& surface) const {
         });
     });
 
+    projectiles_.draw(ctx, surface);
+
     if (ctx.show(DebugFlag::ShowUnitGroupInfo)) draw_unit_groups_(ctx, surface);
 }
 

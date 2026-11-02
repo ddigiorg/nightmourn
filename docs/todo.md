@@ -297,7 +297,7 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 
 - [ ] **Unit separation / collision response.** Units stack when they
       fight and overlap when converging on a group's engage position. A
-      push-apart steer in phase 5 using `find_colliding` (needs
+      push-apart steer in phase 6 using `find_colliding` (needs
       `set_collidable()` on units; ROADMAP §8).
 - [ ] **Attack wind-up.** `attack_windup` ticks in `UnitConfig` so the hit
       lands on the swing frame once Animation exists. Store "swing started

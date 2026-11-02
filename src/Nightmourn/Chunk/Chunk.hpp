@@ -148,7 +148,7 @@ private:
     void set_entity_active_  (Entity* entity, bool active);
 
     // -------------------------------------------------------------------------
-    // Pheromones (Surface only, tick phase 7)
+    // Pheromones (Surface only, tick phase 8)
     // -------------------------------------------------------------------------
 
     // Every live, active entity that emits pheromone and has exactly one
