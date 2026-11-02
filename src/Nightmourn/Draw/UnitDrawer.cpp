@@ -30,13 +30,13 @@ UnitDrawer::UnitDrawer(const Config& config)
     : sheet_(config.sheet)
 {
     assert(sheet_ && "UnitDrawer: config.sheet is null");
-    assert(config.figures[0][0] && "UnitDrawer: faction 0 needs a figure");
+    assert(config.looks[0][0].unit && "UnitDrawer: faction 0 needs a look");
     for (std::size_t f = 0; f < MAX_FACTIONS; f++) {
         for (std::size_t s = 0; s < MAX_SUBTYPES; s++) {
-            const char* name = config.figures[f][s];
-            if (!name) name = config.figures[f][0];
-            if (!name) name = config.figures[0][0];
-            figures_[f][s] = FigureAnimations::find(*sheet_, name);
+            const Config::Look* look = &config.looks[f][s];
+            if (!look->unit) look = &config.looks[f][0];
+            if (!look->unit) look = &config.looks[0][0];
+            looks_[f][s] = { FigureAnimations::find(*sheet_, look->unit), look->color };
         }
     }
 }
@@ -54,8 +54,9 @@ void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
         ? 0 : unit.faction_index();
 
     const EntitySubtypeID subtype = unit.subtype_id;
-    const std::size_t     look    = (subtype.is_valid() && subtype.value() < MAX_SUBTYPES) ? subtype.value() : 0;
-    const FigureAnimations& figure = figures_[faction][look];
+    const std::size_t     index   = (subtype.is_valid() && subtype.value() < MAX_SUBTYPES) ? subtype.value() : 0;
+    const Resolved&         look   = looks_[faction][index];
+    const FigureAnimations& figure = look.anims;
 
     // Idle and walk loop on the clock, each unit at its own phase; the
     // attack runs once per attack_interval, starting at the hit
@@ -84,7 +85,7 @@ void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
         }
     }
 
-    draw_figure   (ctx, *sheet_, anim, pos, unit.facing(), seconds);
+    draw_figure   (ctx, *sheet_, anim, pos, unit.facing(), seconds, look.color);
     draw_healthbar(ctx, unit);
 
     if (!ctx.debug.any()) return;

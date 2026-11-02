@@ -11,12 +11,12 @@
 //   data/
 //     base/                       the game's own mod; later mods sit beside it
 //       graphics/                 PNGs (straight alpha, as editors save them)
-//         entity/figure/hero/idle.png
+//         entity/unit/figure/idle_mask.png
 //         entity/tree/oak-01.png
 //         terrain/meadow.png
 //         gui/eagle.png
 //       configs/                  JSON, any file names and folders
-//         entity/figures.json
+//         entity/units.json
 //         entity/trees.json
 //         tiles.json
 //         gui.json
@@ -29,20 +29,24 @@
 //
 // ## Types
 //
-//   figure   an upright figure (units, characters): its animations by name,
-//            one sheet PNG each, a column per frame and a row per stored
-//            direction (see Nezumi's SpritePacker.hpp)
+//   unit     an upright unit look (units, characters): its animations by
+//            name, one sheet PNG each, a column per frame and a row per
+//            stored direction (see Nezumi's SpritePacker.hpp). The drawers
+//            tint it, so a "_mask" sheet (white where the color goes) serves
+//            every side
 //
-//     { "type": "figure", "name": "hero",
+//     { "type": "unit", "name": "figure",
 //       "animations": {
-//         "idle": { "filename": "__base__/graphics/entity/figure/hero/idle.png",
-//                   "width": 128, "height": 160,    // one frame, px
+//         "idle": { "filename": "__base__/graphics/entity/unit/figure/idle_mask.png",
+//                   "width": 64, "height": 128,     // one frame, px
 //                   "frame_count": 8,               // columns (default 1)
-//                   "direction_count": 5,           // rows (default 1): down,
-//                   "headings": 8,                  //   down-right, right, up-right,
-//                                                   //   up; the rest mirrored
+//                   "direction_count": 8,           // rows (default 1): down,
+//                   "headings": 8,                  //   down-right, right, ...
+//                                                   //   counter-clockwise; with
+//                                                   //   fewer rows than headings
+//                                                   //   the rest are mirrored
 //                   "fps": 6, "loop": true,         // (defaults 0, true)
-//                   "pivot": [64, 128] } } }        // feet, px in a frame, y down
+//                   "pivot": [32, 96] } } }         // feet, px in a frame, y down
 //
 //            Animations the drawers play: idle, walk, attack (frame 0 is
 //            the hit) and death; any but idle may be left out
@@ -103,8 +107,9 @@ struct PictureConfig {
 // Configs by type
 // -----------------------------------------------------------------------------
 
-struct FigureConfig {
-    std::string                               name;
+// A "unit" config: how a kind of unit looks (not the simulation's UnitConfig)
+struct UnitSpriteConfig {
+    std::string                            name;
     std::map<std::string, AnimationConfig> animations;
 };
 
@@ -141,16 +146,16 @@ public:
     static Configs load(std::string_view data_dir = "data");
 
     // In load order; a replaced config keeps its first place
-    std::vector<FigureConfig> figures;
-    std::vector<TreeConfig>   trees;
-    std::vector<TileConfig>   tiles;
-    std::vector<SpriteConfig> sprites;
+    std::vector<UnitSpriteConfig> units;
+    std::vector<TreeConfig>       trees;
+    std::vector<TileConfig>       tiles;
+    std::vector<SpriteConfig>     sprites;
 
     // Null if there's none by that name
-    const FigureConfig* find_figure(std::string_view name) const;
-    const TreeConfig*   find_tree  (std::string_view name) const;
-    const TileConfig*   find_tile  (std::string_view name) const;
-    const SpriteConfig* find_sprite(std::string_view name) const;
+    const UnitSpriteConfig* find_unit  (std::string_view name) const;
+    const TreeConfig*       find_tree  (std::string_view name) const;
+    const TileConfig*       find_tile  (std::string_view name) const;
+    const SpriteConfig*     find_sprite(std::string_view name) const;
 
     // Every file name the configs use, for checks
     std::vector<std::string> filenames() const;
