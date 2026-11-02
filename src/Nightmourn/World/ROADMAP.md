@@ -139,7 +139,7 @@ The phase structure already provides the seams. Steps when you get there:
    construct during the command phase instead.
 4. **RNG:** counter-based (see §3), so a roll doesn't depend on which thread
    ran first.
-5. **Movement (phase 5):** integration parallelizes per chunk; spatial
+5. **Movement (phase 6):** integration parallelizes per chunk; spatial
    updates (chunk/sector moves) stay serial, or use checkerboard (2×2
    coloring) so neighboring chunks never update concurrently.
 6. **Reads:** queries during phase 3 read state from the start of the tick,
@@ -186,7 +186,7 @@ locality for neighbor queries.
   surface, position)` command (remove from source, insert into destination in
   the command phase). Needed before surfaces can be removed.
 - **Collision response:** `find_colliding` exists; resolution (push-apart,
-  blocking) belongs in phase 5 after integration.
+  blocking) belongs in phase 6 after integration.
 - **Render interpolation:** snapshot positions of visible entities after each
   tick on the render side, or add `prev_position` (8 B; there is 24 B free).
 - **Save/load:** serialize SlotMap slots *including* versions and free-list
@@ -210,7 +210,7 @@ locality for neighbor queries.
 Per-chunk data is baked into `Chunk`, not a layer system.
 
 - **Pheromones (done):** `Chunk/Pheromones.hpp`. 16 `uint16_t` strengths
-  per chunk with integer lazy decay; deposits in tick phase 7; reads through
+  per chunk with integer lazy decay; deposits in tick phase 8; reads through
   `Surface::pheromone_at` and `pheromone_gradient`. Still to do: include
   `values` and `epoch` in save/load and in the desync checksum (§4), and
   have unit AI follow the gradient.

@@ -23,6 +23,7 @@
 #include "Nightmourn/Entity/EntitySearchFilter.hpp"
 #include "Nightmourn/Geometry/Area2D.hpp"
 #include "Nightmourn/Geometry/Position2D.hpp"
+#include "Nightmourn/Projectile/Projectile.hpp"
 #include "Nightmourn/Sector/Sector.hpp"
 #include "Nightmourn/Sector/SectorID.hpp"
 #include "Nightmourn/Sector/SectorSpan.hpp"
@@ -92,7 +93,7 @@ public:
 
     // -------------------------------------------------------------------------
     // Pheromones (const, safe to call while ticking: deposits only happen in
-    // World tick phase 7)
+    // World tick phase 8)
     // -------------------------------------------------------------------------
 
     // `faction`'s pheromone in the chunk holding `position`, or 0 if that
@@ -104,6 +105,16 @@ public:
     // `position`; { 0, 0 } at a peak or where there is none. Ties go to the
     // lower NEIGHBOUR_OFFSETS index.
     ChunkOffset pheromone_gradient(Position2D position, FactionIndex faction) const;
+
+    // -------------------------------------------------------------------------
+    // Projectiles
+    //
+    // In flight on this surface, in no particular order (landing swaps the
+    // last one into the gap). Changed only in World tick phase 4; drawers
+    // read them between ticks (see Projectile.hpp for the flight).
+    // -------------------------------------------------------------------------
+
+    const std::vector<Projectile>& projectiles() const { return projectiles_; }
 
     // -------------------------------------------------------------------------
     // Sectors
@@ -164,6 +175,7 @@ private:
     // -------------------------------------------------------------------------
 
     void tick_entities_          (WorldContext& ctx);
+    void update_projectiles_     (Nezumi::Tick tick);
     void integrate_movement_     (float dt, std::vector<Entity*>& moved);
     void update_chunk_activation_();
     void deposit_pheromones_     (Nezumi::Tick tick, Nezumi::Tick interval, PheromoneValue amount);
@@ -188,6 +200,13 @@ private:
     void    mark_dirty_          (Chunk* chunk);
     void    link_neighbours_     (Chunk* chunk);
 
+    // Who `p`, landing now, hits (null if nobody): see ProjectileConfig.hpp
+    EntityHandle projectile_hit_(const Projectile& p) const;
+
+    // How far an entity's collision box may reach past its position (tiles):
+    // landing searches look this much further for feet
+    static constexpr float PROJECTILE_HIT_REACH = 1.0f;
+
     // -------------------------------------------------------------------------
     // Members
     // -------------------------------------------------------------------------
@@ -203,6 +222,8 @@ private:
 
     Nezumi::SlotMap<Sector>                       sectors_       = {};
     std::unordered_map<SectorID, Sector*> sector_lookup_ = {};
+
+    std::vector<Projectile>               projectiles_   = {};
 };
 
 // -----------------------------------------------------------------------------

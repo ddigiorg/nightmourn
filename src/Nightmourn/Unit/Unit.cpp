@@ -41,6 +41,21 @@ void Unit::tick(WorldContext& ctx) {
 
     const UnitState prev_state = state_;
 
+    if (windup_ticks_ > 0) wind_up_(ctx);
+    else                   follow_command_(ctx);
+
+    // A command that completed this tick leaves the unit standing still
+    if (velocity.is_zero() && state_ == UnitState::Moving) state_ = UnitState::Idle;
+
+    if (state_ != prev_state)  state_ticks_ = 0;
+    else if (state_ticks_ < UINT16_MAX) state_ticks_++;
+}
+
+// -----------------------------------------------------------------------------
+// Behaviors
+// -----------------------------------------------------------------------------
+
+void Unit::follow_command_(WorldContext& ctx) {
     const float aggro = config_->aggro_radius;
 
     switch (command_.type) {
@@ -85,17 +100,7 @@ void Unit::tick(WorldContext& ctx) {
             break;
         }
     }
-
-    // A command that completed this tick leaves the unit standing still
-    if (velocity.is_zero() && state_ == UnitState::Moving) state_ = UnitState::Idle;
-
-    if (state_ != prev_state)  state_ticks_ = 0;
-    else if (state_ticks_ < UINT16_MAX) state_ticks_++;
 }
-
-// -----------------------------------------------------------------------------
-// Behaviors
-// -----------------------------------------------------------------------------
 
 const Entity* Unit::resolve_target_(WorldContext& ctx, float leash) {
     if (!target_) return nullptr;
@@ -194,9 +199,41 @@ void Unit::engage_(WorldContext& ctx, const Entity& target) {
     state_ = UnitState::Attacking;
 
     if (attack_cooldown_ == 0) {
-        ctx.world->damage_entity(target.handle, config_->attack_damage, handle);
+        assert(config_->attack_windup < config_->attack_interval || config_->attack_interval == 0);
         attack_cooldown_ = config_->attack_interval;
+        target_          = target.handle;
+        windup_ticks_    = config_->attack_windup;
+        if (windup_ticks_ == 0) release_(ctx, target);
     }
+}
+
+void Unit::wind_up_(WorldContext& ctx) {
+    state_ = UnitState::Attacking;
+
+    const Entity* target = ctx.world->get_entity(target_);
+    if (!target || !target->is_alive()) {
+        // Someone else got it first: the attack is wasted
+        windup_ticks_ = 0;
+        target_       = {};
+        return;
+    }
+
+    const Position2D delta = target->position - position;
+    face_(delta, std::sqrt(delta.x * delta.x + delta.y * delta.y));
+
+    if (--windup_ticks_ == 0) release_(ctx, *target);
+}
+
+void Unit::release_(WorldContext& ctx, const Entity& target) {
+    if (config_->projectile) {
+        ctx.world->launch_projectile(*config_->projectile, *this, target, config_->attack_damage);
+        return;
+    }
+
+    const float reach = config_->attack_range + MELEE_SLACK;
+    if (distance2(target) > reach * reach) return; // stepped out of reach: whiff
+
+    ctx.world->damage_entity(target.handle, config_->attack_damage, handle);
 }
 
 bool Unit::move_toward_(WorldContext& ctx, Position2D destination, float stop_distance) {

@@ -3,7 +3,7 @@
 //
 // Per-chunk pheromone field: one decaying strength per faction, like the
 // trail ants leave. Units that carry EntityFlagsMask::EmitsPheromone deposit
-// into the chunk they stand in (World tick phase 7); AI reads a chunk's
+// into the chunk they stand in (World tick phase 8); AI reads a chunk's
 // strength and compares it with its neighbours' to follow the gradient
 // (Chunk::strongest_neighbour, Surface::pheromone_gradient).
 //

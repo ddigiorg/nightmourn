@@ -13,6 +13,9 @@
 //   finish their route attack the nearest enemy group. Red units treat the
 //   hero like any other blue target, so walking into a red group gets the
 //   hero hurt and, eventually, killed.
+// - Archers loose arrows that arc to where their target stood (Nightmourn
+//   Projectiles): a target that walks on can dodge them, and a miss can
+//   still hit another enemy standing there.
 // - A dead hero respawns at the blue camp, behind the archers, after a few
 //   seconds.
 // - The world is drawn 2:1 isometric (use-top-down-view in the debug menu
@@ -49,6 +52,7 @@
 #include "Nezumi/Input/Events/OnMouseButtonDown.hpp"
 #include "Nezumi/Input/Events/OnMouseMotion.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Projectile/ProjectileConfig.hpp"
 #include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/Unit/UnitGroup.hpp"
 #include "Nightmourn/Geometry/Area2D.hpp"
@@ -179,6 +183,15 @@ static constexpr UnitConfig SOLDIER = {
     .attack_interval = 60,
     .attack_range    = 0.75f,
     .aggro_radius    = 6.0f,
+    .attack_windup   = 30, // the blow lands mid-swing
+};
+
+// Dumb arrows (AoE2 before Ballistics): they fly to where the target stood
+// on release and hit whatever enemy is there on landing
+static constexpr ProjectileConfig ARROW = {
+    .name     = "arrow",
+    .guidance = ProjectileGuidance::Ground,
+    .speed    = 8.0f, // ~0.5 s at full range
 };
 
 static constexpr UnitConfig ARCHER = {
@@ -190,6 +203,8 @@ static constexpr UnitConfig ARCHER = {
     .attack_interval = 45,
     .attack_range    = 4.0f,
     .aggro_radius    = 7.0f,
+    .attack_windup   = 25, // draw, aim, loose
+    .projectile      = &ARROW,
 };
 
 static constexpr ResourceConfig OAK = {

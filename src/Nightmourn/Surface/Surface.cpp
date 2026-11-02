@@ -224,6 +224,60 @@ void Surface::tick_entities_(WorldContext& ctx) {
     }
 }
 
+void Surface::update_projectiles_(Nezumi::Tick tick) {
+    for (std::size_t i = 0; i < projectiles_.size(); ) {
+        Projectile& p = projectiles_[i];
+
+        // Tracking projectiles follow a live target. One whose target is
+        // gone keeps its last destination and lands like a Ground one.
+        const Entity* target = world_.get_entity(p.target);
+        const bool    alive  = target && target->is_alive();
+        if (p.config->guidance == ProjectileGuidance::Tracking && alive)
+            p.destination = target->position;
+
+        if (p.land_tick() > tick) {
+            i++;
+            continue;
+        }
+
+        const EntityHandle hit =
+            (p.config->guidance == ProjectileGuidance::Tracking && alive)
+                ? p.target
+                : projectile_hit_(p);
+
+        if (hit) world_.damage_entity(hit, p.damage, p.source);
+
+        projectiles_[i] = projectiles_.back();
+        projectiles_.pop_back();
+    }
+}
+
+EntityHandle Surface::projectile_hit_(const Projectile& p) const {
+    // Units aren't Collidable (not in sectors), so walk the chunks around
+    // the landing point and test collision boxes directly
+    const Area2D hit_box = Area2D::around(p.destination, p.config->hit_radius);
+    const Area2D search  = Area2D::around(p.destination, p.config->hit_radius + PROJECTILE_HIT_REACH);
+
+    EntityHandle best = {};
+    visit_entities_in(search, [&](const Entity& entity) {
+        if (entity.handle == p.source)                     return true;
+        if (!entity.is_damageable())                       return true;
+        if (!entity.collision_box().overlaps(hit_box))     return true;
+        if (!p.config->friendly_fire &&
+            has_any(entity.factions_mask, p.source_factions)) return true;
+
+        if (entity.handle == p.target) {
+            best = entity.handle;
+            return false; // the intended target always wins
+        }
+
+        // Otherwise the lowest handle index, whatever the walk order
+        if (!best || entity.handle.index() < best.index()) best = entity.handle;
+        return true;
+    });
+    return best;
+}
+
 void Surface::integrate_movement_(float dt, std::vector<Entity*>& moved) {
     for (Chunk* chunk : active_chunks_) {
         chunk->visit_active_entities([&](Entity& entity) {

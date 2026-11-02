@@ -2,8 +2,8 @@
 // Draw/WorldDrawer.hpp
 //
 // Draws what the camera sees of one surface: visits the chunks in view, has
-// ChunkDrawer draw their ground, and hands each entity to the drawer for its
-// type. The game calls it once per frame:
+// ChunkDrawer draw their ground, hands each entity to the drawer for its
+// type, then draws the projectiles in flight (ProjectileDrawer). The game calls it once per frame:
 //
 //   void on_draw(Engine& engine) override {
 //       DrawContext ctx = DrawContext::make(*engine.renderer2d(), *world_,
@@ -23,6 +23,7 @@
 #include "Nightmourn/Draw/CharacterDrawer.hpp"
 #include "Nightmourn/Draw/ChunkDrawer.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
+#include "Nightmourn/Draw/ProjectileDrawer.hpp"
 #include "Nightmourn/Draw/ResourceDrawer.hpp"
 #include "Nightmourn/Draw/UnitDrawer.hpp"
 #include "Nightmourn/Draw/UnitGroupDrawer.hpp"
@@ -68,6 +69,7 @@ public:
     const UnitGroupDrawer& unit_groups() const { return unit_groups_; }
     const CharacterDrawer& characters()  const { return characters_;  }
     const ResourceDrawer&  resources()   const { return resources_;   }
+    const ProjectileDrawer& projectiles() const { return projectiles_; }
 
 private:
 
@@ -90,6 +92,7 @@ private:
     UnitGroupDrawer unit_groups_;
     CharacterDrawer characters_;
     ResourceDrawer  resources_;
+    ProjectileDrawer projectiles_;
 };
 
 } // namespace Nightmourn
