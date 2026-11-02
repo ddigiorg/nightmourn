@@ -4,7 +4,7 @@
 // The player walks a hero around a battlefield while a friendly blue army and
 // an enemy red army fight each other.
 //
-// - The hero (a knight) is a Nightmourn::Character on the blue side, controlled
+// - The hero (white) is a Nightmourn::Character on the blue side, controlled
 //   by a Nightmourn::Player: W/A/S/D move in 8 directions and the camera
 //   follows.
 // - Each army is a front line of 5 soldier groups with 3 archer groups behind
@@ -216,15 +216,20 @@ static constexpr UnitGroupConfig BLOCK = {
 
 struct SideStyle {
     const char* name;
-    const char* soldier;      // figures (data/base/configs/entity/figures.json)
-    const char* archer;
+    glm::vec4   soldier;      // unit tints: human warriors blue, archers cyan;
+    glm::vec4   archer;       //   undead warriors red, archers purple
     glm::vec4   color;        // group routes and slots
     float       direction;    // +1 marches right, -1 left
 };
 
+static constexpr glm::vec4 BLUE_UNIT   = { 0.0f,  0.33f, 1.0f,  1.0f };
+static constexpr glm::vec4 CYAN_UNIT   = { 0.11f, 0.9f,  0.72f, 1.0f };
+static constexpr glm::vec4 RED_UNIT    = { 1.0f,  0.01f, 0.01f, 1.0f };
+static constexpr glm::vec4 PURPLE_UNIT = { 0.48f, 0.0f,  0.64f, 1.0f };
+
 static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
-    { "blue", "human-warrior",  "human-archer",    { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
-    { "red",  "zombie-warrior", "skeleton-archer", { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
+    { "blue", BLUE_UNIT, CYAN_UNIT,   { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
+    { "red",  RED_UNIT,  PURPLE_UNIT, { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
 }};
 
 // The hero's side
@@ -294,8 +299,8 @@ public:
 
         WorldDrawer::Config draw_config = sheets_.drawer_config();
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
-            draw_config.units.figures[f][SOLDIER.subtype.value()] = SIDES[f].soldier;
-            draw_config.units.figures[f][ARCHER.subtype.value()]  = SIDES[f].archer;
+            draw_config.units.looks[f][SOLDIER.subtype.value()] = { "figure", SIDES[f].soldier };
+            draw_config.units.looks[f][ARCHER.subtype.value()]  = { "figure", SIDES[f].archer  };
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
             draw_config.chunks.faction_colors[f]      = SIDES[f].color;
         }

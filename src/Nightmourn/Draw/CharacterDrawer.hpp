@@ -8,8 +8,8 @@
 //   ShowCollisionRectangles  collision box
 //   ShowFacingArrows         arrow along facing()
 //
-// One figure for every character for now. When characters get their own
-// looks, map CharacterConfig (or an appearance id on it) to figures here.
+// One look for every character for now. When characters get their own
+// looks, map CharacterConfig (or an appearance id on it) to looks here.
 // =============================================================================
 
 #pragma once
@@ -34,16 +34,18 @@ public:
     struct Config {
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // The characters' figure (a figure config's name)
-        const char* figure = "hero";
+        // The characters' look: a unit config's name, and the color its
+        // (mask) sprites are tinted with
+        const char* unit  = "figure";
+        glm::vec4   color = glm::vec4(1.0f);
     };
 
     // -------------------------------------------------------------------------
     // Construction & Destruction
     // -------------------------------------------------------------------------
 
-    // `config.sheet` must outlive the drawer. Throws if `config.figure`
-    // isn't in the sheet.
+    // `config.sheet` must outlive the drawer. Throws if `config.unit` has
+    // no idle animation in the sheet.
     explicit CharacterDrawer(const Config& config);
 
     // -------------------------------------------------------------------------
@@ -60,6 +62,7 @@ private:
 
     const Nezumi::Render::SpriteSheet* sheet_  = nullptr;
     FigureAnimations                   figure_ = {};
+    glm::vec4                          color_  = glm::vec4(1.0f);
 };
 
 } // namespace Nightmourn

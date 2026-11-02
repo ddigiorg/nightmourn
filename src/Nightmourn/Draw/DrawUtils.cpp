@@ -4,6 +4,7 @@
 
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
+#include "Nezumi/Render/Core/Color/Rgba8.hpp"
 #include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/Entity/EntityDamageable.hpp"
 #include "Nightmourn/Character/Character.hpp"
@@ -40,7 +41,7 @@ glm::vec4 sprite_view_box(const Projection&         proj, glm::vec2 pos, glm::ve
 }
 
 void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
-                    Nezumi::Render::SpriteID sprite, glm::vec2 pos, bool mirrored)
+                    Nezumi::Render::SpriteID sprite, glm::vec2 pos, bool mirrored, glm::vec4 tint)
 {
     // Sorted by the feet's view y: further up the screen draws first
     Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Entities);
@@ -48,21 +49,23 @@ void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
     params.order    = y_sort_order(ctx.to_view(pos).y);
 
     const float scale = ctx.upright_scale() / SPRITE_PIXELS_PER_TILE;
-    ctx.renderer.draw_sprite(sheet.sprite_at(sprite, ctx.to_view(pos), scale, mirrored), params);
+    Nezumi::Render::Sprite s = sheet.sprite_at(sprite, ctx.to_view(pos), scale, mirrored);
+    s.tint = Nezumi::Render::rgba8(tint);
+    ctx.renderer.draw_sprite(s, params);
 }
 
 void draw_figure(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
                  Nezumi::Render::AnimationID animation, glm::vec2 pos, Position2D facing,
-                 float seconds)
+                 float seconds, glm::vec4 color)
 {
     const std::uint32_t headings = sheet.anim(animation).headings;
     const std::uint32_t heading  = heading_index(ctx.proj.dir_to_heading(facing.to_vec2()), headings);
     const auto frame = sheet.frame(animation, heading, seconds);
-    draw_sprite_at(ctx, sheet, frame.sprite, pos, frame.mirrored);
+    draw_sprite_at(ctx, sheet, frame.sprite, pos, frame.mirrored, color);
 }
 
 FigureAnimations FigureAnimations::find(const Nezumi::Render::SpriteSheet& sheet, std::string_view figure) {
-    const std::string prefix = "figure/" + std::string(figure) + "/";
+    const std::string prefix = "unit/" + std::string(figure) + "/";
     FigureAnimations out;
     out.idle = sheet.animation(prefix + "idle");
     const auto pick = [&](const char* name) {

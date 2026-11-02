@@ -25,7 +25,7 @@ Demos are built next to the game:
 | `src/Nightmourn/` | Game code shared by the game and the demos, included as `<Nightmourn/...>`. The simulation (`World/`, `Surface/`, `Chunk/`, `Sector/`, `Entity/`, `Unit/`, `Resource/`, ...) builds as the headless `nightmourn_world` library; drawing, GUI, input and `Player` build as `nightmourn_game` on top |
 | `demos/` | One small prototype per feature, the game's version of Nezumi's `examples/` |
 | `data/` | Game data, Factorio style: `base/graphics/` (PNGs) and `base/configs/` (JSON naming them, see `src/Nightmourn/Data/Configs.hpp`). Copied next to each executable; sprite sheets are packed from it when the game starts. Adding a unit look, tree or terrain is a PNG plus a few lines of JSON |
-| `tools/` | Generators for the art in `data/` (`gen_figures.py`, `gen_trees.py`, `gen_meadow.py`, `gen_ui.py`) |
+| `tools/` | Generators for the art in `data/` (`gen_units.py`, `gen_trees.py`, `gen_meadow.py`, `gen_ui.py`) |
 | `tests/` | Headless simulation tests (link `nightmourn_world` only); run with `ctest --test-dir .build/debug` |
 
 ## Engine Version

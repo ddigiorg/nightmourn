@@ -35,9 +35,9 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Configs& configs) 
 
     // Figures and trees, packed into one sheet so they batch together
     NR::SpritePacker packer;
-    for (const FigureConfig& figure : configs.figures) {
+    for (const UnitSpriteConfig& figure : configs.units) {
         for (const auto& [name, a] : figure.animations) {
-            packer.add_animation("figure/" + figure.name + "/" + name, NR::load_image(a.filename), {
+            packer.add_animation("unit/" + figure.name + "/" + name, NR::load_image(a.filename), {
                 .frame_width  = a.width,
                 .frame_height = a.height,
                 .frames       = a.frame_count,

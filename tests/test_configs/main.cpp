@@ -52,11 +52,10 @@ static void test_shipped_data() {
     const Configs p = Configs::load(NIGHTMOURN_DATA_DIR);
 
     // What the drawers and UI look up by default
-    for (const char* figure : { "hero", "human-warrior", "human-archer", "zombie-warrior", "skeleton-archer" }) {
-        const FigureConfig* f = p.find_figure(figure);
-        CHECK(f != nullptr);
-        if (!f) continue;
-        for (const char* anim : { "idle", "walk", "attack", "death" }) CHECK(f->animations.contains(anim));
+    {
+        const UnitSpriteConfig* u = p.find_unit("figure");
+        CHECK(u != nullptr);
+        if (u) for (const char* anim : { "idle", "walk", "attack", "death" }) CHECK(u->animations.contains(anim));
     }
     CHECK(p.find_tree("oak") && p.find_tree("pine"));
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
@@ -85,7 +84,7 @@ static void test_mods() {
     ])");
     write(dir / "zmod/configs/sub/b.json", R"([
         { "type": "tile", "name": "grass", "texture": { "filename": "__zmod__/lush.png", "tiles": 2 } },
-        { "type": "figure", "name": "x", "animations": {
+        { "type": "unit", "name": "x", "animations": {
             "walk": { "filename": "__base__/x.png", "width": 8, "height": 16, "frame_count": 4,
                       "direction_count": 5, "headings": 8, "fps": 10, "pivot": [4, 12] } } }
     ])");
@@ -96,7 +95,7 @@ static void test_mods() {
     CHECK(p.tiles[0].filename == (dir / "zmod" / "lush.png").string());
     CHECK(p.trees.size() == 1 && !p.trees[0].pictures[0].pivot);
 
-    const AnimationConfig& walk = p.find_figure("x")->animations.at("walk");
+    const AnimationConfig& walk = p.find_unit("x")->animations.at("walk");
     CHECK(walk.filename == (dir / "base" / "x.png").string());
     CHECK(walk.width == 8 && walk.height == 16 && walk.frame_count == 4);
     CHECK(walk.direction_count == 5 && walk.headings == 8 && walk.fps == 10.0f && walk.loop);
@@ -122,8 +121,8 @@ static void test_errors() {
               .find("__<mod>__") != std::string::npos);
     CHECK(broken(R"([ { "type": "tree", "name": "t", "pictures": [ { "filename": "__nope__/oak.png" } ] } ])")
               .find("unknown mod 'nope'") != std::string::npos);
-    CHECK(broken(R"([ { "type": "figure", "name": "f", "animations": { "idle": { "filename": "__base__/f.png" } } } ])")
-              .find("figure 'f'") != std::string::npos); // no width
+    CHECK(broken(R"([ { "type": "unit", "name": "f", "animations": { "idle": { "filename": "__base__/f.png" } } } ])")
+              .find("unit 'f'") != std::string::npos); // no width
     CHECK(broken(R"([ { "type": "sprite", "name": "s", "filename": "__base__/s.png", "pivot": [1] } ])")
               .find("'pivot' must be [x, y]") != std::string::npos);
     fs::remove_all(dir);

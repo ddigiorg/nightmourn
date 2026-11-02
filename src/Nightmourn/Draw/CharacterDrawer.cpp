@@ -18,7 +18,8 @@ CharacterDrawer::CharacterDrawer(const Config& config)
     : sheet_(config.sheet)
 {
     assert(sheet_ && "CharacterDrawer: config.sheet is null");
-    figure_ = FigureAnimations::find(*sheet_, config.figure);
+    figure_ = FigureAnimations::find(*sheet_, config.unit);
+    color_  = config.color;
 }
 
 // -----------------------------------------------------------------------------
@@ -42,7 +43,7 @@ void CharacterDrawer::draw(DrawContext& ctx, const Character& character) const {
         }
     }
 
-    draw_figure   (ctx, *sheet_, anim, pos, character.facing(), seconds);
+    draw_figure   (ctx, *sheet_, anim, pos, character.facing(), seconds, color_);
     draw_healthbar(ctx, character);
 
     if (!ctx.debug.any()) return;

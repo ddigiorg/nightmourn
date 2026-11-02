@@ -4,8 +4,8 @@
 // The sprite sheets the world drawers draw from, built once at startup from
 // the configs (Data/Configs.hpp) and their PNGs in data/:
 //
-//   sprites  every figure animation, as "figure/<name>/<animation>"
-//            ("figure/hero/walk"), and every tree's pictures, as the
+//   sprites  every unit animation, as "unit/<name>/<animation>"
+//            ("unit/figure/walk"), and every tree's pictures, as the
 //            animation "tree/<name>" (one frame per look), packed at load
 //            (Nezumi's SpritePacker) with mips
 //   ground   one page per tile config's texture, sampled with Repeat so

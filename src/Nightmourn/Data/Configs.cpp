@@ -21,7 +21,7 @@ using Json   = nlohmann::json;
 // Where the config being read came from, for error messages
 struct Source {
     std::string file;
-    std::string what; // "figure 'red'"
+    std::string what; // "unit 'figure'"
 };
 
 [[noreturn]] void fail(const Source& src, const std::string& what) {
@@ -116,8 +116,8 @@ Configs Configs::load(std::string_view data_dir) {
                         return resolve(src, mods, o.at("filename").get<std::string>());
                     };
 
-                    if (type == "figure") {
-                        FigureConfig p{ .name = name, .animations = {} };
+                    if (type == "unit") {
+                        UnitSpriteConfig p{ .name = name, .animations = {} };
                         for (const auto& [anim_name, a] : j.at("animations").items()) {
                             AnimationConfig anim;
                             anim.filename        = file_of(a);
@@ -132,7 +132,7 @@ Configs Configs::load(std::string_view data_dir) {
                             p.animations.emplace(anim_name, std::move(anim));
                         }
                         if (p.animations.empty()) fail(src, "has no animations");
-                        put(out.figures, std::move(p));
+                        put(out.units, std::move(p));
                     } else if (type == "tree") {
                         TreeConfig p{ .name = name, .pictures = {} };
                         for (const Json& pic : j.at("pictures")) {
@@ -169,14 +169,14 @@ Configs Configs::load(std::string_view data_dir) {
 // Lookup
 // -----------------------------------------------------------------------------
 
-const FigureConfig* Configs::find_figure(std::string_view name) const { return find(figures, name); }
-const TreeConfig*   Configs::find_tree  (std::string_view name) const { return find(trees,   name); }
-const TileConfig*   Configs::find_tile  (std::string_view name) const { return find(tiles,   name); }
-const SpriteConfig* Configs::find_sprite(std::string_view name) const { return find(sprites, name); }
+const UnitSpriteConfig* Configs::find_unit  (std::string_view name) const { return find(units,   name); }
+const TreeConfig*       Configs::find_tree  (std::string_view name) const { return find(trees,   name); }
+const TileConfig*       Configs::find_tile  (std::string_view name) const { return find(tiles,   name); }
+const SpriteConfig*     Configs::find_sprite(std::string_view name) const { return find(sprites, name); }
 
 std::vector<std::string> Configs::filenames() const {
     std::vector<std::string> out;
-    for (const FigureConfig& f : figures) for (const auto& [_, a] : f.animations) out.push_back(a.filename);
+    for (const UnitSpriteConfig& u : units) for (const auto& [_, a] : u.animations) out.push_back(a.filename);
     for (const TreeConfig&   t : trees)   for (const PictureConfig& p : t.pictures) out.push_back(p.filename);
     for (const TileConfig&   t : tiles)   out.push_back(t.filename);
     for (const SpriteConfig& s : sprites) out.push_back(s.filename);
