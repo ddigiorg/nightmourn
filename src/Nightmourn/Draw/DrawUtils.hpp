@@ -19,6 +19,7 @@
 #include <array>       // array
 #include <cstdint>     // uint8_t, uint32_t
 #include <glm/glm.hpp> // vec2, vec4
+#include <string_view> // string_view
 
 namespace Nightmourn {
 
@@ -30,8 +31,9 @@ class EntityDamageable;
 //
 // Sprites come from a Nezumi SpriteSheet (WorldSheets, packed at startup from
 // the configs in data/) and are drawn upright at their pivot, which is
-// the entity's feet. Art is painted at SPRITE_PIXELS_PER_TILE: a 64x128 px
-// figure frame is 0.5x1 tile, a 256x512 px tree 2x4.
+// the entity's feet. Art is painted at SPRITE_PIXELS_PER_TILE: a 128x160 px
+// figure frame is 1x1.25 tiles (the figure stands about 0.7 tall in it, the
+// rest is room for weapons and its shadow), a 256x512 px tree 2x4.
 // -----------------------------------------------------------------------------
 
 inline constexpr float SPRITE_PIXELS_PER_TILE = 128.0f;
@@ -71,6 +73,27 @@ void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
 void draw_figure(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
                  Nezumi::Render::AnimationID animation, glm::vec2 pos, Position2D facing,
                  float seconds = 0.0f);
+
+// Seconds per simulation tick (60 UPS), for timing animations by ticks
+inline constexpr float TICK_SECONDS = 1.0f / 60.0f;
+
+// A figure's animations in the sheet, packed from its config as
+// "figure/<name>/<animation>". Any but idle may be missing, and then plays
+// idle. Throws if there's no idle.
+struct FigureAnimations {
+    Nezumi::Render::AnimationID idle   = 0;
+    Nezumi::Render::AnimationID walk   = 0;
+    Nezumi::Render::AnimationID attack = 0; // frame 0 is the hit
+    Nezumi::Render::AnimationID death  = 0;
+
+    static FigureAnimations find(const Nezumi::Render::SpriteSheet& sheet, std::string_view figure);
+};
+
+// Seconds into a looping animation for something `seconds` into it, offset
+// by a per-entity phase (`seed`, e.g. a handle index) so a crowd doesn't
+// step in lockstep
+float figure_seconds(const Nezumi::Render::SpriteSheet& sheet, Nezumi::Render::AnimationID animation,
+                     float seconds, std::uint32_t seed);
 
 // -----------------------------------------------------------------------------
 // Healthbars

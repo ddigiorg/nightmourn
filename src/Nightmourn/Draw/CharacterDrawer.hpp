@@ -1,17 +1,15 @@
 // =============================================================================
 // Draw/CharacterDrawer.hpp
 //
-// Draws Characters (the hero, later NPCs): the sprite for the way the
-// character faces, its healthbar once hurt, a swing while it mines (a
-// placeholder slash in front of it until there are swing frames), and the
-// debug overlays:
+// Draws Characters (the hero, later NPCs): its figure's animation for the
+// way the character faces (attack for a moment after each swing, walk while
+// it moves, otherwise idle), its healthbar once hurt, and the debug overlays:
 //
 //   ShowCollisionRectangles  collision box
 //   ShowFacingArrows         arrow along facing()
 //
-// One figure animation for every character for now. When characters get
-// their own looks, map CharacterConfig (or an appearance id on it) to
-// animations here.
+// One figure for every character for now. When characters get their own
+// looks, map CharacterConfig (or an appearance id on it) to figures here.
 // =============================================================================
 
 #pragma once
@@ -36,8 +34,8 @@ public:
     struct Config {
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // The characters' figure animation in the sheet
-        const char* figure = "figure/cyan/idle";
+        // The characters' figure (a figure config's name)
+        const char* figure = "hero";
     };
 
     // -------------------------------------------------------------------------
@@ -61,7 +59,7 @@ private:
     // -------------------------------------------------------------------------
 
     const Nezumi::Render::SpriteSheet* sheet_  = nullptr;
-    Nezumi::Render::AnimationID        figure_ = 0;
+    FigureAnimations                   figure_ = {};
 };
 
 } // namespace Nightmourn

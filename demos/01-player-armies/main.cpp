@@ -4,7 +4,7 @@
 // The player walks a hero around a battlefield while a friendly blue army and
 // an enemy red army fight each other.
 //
-// - The hero (cyan) is a Nightmourn::Character on the blue side, controlled
+// - The hero (a knight) is a Nightmourn::Character on the blue side, controlled
 //   by a Nightmourn::Player: W/A/S/D move in 8 directions and the camera
 //   follows.
 // - Each army is a front line of 5 soldier groups with 3 archer groups behind
@@ -216,14 +216,15 @@ static constexpr UnitGroupConfig BLOCK = {
 
 struct SideStyle {
     const char* name;
-    const char* figure;       // figure animation in the sprite sheet
+    const char* soldier;      // figures (data/base/configs/entity/figures.json)
+    const char* archer;
     glm::vec4   color;        // group routes and slots
     float       direction;    // +1 marches right, -1 left
 };
 
 static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
-    { "blue", "figure/blue/idle", { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
-    { "red",  "figure/red/idle",  { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
+    { "blue", "human-warrior",  "human-archer",    { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
+    { "red",  "zombie-warrior", "skeleton-archer", { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
 }};
 
 // The hero's side
@@ -293,7 +294,8 @@ public:
 
         WorldDrawer::Config draw_config = sheets_.drawer_config();
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
-            draw_config.units.faction_figures[f]      = SIDES[f].figure;
+            draw_config.units.figures[f][SOLDIER.subtype.value()] = SIDES[f].soldier;
+            draw_config.units.figures[f][ARCHER.subtype.value()]  = SIDES[f].archer;
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
             draw_config.chunks.faction_colors[f]      = SIDES[f].color;
         }

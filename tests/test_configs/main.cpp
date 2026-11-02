@@ -52,9 +52,11 @@ static void test_shipped_data() {
     const Configs p = Configs::load(NIGHTMOURN_DATA_DIR);
 
     // What the drawers and UI look up by default
-    for (const char* figure : { "red", "blue", "purple", "cyan" }) {
+    for (const char* figure : { "hero", "human-warrior", "human-archer", "zombie-warrior", "skeleton-archer" }) {
         const FigureConfig* f = p.find_figure(figure);
-        CHECK(f && f->animations.contains("idle"));
+        CHECK(f != nullptr);
+        if (!f) continue;
+        for (const char* anim : { "idle", "walk", "attack", "death" }) CHECK(f->animations.contains(anim));
     }
     CHECK(p.find_tree("oak") && p.find_tree("pine"));
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);

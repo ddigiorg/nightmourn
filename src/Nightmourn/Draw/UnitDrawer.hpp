@@ -9,8 +9,10 @@
 //   ShowUnitBehaviorInfo     dot colored by UnitState, and a line to the
 //                            unit's target (yellow chasing, red attacking)
 //
-// Sprites are one figure animation per faction for now (red, blue, ...).
-// Once units have their own art, it comes from the unit's subtype as well.
+// Each unit wears a figure (data/base/configs/entity/figures.json) picked by
+// its faction and its subtype (UnitConfig::subtype), and plays the figure's
+// animation for its UnitState: idle, walk, or attack, the attack timed so
+// its frame 0 (the hit) lands as the unit's hit does.
 // =============================================================================
 
 #pragma once
@@ -30,6 +32,9 @@ class Unit;
 class UnitDrawer {
 public:
 
+    // Unit subtypes with a figure of their own; higher ones use subtype 0's
+    static constexpr std::size_t MAX_SUBTYPES = 4;
+
     // -------------------------------------------------------------------------
     // Config
     // -------------------------------------------------------------------------
@@ -37,9 +42,10 @@ public:
     struct Config {
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // Each faction's figure animation in the sheet. A faction left null
-        // uses faction 0's, and so does a unit with no faction.
-        std::array<const char*, MAX_FACTIONS> faction_figures = { "figure/red/idle" };
+        // Figure names by faction, then by unit subtype (its value; 0 for
+        // none). A null entry falls back to the faction's subtype 0, then to
+        // faction 0's; a unit with no faction uses faction 0's.
+        std::array<std::array<const char*, MAX_SUBTYPES>, MAX_FACTIONS> figures = {{ { "human-warrior" } }};
     };
 
     // -------------------------------------------------------------------------
@@ -69,7 +75,7 @@ private:
     // -------------------------------------------------------------------------
 
     const Nezumi::Render::SpriteSheet*                    sheet_   = nullptr;
-    std::array<Nezumi::Render::AnimationID, MAX_FACTIONS> figures_ = {};
+    std::array<std::array<FigureAnimations, MAX_SUBTYPES>, MAX_FACTIONS> figures_ = {};
 };
 
 } // namespace Nightmourn

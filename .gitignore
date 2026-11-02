@@ -3,3 +3,4 @@
 
 # Per-developer presets (e.g. dev-local, see README.md)
 CMakeUserPresets.json
+__pycache__/

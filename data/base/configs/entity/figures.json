@@ -1,49 +1,171 @@
 [
     {
         "type": "figure",
-        "name": "red",
+        "name": "hero",
         "animations": {
             "idle": {
-                "filename": "__base__/graphics/entity/figure/red/idle.png",
-                "width": 64, "height": 128,
-                "frame_count": 1, "direction_count": 5, "headings": 8,
-                "pivot": [32, 96]
+                "filename": "__base__/graphics/entity/figure/hero/idle.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 6, "loop": true,
+                "pivot": [64, 128]
+            },
+            "walk": {
+                "filename": "__base__/graphics/entity/figure/hero/walk.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "attack": {
+                "filename": "__base__/graphics/entity/figure/hero/attack.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "death": {
+                "filename": "__base__/graphics/entity/figure/hero/death.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": false,
+                "pivot": [64, 128]
             }
         }
     },
     {
         "type": "figure",
-        "name": "blue",
+        "name": "human-warrior",
         "animations": {
             "idle": {
-                "filename": "__base__/graphics/entity/figure/blue/idle.png",
-                "width": 64, "height": 128,
-                "frame_count": 1, "direction_count": 5, "headings": 8,
-                "pivot": [32, 96]
+                "filename": "__base__/graphics/entity/figure/human-warrior/idle.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 6, "loop": true,
+                "pivot": [64, 128]
+            },
+            "walk": {
+                "filename": "__base__/graphics/entity/figure/human-warrior/walk.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "attack": {
+                "filename": "__base__/graphics/entity/figure/human-warrior/attack.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "death": {
+                "filename": "__base__/graphics/entity/figure/human-warrior/death.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": false,
+                "pivot": [64, 128]
             }
         }
     },
     {
         "type": "figure",
-        "name": "purple",
+        "name": "human-archer",
         "animations": {
             "idle": {
-                "filename": "__base__/graphics/entity/figure/purple/idle.png",
-                "width": 64, "height": 128,
-                "frame_count": 1, "direction_count": 5, "headings": 8,
-                "pivot": [32, 96]
+                "filename": "__base__/graphics/entity/figure/human-archer/idle.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 6, "loop": true,
+                "pivot": [64, 128]
+            },
+            "walk": {
+                "filename": "__base__/graphics/entity/figure/human-archer/walk.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "attack": {
+                "filename": "__base__/graphics/entity/figure/human-archer/attack.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "death": {
+                "filename": "__base__/graphics/entity/figure/human-archer/death.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": false,
+                "pivot": [64, 128]
             }
         }
     },
     {
         "type": "figure",
-        "name": "cyan",
+        "name": "zombie-warrior",
         "animations": {
             "idle": {
-                "filename": "__base__/graphics/entity/figure/cyan/idle.png",
-                "width": 64, "height": 128,
-                "frame_count": 1, "direction_count": 5, "headings": 8,
-                "pivot": [32, 96]
+                "filename": "__base__/graphics/entity/figure/zombie-warrior/idle.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 6, "loop": true,
+                "pivot": [64, 128]
+            },
+            "walk": {
+                "filename": "__base__/graphics/entity/figure/zombie-warrior/walk.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "attack": {
+                "filename": "__base__/graphics/entity/figure/zombie-warrior/attack.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "death": {
+                "filename": "__base__/graphics/entity/figure/zombie-warrior/death.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": false,
+                "pivot": [64, 128]
+            }
+        }
+    },
+    {
+        "type": "figure",
+        "name": "skeleton-archer",
+        "animations": {
+            "idle": {
+                "filename": "__base__/graphics/entity/figure/skeleton-archer/idle.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 6, "loop": true,
+                "pivot": [64, 128]
+            },
+            "walk": {
+                "filename": "__base__/graphics/entity/figure/skeleton-archer/walk.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "attack": {
+                "filename": "__base__/graphics/entity/figure/skeleton-archer/attack.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": true,
+                "pivot": [64, 128]
+            },
+            "death": {
+                "filename": "__base__/graphics/entity/figure/skeleton-archer/death.png",
+                "width": 128, "height": 160,
+                "frame_count": 8, "direction_count": 5, "headings": 8,
+                "fps": 10, "loop": false,
+                "pivot": [64, 128]
             }
         }
     }
