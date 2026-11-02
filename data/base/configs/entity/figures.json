@@ -1,0 +1,50 @@
+[
+    {
+        "type": "figure",
+        "name": "red",
+        "animations": {
+            "idle": {
+                "filename": "__base__/graphics/entity/figure/red/idle.png",
+                "width": 64, "height": 128,
+                "frame_count": 1, "direction_count": 5, "headings": 8,
+                "pivot": [32, 96]
+            }
+        }
+    },
+    {
+        "type": "figure",
+        "name": "blue",
+        "animations": {
+            "idle": {
+                "filename": "__base__/graphics/entity/figure/blue/idle.png",
+                "width": 64, "height": 128,
+                "frame_count": 1, "direction_count": 5, "headings": 8,
+                "pivot": [32, 96]
+            }
+        }
+    },
+    {
+        "type": "figure",
+        "name": "purple",
+        "animations": {
+            "idle": {
+                "filename": "__base__/graphics/entity/figure/purple/idle.png",
+                "width": 64, "height": 128,
+                "frame_count": 1, "direction_count": 5, "headings": 8,
+                "pivot": [32, 96]
+            }
+        }
+    },
+    {
+        "type": "figure",
+        "name": "cyan",
+        "animations": {
+            "idle": {
+                "filename": "__base__/graphics/entity/figure/cyan/idle.png",
+                "width": 64, "height": 128,
+                "frame_count": 1, "direction_count": 5, "headings": 8,
+                "pivot": [32, 96]
+            }
+        }
+    }
+]

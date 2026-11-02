@@ -3,10 +3,10 @@
 #
 # Generates the tree sprites in the style of Age of Empires II: DE's
 # pre-rendered trees (dark green, lit from the upper left, with a soft ground
-# shadow to the lower right), as loose sprite sources for
-# tools/pack_sprites.py: two broadleaf oak looks, then a pine
-# (assets-src/sprites/trees/<variety>/<look>.png; each folder's sprite.json
-# lists the looks and the pivot).
+# shadow to the lower right): two broadleaf oak looks, then a pine
+# (data/base/graphics/entity/tree/<variety>-<look>.png; the tree configs
+# in data/base/configs/entity/trees.json list the looks and the pivot,
+# and the game packs them when it starts).
 #
 # Each frame is 256x512 px, four times a unit frame (64x128) on each side,
 # and is drawn 2x4 tiles. The trunk's foot is the frame's pivot, 128 px above
@@ -22,9 +22,8 @@
 #         darker near the trunk, in the shadow of the one above it.
 # Drawn 2x supersampled, then box filtered down. Deterministic (fixed seeds).
 #
-#   python3 tools/gen_trees.py                       # update assets-src/sprites/trees
+#   python3 tools/gen_trees.py                       # update data/base/graphics/entity/tree
 #   python3 tools/gen_trees.py --out trees.png       # side by side, for a look
-#   python3 tools/pack_sprites.py                    # then repack
 #
 # Needs numpy and Pillow.
 # ==============================================================================
@@ -287,8 +286,8 @@ FRAMES = [
 NAMES = [("oak", "01"), ("oak", "02"), ("pine", "01")] # files, by FRAMES
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--out-dir", default="assets-src/sprites/trees",
-                    help="writes <variety>/<look>.png here (pack with tools/pack_sprites.py)")
+parser.add_argument("--out-dir", default="data/base/graphics/entity/tree",
+                    help="writes <variety>-<look>.png here")
 parser.add_argument("--out", help="write the sprites side by side in one image instead, for a look")
 args = parser.parse_args()
 
@@ -300,6 +299,6 @@ if args.out:
     sheet.save(args.out)
 else:
     for (variety, look), frame in zip(NAMES, frames):
-        path = os.path.join(args.out_dir, variety, f"{look}.png")
+        path = os.path.join(args.out_dir, f"{variety}-{look}.png")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         frame.save(path, optimize=True)

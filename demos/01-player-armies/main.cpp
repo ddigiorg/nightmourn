@@ -58,6 +58,7 @@
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/Data/Configs.hpp"
 #include "Nightmourn/Draw/WorldSheets.hpp"
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
@@ -221,8 +222,8 @@ struct SideStyle {
 };
 
 static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
-    { "blue", "units/blue/idle", { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
-    { "red",  "units/red/idle",  { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
+    { "blue", "figure/blue/idle", { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
+    { "red",  "figure/red/idle",  { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
 }};
 
 // The hero's side
@@ -285,15 +286,12 @@ public:
             }
         );
 
-        // Sprites (units, trees) and ground
-        sheets_ = Nightmourn::WorldSheets::load(*renderer);
+        // Configs from data/, then the sprites (units, trees) and ground
+        // they describe
+        const Nightmourn::Configs configs = Nightmourn::Configs::load();
+        sheets_ = Nightmourn::WorldSheets::load(*renderer, configs);
 
-        WorldDrawer::Config draw_config = {
-            .chunks     = { .sheet = sheets_.ground  },
-            .units      = { .sheet = sheets_.sprites },
-            .characters = { .sheet = sheets_.sprites },
-            .resources  = { .sheet = sheets_.sprites },
-        };
+        WorldDrawer::Config draw_config = sheets_.drawer_config();
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
             draw_config.units.faction_figures[f]      = SIDES[f].figure;
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
@@ -324,7 +322,7 @@ public:
         Nightmourn::apply_ui_theme(engine.ui()->style());
 
         // Action bar, with a few test items to use and drag around
-        ui_sheet_   = Nightmourn::UISheet::load(*renderer);
+        ui_sheet_   = Nightmourn::UISheet::load(*renderer, configs);
         action_bar_ = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         action_bar_->set_slot(0, Nightmourn::Items::Wood);
         action_bar_->set_slot(1, Nightmourn::Items::Stone);

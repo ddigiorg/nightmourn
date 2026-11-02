@@ -28,8 +28,8 @@ class EntityDamageable;
 // -----------------------------------------------------------------------------
 // Sprites
 //
-// Sprites come from a Nezumi SpriteSheet (assets/graphics/sprites.json, packed
-// by tools/pack_sprites.py) and are drawn upright at their pivot, which is
+// Sprites come from a Nezumi SpriteSheet (WorldSheets, packed at startup from
+// the configs in data/) and are drawn upright at their pivot, which is
 // the entity's feet. Art is painted at SPRITE_PIXELS_PER_TILE: a 64x128 px
 // figure frame is 0.5x1 tile, a 256x512 px tree 2x4.
 // -----------------------------------------------------------------------------

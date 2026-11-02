@@ -2,8 +2,9 @@
 // Draw/ResourceDrawer.hpp
 //
 // Draws Nezumi Resources. Only trees have art so far: each tree variety (oak, pine)
-// has one or more looks in the sprite sheet (a "looks" animation: one frame
-// per look, see tools/pack_sprites.py), and a tree wears the one picked by a
+// has one or more looks in the sprite sheet (its tree config's pictures,
+// packed as the animation "tree/<name>": one frame per look, see
+// WorldSheets.hpp), and a tree wears the one picked by a
 // hash of its tile, so a forest doesn't repeat yet a tree never changes look
 // (no sim state for it). Debug overlay:
 //
@@ -41,7 +42,7 @@ public:
 
         // Looks animation of each tree variety in the sheet, indexed by
         // TreeVariety. A variety left null, or not in the sheet, isn't drawn.
-        std::array<const char*, TREE_VARIETIES> trees = { "trees/oak/looks", "trees/pine/looks" };
+        std::array<const char*, TREE_VARIETIES> trees = { "tree/oak", "tree/pine" };
     };
 
     // -------------------------------------------------------------------------

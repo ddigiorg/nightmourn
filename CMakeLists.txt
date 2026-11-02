@@ -52,6 +52,25 @@ set(NIGHTMOURN_WARNINGS
 )
 
 # ------------------------------------------------------------------------------
+# nightmourn_copy_data(TARGET)
+#
+# Copies data/ (configs and the graphics they name, see
+# src/Nightmourn/Data/Configs.hpp) next to TARGET's executable after every
+# build, so the game reads it as data/... relative to its own folder. Edit
+# the files in data/ and rebuild (or copy them over) to see a change.
+# ------------------------------------------------------------------------------
+
+function(nightmourn_copy_data TARGET)
+    add_custom_command(
+        TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${PROJECT_SOURCE_DIR}/data" "$<TARGET_FILE_DIR:${TARGET}>/data"
+        COMMENT "Copying data/ to ${TARGET}"
+        VERBATIM
+    )
+endfunction()
+
+# ------------------------------------------------------------------------------
 # World library
 #
 # The simulation: World, surfaces, chunks, sectors, entities and everything
@@ -64,6 +83,7 @@ add_library(nightmourn_world STATIC
     src/Nightmourn/Character/Character.cpp
     src/Nightmourn/Chunk/Chunk.cpp
     src/Nightmourn/Chunk/Pheromones.cpp
+    src/Nightmourn/Data/Configs.cpp
     src/Nightmourn/Item/Inventory.cpp
     src/Nightmourn/Sector/Sector.cpp
     src/Nightmourn/Surface/Surface.cpp
@@ -79,6 +99,8 @@ target_link_libraries(nightmourn_world
         nezumi_core
         nezumi_logger
         glm::glm
+    PRIVATE
+        nlohmann_json::nlohmann_json # config JSON (Nezumi fetches it)
 )
 
 # ------------------------------------------------------------------------------
@@ -125,24 +147,10 @@ target_link_libraries(nightmourn_game PUBLIC nightmourn_world Nezumi::Engine)
 add_executable(nightmourn src/main.cpp)
 target_link_libraries(nightmourn PRIVATE nightmourn_game)
 
-# Copy the engine's runtime assets (shaders, fonts), then this game's assets/
-# folder on top, next to the executable. Game files override engine files with
-# the same path (e.g. assets/graphics/sprites.json).
+# Copy the engine's runtime assets (shaders, fonts) and this game's data/
+# (configs, graphics) next to the executable
 nezumi_copy_assets(nightmourn ENGINE)
-
-# Repack the world sprite sheet (assets/graphics/sprites.json and its pages)
-# from the loose art in assets-src/sprites. Needs Python 3 and Pillow. The
-# output is committed, so a normal build doesn't run it:
-#   cmake --build --preset release --target pack-sprites
-find_package(Python3 COMPONENTS Interpreter QUIET)
-if(Python3_FOUND)
-    add_custom_target(pack-sprites
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/pack_sprites.py
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMENT "Packing assets-src/sprites into assets/graphics/sprites.json"
-        VERBATIM
-    )
-endif()
+nightmourn_copy_data(nightmourn)
 
 # ------------------------------------------------------------------------------
 # Demos

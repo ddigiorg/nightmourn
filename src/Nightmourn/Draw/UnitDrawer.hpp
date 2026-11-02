@@ -39,7 +39,7 @@ public:
 
         // Each faction's figure animation in the sheet. A faction left null
         // uses faction 0's, and so does a unit with no faction.
-        std::array<const char*, MAX_FACTIONS> faction_figures = { "units/red/idle" };
+        std::array<const char*, MAX_FACTIONS> faction_figures = { "figure/red/idle" };
     };
 
     // -------------------------------------------------------------------------

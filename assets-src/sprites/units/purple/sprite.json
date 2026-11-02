@@ -1,7 +1,0 @@
-{
-    "pivot": [32, 96],
-    "animations": [
-        { "name": "idle", "directions": 5, "headings": 8,
-          "files": ["down", "down-right", "right", "up-right", "up"] }
-    ]
-}

@@ -55,10 +55,11 @@ public:
         // wrap across its edges
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // The grass sprite in the sheet, covering `grass_tiles` x
-        // `grass_tiles` tiles. It must fill its page (so Repeat wraps it
-        // onto itself), be square and be seamless.
-        const char*   grass       = "meadow";
+        // The grass texture: a whole page (layer) of the sheet, so Repeat
+        // wraps it onto itself, covering `grass_tiles` x `grass_tiles`
+        // tiles. Square and seamless. WorldSheets::drawer_config() fills
+        // both from the "grass" tile config.
+        std::uint32_t grass_layer = 0;
         std::uint32_t grass_tiles = 8;
 
         // Grid (Factorio's: plain black)
@@ -80,8 +81,7 @@ public:
     // Construction & Destruction
     // -------------------------------------------------------------------------
 
-    // `config.sheet` must outlive the drawer. Throws if `config.grass`
-    // isn't in the sheet.
+    // `config.sheet` must outlive the drawer
     explicit ChunkDrawer(const Config& config);
 
     // -------------------------------------------------------------------------

@@ -40,6 +40,7 @@
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/Data/Configs.hpp"
 #include "Nightmourn/Draw/WorldSheets.hpp"
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
@@ -199,15 +200,12 @@ public:
             }
         );
 
-        // Sprites (units, trees) and ground
-        sheets_ = Nightmourn::WorldSheets::load(*renderer);
+        // Configs from data/, then the sprites (units, trees) and ground
+        // they describe
+        const Nightmourn::Configs configs = Nightmourn::Configs::load();
+        sheets_ = Nightmourn::WorldSheets::load(*renderer, configs);
 
-        WorldDrawer::Config draw_config = {
-            .chunks     = { .sheet = sheets_.ground  },
-            .units      = { .sheet = sheets_.sprites },
-            .characters = { .sheet = sheets_.sprites },
-            .resources  = { .sheet = sheets_.sprites },
-        };
+        WorldDrawer::Config draw_config = sheets_.drawer_config();
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         // Mouse: only its position; mining reads the Mine action
@@ -234,7 +232,7 @@ public:
         Nightmourn::apply_ui_theme(engine.ui()->style());
 
         // Action bar and inventory, both over the player's inventory
-        ui_sheet_       = Nightmourn::UISheet::load(*renderer);
+        ui_sheet_       = Nightmourn::UISheet::load(*renderer, configs);
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory());
 

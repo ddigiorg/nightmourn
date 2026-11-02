@@ -51,9 +51,9 @@ Ground is world-space (AoE2: DE style): one seamless 1024² meadow covers
 terrain roadmap below: `isometric-plan/TILE-RESEARCH.md` in the project
 files.
 
-- [x] **Sprite frames with pivots**: `tools/pack_sprites.py` packs
-      `assets-src/sprites` into `assets/graphics/sprites.json` + pages
-      (Nezumi `SpriteSheet`), each frame trimmed with its feet pivot. Drawers
+- [x] **Sprite frames with pivots**: `WorldSheets` packs the figure and
+      tree configs' PNGs from `data/` at startup (Nezumi `SpritePacker`),
+      each frame trimmed with its feet pivot. Drawers
       draw at the pivot; `FIGURE_SPRITE_BOUNDS` / `TREE_SPRITE_BOUNDS` are
       now only pick boxes.
 - [ ] **Player-color mask** in a sprite shader variant, replacing one figure
@@ -84,12 +84,13 @@ Decisions for the rest of the roadmap to build on.
   ships separate files too: one sprite file per unit graphic, one `.dds` per
   terrain. Loose files are what an artist (or Blender) produces. Atlases are
   what the GPU wants, so something has to pack them.
-  - Pack **at build time**, not at startup: `tools/pack_sprites.py`
-    (`cmake --build <dir> --target pack-sprites`) writes the pages plus a
-    JSON of frames (`{ page, box, offset, pivot }`), committed so a build
-    needs no Python. It's simpler in the engine, and
-    there's no packing cost at load. Move it to startup (Factorio's way)
-    only if mods need to add sprites. Then cache the result on disk.
+  - Pack **at startup** (Factorio's way, done): one `data/` folder holds
+    the PNGs and the config JSON naming them (`Data/Configs.hpp`),
+    and Nezumi's `SpritePacker` trims, dedupes and packs them into sheets
+    when the game loads. No generated files and no build step, so art and
+    config are edited in one place, and mods can add sprites later. One
+    PNG per animation: a column per frame, a row per direction. If load
+    time grows, cache the packed (and compressed) pages on disk.
   - Group sprites drawn together onto the same page (units with units,
     terrain with terrain). Leave padding of at least `2^(mips-1)` px between
     sprites, so mips don't blend neighbors.
@@ -101,13 +102,12 @@ Decisions for the rest of the roadmap to build on.
   - Raw RGBA8 files would load without a decode step but take about 2x
     PNG's disk space (1024² is 4 MB raw vs 1.8 MB for the meadow PNG),
     and no image editor opens them. Not worth it.
-  - So: keep PNGs in `assets/` as the source of truth. When load time or
-    VRAM matters, have the packer write KTX2/DDS (BC7, with mips) next to
-    them, and have the engine load those. Until then the engine loads
-    PNGs.
+  - So: keep PNGs in `data/` as the source of truth. When load time or
+    VRAM matters, compress the packed pages (BC7, with mips; Nezumi reads
+    KTX2 already) into an on-disk cache. Until then the engine packs PNGs.
 - **Mips: one source image, generated chain.** Author one full-size image
   and generate the levels (box filter in premultiplied alpha, see
-  `AtlasConfig::mip_levels`'s TODO), either at load or in the packer. A
+  `SpriteSheetConfig::mip_levels`), at load (done). A
   DDS/KTX2 file stores the whole chain in one file, so "one file per level"
   only makes sense if someone hand-paints the small levels, which nobody
   does for terrain.
@@ -192,7 +192,7 @@ per pixel. Do this only if the ground kind shows up in a GPU profile
       doesn't require the Damageable flag. Add a type or flag requirement
       when something starts calling it.
 - [ ] `Engine::get_stats()` should be `const`.
-- [ ] A parallel Debug build once failed copying `assets/`, apparently
+- [ ] A parallel Debug build once failed copying `assets/` (now `data/`), apparently
       because several examples copy into the same folder at once. Investigate
       if it shows up again.
 - [ ] ROADMAP §8 "Entity slimming" still says to move health/mana to a
@@ -291,7 +291,7 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 - [ ] **Inventory controls**: shift-click to split a stack, right-click to
       take half, ctrl-click to move to a chest (Factorio's).
 - [ ] **Hand-drawn art** to replace `tools/gen_ui.py`'s placeholders at the
-      same names (`GUI/UISheet.hpp`, `assets/graphics/ui.json`).
+      same names (`GUI/UISheet.hpp`, `data/base/configs/gui.json`).
 
 ### World: entities and combat
 
@@ -426,8 +426,8 @@ yields (`Items::Wood`). Decorative for now.
 - [ ] A stump (and a felled-tree frame) once trees can be cut, instead of
       vanishing at 0 wood.
 - [ ] More subtypes and varieties (palm and dead trees, berry bushes, stone
-      and gold mines) as `ResourceConfig`s plus sprite-sheet looks (a
-      `looks` variant set per folder in `assets-src/sprites`); trimmed
+      and gold mines) as `ResourceConfig`s plus looks (pictures on a
+      config in `data/base/configs/`); trimmed
       frames with pivots let a kind's looks differ in size.
 - [ ] Map generation: today the demo scatters trees with value noise; a
       real map generator should own forests, clearings and resource spots.
