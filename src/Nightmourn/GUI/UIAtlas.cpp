@@ -15,6 +15,9 @@ UIAtlas UIAtlas::load(Nezumi::Render::Renderer2D& renderer) {
         Nezumi::Render::AtlasConfig{
             .name     = "ui-atlas",
             .filepath = "assets/graphics/ui.png",
+            // Drawn at DENSITY atlas pixels per point, so usually minified
+            // 2x: one extra level. Pieces are at least 8 px apart.
+            .mip_levels = 2,
         }
     ).object;
 

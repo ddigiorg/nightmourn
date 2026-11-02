@@ -220,8 +220,9 @@ static constexpr UnitGroupConfig BLOCK = {
 
 namespace AtlasPixels {
     // Seamless 1024x1024 px meadow covering 8x8 tiles (128 px per tile),
-    // drawn world-space (see ChunkDrawer). Made by tools/gen_meadow.py.
-    constexpr glm::vec4     Meadow      = { 0.0f, 384.0f, 1024.0f, 1408.0f };
+    // drawn world-space (see ChunkDrawer). Its own texture (meadow.png, so
+    // it can wrap), made by tools/gen_meadow.py.
+    constexpr glm::vec4     Meadow      = { 0.0f, 0.0f, 1024.0f, 1024.0f };
     constexpr std::uint32_t MeadowTiles = 8;
 
     // 64x128 px unit frames, drawn 0.5x1 tile. One row of 5 headings per
@@ -313,12 +314,27 @@ public:
             Render::AtlasConfig{
                 .name     = "demo-atlas",
                 .filepath = "assets/graphics/atlas.png",
+                // Mips for zooming out; sprites sit on a 64 px grid, so 4
+                // levels (8 px blocks) never average neighbors together.
+                .mip_levels = 4,
             }
         ).object;
 
+        // Ground: its own texture so it can wrap (Repeat), with the full mip
+        // chain. Iso squashes it 2:1, so anisotropy keeps it from blurring,
+        // and a small negative bias keeps the grass detail crisp.
+        ground_ = renderer->create_atlas({
+            .name           = "meadow",
+            .filepath       = "assets/graphics/meadow.png",
+            .address_mode   = RHI::SamplerAddressMode::Repeat,
+            .mip_levels     = 0,
+            .max_anisotropy = 4.0f,
+            .lod_bias       = -0.5f,
+        }).object;
+
         WorldDrawer::Config draw_config = {
             .chunks = {
-                .atlas       = atlas_,
+                .atlas       = ground_,
                 .grass       = AtlasPixels::Meadow,
                 .grass_tiles = AtlasPixels::MeadowTiles,
             },
@@ -784,6 +800,7 @@ private:
     Render::Camera2D* world_camera_  = nullptr;
     Render::Camera2D* screen_camera_ = nullptr;
     Render::Atlas*  atlas_         = nullptr;
+    Render::Atlas*  ground_        = nullptr;
     Render::Font*   font_          = nullptr;
 
     std::unique_ptr<CameraController> camera_controller_ = nullptr;

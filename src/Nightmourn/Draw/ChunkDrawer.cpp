@@ -31,9 +31,9 @@ ChunkDrawer::ChunkDrawer(const Config& config)
     // Cut the grass texture into its cells, row-major with cell (0, 0) at the
     // texture's bottom-left: world y goes up, image y goes down. Neighboring
     // cells are neighbors in the texture too, so linear filtering across a
-    // tile edge samples the right pixels. Only the texture's outer edges are
-    // inset by half a texel, so filtering never reaches past them into the
-    // next sprite in the atlas (the wrap there is invisible on seamless art).
+    // tile edge samples the right pixels, and the texture's own edges wrap
+    // (Repeat addressing), so the last cell filters into the first at every
+    // mip level.
     const std::uint32_t n    = config_.grass_tiles;
     const float         cell = (config_.grass.z - config_.grass.x) / static_cast<float>(n);
 
@@ -43,12 +43,7 @@ ChunkDrawer::ChunkDrawer(const Config& config)
             const float x0 = config_.grass.x + cell * static_cast<float>(cx);
             const float y0 = config_.grass.y + cell * static_cast<float>(n - 1 - cy);
 
-            glm::vec4 pixels = { x0, y0, x0 + cell, y0 + cell };
-            if (cx == 0)     pixels.x += 0.5f;
-            if (cx == n - 1) pixels.z -= 0.5f;
-            if (cy == n - 1) pixels.y += 0.5f; // top row of the image
-            if (cy == 0)     pixels.w -= 0.5f; // bottom row of the image
-
+            const glm::vec4 pixels = { x0, y0, x0 + cell, y0 + cell };
             grass_cells_[cy * n + cx] = config_.atlas->tex_box(pixels);
         }
     }
