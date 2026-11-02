@@ -37,3 +37,5 @@ endfunction()
 
 add_world_test(test_unit_group)
 add_world_test(test_pheromones)
+add_world_test(test_prototypes)
+target_compile_definitions(test_prototypes PRIVATE NIGHTMOURN_DATA_DIR="${PROJECT_SOURCE_DIR}/data")

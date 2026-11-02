@@ -1,0 +1,7 @@
+[
+    {
+        "type": "tile",
+        "name": "grass",
+        "texture": { "filename": "__base__/graphics/terrain/meadow.png", "tiles": 8 }
+    }
+]

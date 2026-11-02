@@ -37,7 +37,7 @@ public:
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
         // The characters' figure animation in the sheet
-        const char* figure = "units/cyan/idle";
+        const char* figure = "figure/cyan/idle";
     };
 
     // -------------------------------------------------------------------------

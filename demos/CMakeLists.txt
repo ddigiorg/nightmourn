@@ -18,7 +18,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/demos/bin)
 #
 # Each demo:
 #   - Links the game library (and through it, Nezumi::Engine)
-#   - Gets the engine's and the game's assets/ copied next to its executable
+#   - Gets the engine's assets/ and the game's data/ copied next to its
+#     executable
 # ------------------------------------------------------------------------------
 
 function(add_demo DEMO_NAME)
@@ -34,6 +35,7 @@ function(add_demo DEMO_NAME)
     target_compile_options(${DEMO_NAME} PRIVATE ${NIGHTMOURN_WARNINGS})
 
     nezumi_copy_assets(${DEMO_NAME} ENGINE)
+    nightmourn_copy_data(${DEMO_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------

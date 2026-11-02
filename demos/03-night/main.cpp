@@ -29,6 +29,7 @@
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/Data/Prototypes.hpp"
 #include "Nightmourn/Draw/WorldSheets.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InfoOverlay.hpp"
@@ -165,15 +166,12 @@ public:
         // Lighting replaces the engine's single pass
         lighting_ = std::make_unique<GameLighting>(*engine.render(), *renderer);
 
-        // Sprites (units, trees) and ground
-        sheets_ = Nightmourn::WorldSheets::load(*renderer);
+        // Prototypes from data/, then the sprites (units, trees) and ground
+        // they describe
+        const Nightmourn::Prototypes prototypes = Nightmourn::Prototypes::load();
+        sheets_ = Nightmourn::WorldSheets::load(*renderer, prototypes);
 
-        WorldDrawer::Config draw_config = {
-            .chunks     = { .sheet = sheets_.ground  },
-            .units      = { .sheet = sheets_.sprites },
-            .characters = { .sheet = sheets_.sprites },
-            .resources  = { .sheet = sheets_.sprites },
-        };
+        WorldDrawer::Config draw_config = sheets_.drawer_config();
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         font_ = engine.ui()->font();

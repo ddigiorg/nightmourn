@@ -34,11 +34,11 @@ ChunkDrawer::ChunkDrawer(const Config& config)
     // tile edge samples the right pixels, and the texture's own edges wrap
     // (Repeat addressing), so the last cell filters into the first at every
     // mip level.
-    const Nezumi::Render::SpriteRegion& grass = config_.sheet->region(config_.sheet->sprite(config_.grass));
-    grass_layer_ = grass.layer;
+    assert(config_.grass_layer < config_.sheet->pages() && "ChunkDrawer: config.grass_layer is past the sheet's pages");
+    grass_layer_ = config_.grass_layer;
 
     const std::uint32_t n    = config_.grass_tiles;
-    const glm::vec4     box  = grass.tex_box;
+    const glm::vec4     box  = { 0.0f, 0.0f, 1.0f, 1.0f };
     const glm::vec2     cell = glm::vec2(box.z - box.x, box.w - box.y) / static_cast<float>(n);
 
     grass_cells_.resize(static_cast<std::size_t>(n) * n);

@@ -1,8 +1,8 @@
 # ==============================================================================
 # tools/gen_ui.py
 #
-# Generates the UI sprite sheet, assets/graphics/ui.png and its manifest
-# ui.json (one named sprite per piece, for Nezumi's SpriteSheet): the player action bar's
+# Generates the UI art, one PNG per piece in data/base/graphics/gui/ (named
+# by the sprite prototypes in data/base/prototypes/gui.json): the player action bar's
 # art (a stone eagle, the backplate, slot frames, menu buttons and their
 # icons) and placeholder item icons. Everything is carved from cold, blue-
 # grey moonlit stone: each piece is a height map, lit from the upper left,
@@ -10,18 +10,17 @@
 #
 # Painted at 2x (two pixels per UI point) so it stays crisp on 150% and 200%
 # screens; the game draws it with density 2 (see GUI/UISheet.hpp, which
-# looks every piece up by its name in ui.json).
+# packs the pieces when it starts and looks each up by its prototype name).
 #
 # Placeholder art: hand-drawn sprites will replace it, at the same boxes.
 #
-#   python3 tools/gen_ui.py                 # writes assets/graphics/ui.png and ui.json
-#   python3 tools/gen_ui.py --out ui.png    # somewhere else, for a look
+#   python3 tools/gen_ui.py                 # writes data/base/graphics/gui/*.png
+#   python3 tools/gen_ui.py --sheet ui.png  # every piece on one image, for a look
 #
 # Needs numpy and Pillow. Deterministic (fixed seeds).
 # ==============================================================================
 
 import argparse
-import json
 import math
 import os
 import numpy as np
@@ -29,8 +28,8 @@ from PIL import Image, ImageDraw
 
 ATLAS_W, ATLAS_H = 1328, 208
 
-# Pixel boxes { x0, y0, x1, y1 }, written to ui.json. At least 8 px apart, so the
-# sheet's two mip levels don't bleed one piece into the next.
+# Pixel boxes { x0, y0, x1, y1 } on the --sheet preview; each box's size is
+# its piece's size.
 EAGLE   = (0, 0, 160, 120)          # 80 x 60 pt, crouched, faces right (inward on the left)
 PLATE   = (168, 0, 1318, 100)       # 575 x 50 pt
 SLOT    = (0, 128, 72, 200)         # 36 x 36 pt, socket under the icon
@@ -555,28 +554,20 @@ def gen_item_icon(name):
 # Main
 # ------------------------------------------------------------------------------
 
-def write_manifest(path, page, sprites):
-    rows = ",\n".join("        " + json.dumps(s, separators=(", ", ": ")) for s in sprites)
-    with open(path, "w") as f:
-        f.write("{\n")
-        f.write('    "version": 1,\n')
-        f.write(f'    "page_size": [{ATLAS_W}, {ATLAS_H}],\n')
-        f.write(f'    "pages": ["{page}"],\n')
-        f.write(f'    "sprites": [\n{rows}\n    ]\n')
-        f.write("}\n")
-
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="assets/graphics/ui.png")
+    ap.add_argument("--out-dir", default="data/base/graphics/gui",
+                    help="writes <name>.png here, e.g. eagle.png, menu/skills.png")
+    ap.add_argument("--sheet", help="write every piece on one image instead, for a look")
     args = ap.parse_args()
 
     atlas = Image.new("RGBA", (ATLAS_W, ATLAS_H), (0, 0, 0, 0))
-    sprites = []
+    pieces = []
 
     def put(name, img, box):
         assert img.size == (box[2] - box[0], box[3] - box[1]), (img.size, box)
         atlas.paste(img, box[:2])
-        sprites.append({ "name": name, "page": 0, "box": list(box) })
+        pieces.append((name, img))
 
     put("eagle",   gen_eagle(),   EAGLE)
     put("plate",   gen_plate(),   PLATE)
@@ -592,9 +583,15 @@ def main():
         x0 = ITEM_ICONS_AT[0] + 80 * k
         put(f"item/{name}", gen_item_icon(name), (x0, ITEM_ICONS_AT[1], x0 + 72, ITEM_ICONS_AT[1] + 72))
 
-    atlas.save(args.out)
-    write_manifest(os.path.splitext(args.out)[0] + ".json", os.path.basename(args.out), sprites)
-    print(f"wrote {args.out}")
+    if args.sheet:
+        atlas.save(args.sheet)
+        print(f"wrote {args.sheet}")
+        return
+    for name, img in pieces:
+        path = os.path.join(args.out_dir, f"{name}.png")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        img.save(path, optimize=True)
+    print(f"wrote {len(pieces)} pieces to {args.out_dir}")
 
 
 if __name__ == "__main__":

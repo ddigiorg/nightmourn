@@ -1,13 +1,15 @@
 // =============================================================================
 // GUI/UISheet.hpp
 //
-// Nightmourn's UI art: one sprite sheet, assets/graphics/ui.png and its
-// manifest ui.json, both made by tools/gen_ui.py (placeholder art until
-// hand-drawn sprites replace it). Pieces are looked up by name ("eagle",
-// "menu/skills", "item/wood", ...). Painted at 2x, so every image is drawn at
-// density 2: a 160x120 px eagle is 80x60 UI points.
+// Nightmourn's UI art: one sprite sheet packed at load from the "sprite"
+// prototypes (data/base/prototypes/gui.json, PNGs in data/base/graphics/gui/
+// made by tools/gen_ui.py: placeholder art until hand-drawn sprites replace
+// it). Pieces are looked up by prototype name ("eagle", "menu/skills",
+// "item/wood", ...); a nine-slice's border comes from its prototype. Painted
+// at 2x, so every image is drawn at density 2: a 160x120 px eagle is 80x60
+// UI points.
 //
-//   ui_sheet_ = Nightmourn::UISheet::load(*engine.renderer2d());
+//   ui_sheet_ = Nightmourn::UISheet::load(*engine.renderer2d(), prototypes);
 //   ui.draw_image(rect, ui_sheet_.eagle);
 // =============================================================================
 
@@ -25,6 +27,8 @@ namespace Nezumi::Render {
 }
 
 namespace Nightmourn {
+
+class Prototypes;
 
 // The top-level menus, in the order of their buttons on the action bar
 enum class Menu : std::uint8_t {
@@ -76,9 +80,9 @@ struct UISheet {
     Nezumi::UI::SlotStyle item_slot_style(glm::vec2 slot_size, float gap) const;
 
     // Creates the sheet through the renderer (which owns it) and fills in
-    // every image. Throws if ui.json or ui.png can't be loaded, or lacks a
-    // piece.
-    static UISheet load(Nezumi::Render::Renderer2D& renderer);
+    // every image. Throws if a PNG can't be loaded or a piece has no
+    // sprite prototype.
+    static UISheet load(Nezumi::Render::Renderer2D& renderer, const Prototypes& prototypes);
 };
 
 } // namespace Nightmourn
