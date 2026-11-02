@@ -105,6 +105,9 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/GUI/InventoryMenu.cpp
     src/Nightmourn/GUI/Theme.cpp
     src/Nightmourn/GUI/UIAtlas.cpp
+    src/Nightmourn/Lighting/DayNight.cpp
+    src/Nightmourn/Lighting/GameLighting.cpp
+    src/Nightmourn/Lighting/LightDrawer.cpp
     src/Nightmourn/Input/Actions.cpp
     src/Nightmourn/Input/Picking.cpp
     src/Nightmourn/Player/Player.cpp

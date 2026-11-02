@@ -480,7 +480,7 @@ private:
                     .align         = Render::TextAlign::Center,
                     .valign        = Render::TextVAlign::Baseline,
                 },
-                Nightmourn::world_layer(Nightmourn::DrawLayer::EntityOverlay)
+                ctx.layer(Nightmourn::DrawLayer::EntityOverlay)
             );
         }
     }

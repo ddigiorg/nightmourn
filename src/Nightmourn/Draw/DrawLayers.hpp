@@ -21,14 +21,23 @@ namespace DrawLayer {
     inline constexpr std::uint8_t Ground        = 0; // tiles
     inline constexpr std::uint8_t GroundOverlay = 1; // tile grid, chunk borders, group routes and slots
     inline constexpr std::uint8_t Entities      = 2; // unit and character sprites, sorted by y
-    inline constexpr std::uint8_t EntityOverlay = 3; // healthbars
-    inline constexpr std::uint8_t Debug         = 4; // collision boxes, arrows, target lines
+    inline constexpr std::uint8_t EntityOverlay = 3; // healthbars (unlit: DrawContext::overlay_view)
+    inline constexpr std::uint8_t Debug         = 4; // collision boxes, arrows, target lines (unlit)
 
     // Screen view
     inline constexpr std::uint8_t Hud = 0;
 }
 
-// DrawParams for a world layer
+// Views the game adds next to the engine's (Nezumi::Render::View)
+namespace GameView {
+    // The world camera, drawn after the lighting (see Lighting/GameLighting):
+    // healthbars, outlines and debug shapes stay readable at night. Unlit
+    // demos leave DrawContext::overlay_view at View::World instead.
+    inline constexpr Nezumi::Render::ViewID Overlay = 4;
+}
+
+// DrawParams for a world layer, through View::World. Drawers use
+// DrawContext::layer(), which sends overlay layers to the overlay view.
 constexpr Nezumi::Render::DrawParams world_layer(std::uint8_t layer) {
     return { .view = Nezumi::Render::View::World, .layer = layer };
 }

@@ -63,8 +63,13 @@ files.
       pass, and a sprite variant that writes the depth of its footprint's
       front edge per pixel column. Then occluded-unit silhouettes and a
       placement ghost snapped to `tile_at`.
-- [ ] **Darkness**: light map pass (offscreen target + multiply), hero light
-      radius, fog of war per chunk, day/night ambient.
+- [x] **Darkness**: light map pass, hero light radius, day/night ambient
+      (`Lighting/`, demo 03-night).
+- [ ] Fog of war per chunk, multiplied into the light target.
+- [ ] Lights on entities (an `EntityLight`: color, radius, flicker seed)
+      instead of the demo's list of light sources.
+- [ ] Anchor-sampled lighting for tall sprites (trees, buildings): sample
+      the light once at the feet instead of per pixel.
 - [ ] Drag-box selection: query the world bounds of the screen box, keep
       figures whose projected feet fall inside it.
 
@@ -161,8 +166,8 @@ per pixel. Do this only if the ground kind shows up in a GPU profile
       ground pass each).
 - [ ] **Invalidation**: full redraw on zoom, projection switch or resize. A
       chunk's region on a tile change.
-- [ ] The light map pass (Darkness) needs the same offscreen-target support,
-      so build that support once.
+- [x] Offscreen targets exist now (Nezumi `RenderCore::create_target`,
+      built for the lighting); the cached ground can use them.
 
 ---
 
@@ -382,8 +387,9 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 
 - [ ] Tune the hero: with 300 HP it lasts about 2 seconds against a full
       blue group.
-- [ ] Day/night cycle as a game-side timer on top of World ticks (a
-      lighting tint could go into the engine later).
+- [x] Day/night cycle as a game-side timer on top of World ticks
+      (`Lighting/DayNight`). Still to do: drive enemy spawns and aggression
+      from `DayNight::darkness()`, and save the time of day.
 - [ ] Enemy AI controller for characters: a sibling of `Player` that writes
       the same `CharacterCommand` from behavior logic.
 - [ ] Settings screen for key bindings (bindings are already data in

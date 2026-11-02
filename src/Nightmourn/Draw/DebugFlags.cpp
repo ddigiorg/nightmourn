@@ -15,6 +15,9 @@ std::string_view DebugFlags::name(DebugFlag flag) {
         case DebugFlag::ShowUnitBehaviorInfo:    return "show-unit-behavior-info";
         case DebugFlag::ShowUnitGroupInfo:       return "show-unit-group-info";
         case DebugFlag::ShowPheromones:          return "show-pheromones";
+        case DebugFlag::ShowLightMap:            return "show-light-map";
+        case DebugFlag::ShowBloom:               return "show-bloom";
+        case DebugFlag::DisableLighting:         return "disable-lighting";
         case DebugFlag::UseTopDownView:          return "use-top-down-view";
         case DebugFlag::Count:                   break;
     }

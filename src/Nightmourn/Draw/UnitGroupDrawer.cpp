@@ -47,8 +47,8 @@ void UnitGroupDrawer::draw(DrawContext& ctx, const UnitGroup& group) const {
     const glm::vec4 state_color = STATE_COLORS[static_cast<std::size_t>(group.state())];
     const UnitGroup::Plan& plan = group.plan(ctx.tick);
 
-    const Nezumi::Render::DrawParams ground = world_layer(DrawLayer::GroundOverlay);
-    const Nezumi::Render::DrawParams debug  = world_layer(DrawLayer::Debug);
+    const Nezumi::Render::DrawParams ground = ctx.layer(DrawLayer::GroundOverlay);
+    const Nezumi::Render::DrawParams debug  = ctx.layer(DrawLayer::Debug);
 
     draw_outline(ctx, frame, state_color, BOUNDS_PIXELS, DrawLayer::Debug);
 
