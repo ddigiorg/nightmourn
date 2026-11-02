@@ -2,7 +2,7 @@
 # tools/gen_ui.py
 #
 # Generates the UI art, one PNG per piece in data/base/graphics/gui/ (named
-# by the sprite prototypes in data/base/prototypes/gui.json): the player action bar's
+# by the sprite configs in data/base/configs/gui.json): the player action bar's
 # art (a stone eagle, the backplate, slot frames, menu buttons and their
 # icons) and placeholder item icons. Everything is carved from cold, blue-
 # grey moonlit stone: each piece is a height map, lit from the upper left,
@@ -10,7 +10,7 @@
 #
 # Painted at 2x (two pixels per UI point) so it stays crisp on 150% and 200%
 # screens; the game draws it with density 2 (see GUI/UISheet.hpp, which
-# packs the pieces when it starts and looks each up by its prototype name).
+# packs the pieces when it starts and looks each up by its config name).
 #
 # Placeholder art: hand-drawn sprites will replace it, at the same boxes.
 #

@@ -2,16 +2,16 @@
 // Draw/WorldSheets.hpp
 //
 // The sprite sheets the world drawers draw from, built once at startup from
-// the prototypes (Data/Prototypes.hpp) and their PNGs in data/:
+// the configs (Data/Configs.hpp) and their PNGs in data/:
 //
 //   sprites  every figure animation, as "figure/<name>/<animation>"
 //            ("figure/red/idle"), and every tree's pictures, as the
 //            animation "tree/<name>" (one frame per look), packed at load
 //            (Nezumi's SpritePacker) with mips
-//   ground   one page per tile prototype's texture, sampled with Repeat so
+//   ground   one page per tile config's texture, sampled with Repeat so
 //            each wraps onto itself
 //
-//   const Prototypes  protos = Prototypes::load();
+//   const Configs  protos = Configs::load();
 //   const WorldSheets sheets = WorldSheets::load(*engine.renderer2d(), protos);
 //   WorldDrawer::Config config = sheets.drawer_config();
 // =============================================================================
@@ -31,11 +31,11 @@ namespace Nezumi::Render {
 
 namespace Nightmourn {
 
-class Prototypes;
+class Configs;
 
 struct WorldSheets {
 
-    // A tile prototype's texture in `ground`
+    // A tile config's texture in `ground`
     struct GroundTexture {
         std::uint32_t layer = 0; // page
         std::uint32_t tiles = 1; // covers tiles x tiles
@@ -46,7 +46,7 @@ struct WorldSheets {
 
     std::vector<std::pair<std::string, GroundTexture>> ground_textures; // by tile name
 
-    // Throws if there's no tile prototype by that name
+    // Throws if there's no tile config by that name
     const GroundTexture& ground_texture(std::string_view tile) const;
 
     // A drawer config using these sheets, with the default figure and tree
@@ -54,9 +54,9 @@ struct WorldSheets {
     WorldDrawer::Config drawer_config() const;
 
     // Creates both through the renderer, which owns them. Throws if a PNG
-    // can't be loaded or doesn't match its prototype, or if the ground
+    // can't be loaded or doesn't match its config, or if the ground
     // textures differ in size.
-    static WorldSheets load(Nezumi::Render::Renderer2D& renderer, const Prototypes& prototypes);
+    static WorldSheets load(Nezumi::Render::Renderer2D& renderer, const Configs& configs);
 };
 
 } // namespace Nightmourn

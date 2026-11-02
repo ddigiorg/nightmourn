@@ -52,7 +52,7 @@ terrain roadmap below: `isometric-plan/TILE-RESEARCH.md` in the project
 files.
 
 - [x] **Sprite frames with pivots**: `WorldSheets` packs the figure and
-      tree prototypes' PNGs from `data/` at startup (Nezumi `SpritePacker`),
+      tree configs' PNGs from `data/` at startup (Nezumi `SpritePacker`),
       each frame trimmed with its feet pivot. Drawers
       draw at the pivot; `FIGURE_SPRITE_BOUNDS` / `TREE_SPRITE_BOUNDS` are
       now only pick boxes.
@@ -85,7 +85,7 @@ Decisions for the rest of the roadmap to build on.
   terrain. Loose files are what an artist (or Blender) produces. Atlases are
   what the GPU wants, so something has to pack them.
   - Pack **at startup** (Factorio's way, done): one `data/` folder holds
-    the PNGs and the prototype JSON naming them (`Data/Prototypes.hpp`),
+    the PNGs and the config JSON naming them (`Data/Configs.hpp`),
     and Nezumi's `SpritePacker` trims, dedupes and packs them into sheets
     when the game loads. No generated files and no build step, so art and
     config are edited in one place, and mods can add sprites later. One
@@ -291,7 +291,7 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 - [ ] **Inventory controls**: shift-click to split a stack, right-click to
       take half, ctrl-click to move to a chest (Factorio's).
 - [ ] **Hand-drawn art** to replace `tools/gen_ui.py`'s placeholders at the
-      same names (`GUI/UISheet.hpp`, `data/base/prototypes/gui.json`).
+      same names (`GUI/UISheet.hpp`, `data/base/configs/gui.json`).
 
 ### World: entities and combat
 
@@ -427,7 +427,7 @@ yields (`Items::Wood`). Decorative for now.
       vanishing at 0 wood.
 - [ ] More subtypes and varieties (palm and dead trees, berry bushes, stone
       and gold mines) as `ResourceConfig`s plus looks (pictures on a
-      prototype in `data/base/prototypes/`); trimmed
+      config in `data/base/configs/`); trimmed
       frames with pivots let a kind's looks differ in size.
 - [ ] Map generation: today the demo scatters trees with value noise; a
       real map generator should own forests, clearings and resource spots.

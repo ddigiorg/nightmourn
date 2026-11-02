@@ -1,5 +1,5 @@
 // =============================================================================
-// Data/Prototypes.hpp
+// Data/Configs.hpp
 //
 // Everything the game reads from data/: what each kind of thing looks like
 // (and, later, its stats), the way Factorio's prototypes work. Adding a unit
@@ -15,15 +15,15 @@
 //         entity/tree/oak-01.png
 //         terrain/meadow.png
 //         gui/eagle.png
-//       prototypes/               JSON, any file names and folders
+//       configs/                  JSON, any file names and folders
 //         entity/figures.json
 //         entity/trees.json
 //         tiles.json
 //         gui.json
 //
-// Every .json under a mod's prototypes/ holds an array of prototypes, each
+// Every .json under a mod's configs/ holds an array of configs, each
 // with a "type" and a "name". Mods load in order (base first, then the rest
-// alphabetically, files sorted by path), and a later prototype with the same
+// alphabetically, files sorted by path), and a later config with the same
 // type and name replaces the earlier one, so a mod can restyle the base game.
 // File names start with "__<mod>__/", the mod's folder.
 //
@@ -79,8 +79,8 @@ namespace Nightmourn {
 // Pieces
 // -----------------------------------------------------------------------------
 
-struct AnimationPrototype {
-    std::string              filename;            // resolved (see Prototypes::load)
+struct AnimationConfig {
+    std::string              filename;            // resolved (see Configs::load)
     std::uint32_t            width           = 0; // frame size, px
     std::uint32_t            height          = 0;
     std::uint32_t            frame_count     = 1;
@@ -91,32 +91,32 @@ struct AnimationPrototype {
     std::optional<glm::vec2> pivot           = {};
 };
 
-struct PicturePrototype {
+struct PictureConfig {
     std::string              filename;
     std::optional<glm::vec2> pivot = {};
 };
 
 // -----------------------------------------------------------------------------
-// Prototypes by type
+// Configs by type
 // -----------------------------------------------------------------------------
 
-struct FigurePrototype {
+struct FigureConfig {
     std::string                               name;
-    std::map<std::string, AnimationPrototype> animations;
+    std::map<std::string, AnimationConfig> animations;
 };
 
-struct TreePrototype {
+struct TreeConfig {
     std::string                   name;
-    std::vector<PicturePrototype> pictures;
+    std::vector<PictureConfig> pictures;
 };
 
-struct TilePrototype {
+struct TileConfig {
     std::string   name;
     std::string   filename;
     std::uint32_t tiles = 1;
 };
 
-struct SpritePrototype {
+struct SpriteConfig {
     std::string              name;
     std::string              filename;
     std::optional<glm::vec2> pivot  = {};
@@ -124,32 +124,32 @@ struct SpritePrototype {
 };
 
 // -----------------------------------------------------------------------------
-// Prototypes
+// Configs
 // -----------------------------------------------------------------------------
 
-class Prototypes {
+class Configs {
 public:
 
     // Loads every mod under `data_dir`, relative to the executable's folder
     // (or absolute). File names come out as paths the same way:
     // "__base__/graphics/x.png" -> "<data_dir>/base/graphics/x.png". Throws
-    // naming the file and prototype on any error: bad JSON, an unknown type,
+    // naming the file and config on any error: bad JSON, an unknown type,
     // a missing field, an unknown mod in a file name.
-    static Prototypes load(std::string_view data_dir = "data");
+    static Configs load(std::string_view data_dir = "data");
 
-    // In load order; a replaced prototype keeps its first place
-    std::vector<FigurePrototype> figures;
-    std::vector<TreePrototype>   trees;
-    std::vector<TilePrototype>   tiles;
-    std::vector<SpritePrototype> sprites;
+    // In load order; a replaced config keeps its first place
+    std::vector<FigureConfig> figures;
+    std::vector<TreeConfig>   trees;
+    std::vector<TileConfig>   tiles;
+    std::vector<SpriteConfig> sprites;
 
     // Null if there's none by that name
-    const FigurePrototype* find_figure(std::string_view name) const;
-    const TreePrototype*   find_tree  (std::string_view name) const;
-    const TilePrototype*   find_tile  (std::string_view name) const;
-    const SpritePrototype* find_sprite(std::string_view name) const;
+    const FigureConfig* find_figure(std::string_view name) const;
+    const TreeConfig*   find_tree  (std::string_view name) const;
+    const TileConfig*   find_tile  (std::string_view name) const;
+    const SpriteConfig* find_sprite(std::string_view name) const;
 
-    // Every file name the prototypes use, for checks
+    // Every file name the configs use, for checks
     std::vector<std::string> filenames() const;
 };
 

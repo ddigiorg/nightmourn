@@ -2,7 +2,7 @@
 // Draw/ResourceDrawer.hpp
 //
 // Draws Nezumi Resources. Only trees have art so far: each tree variety (oak, pine)
-// has one or more looks in the sprite sheet (its tree prototype's pictures,
+// has one or more looks in the sprite sheet (its tree config's pictures,
 // packed as the animation "tree/<name>": one frame per look, see
 // WorldSheets.hpp), and a tree wears the one picked by a
 // hash of its tile, so a forest doesn't repeat yet a tree never changes look

@@ -3,8 +3,8 @@
 #
 # Generates the seamless 1024x1024 meadow ground texture (8x8 tiles of 128 px)
 # in Age of Empires II: DE's light, warm green, as its own ground texture
-# (data/base/graphics/terrain/meadow.png, the "grass" tile prototype's
-# texture in data/base/prototypes/tiles.json). The game samples it with
+# (data/base/graphics/terrain/meadow.png, the "grass" tile config's
+# texture in data/base/configs/tiles.json). The game samples it with
 # Repeat addressing, so filtering and mips wrap across its edges (see
 # ChunkDrawer).
 #

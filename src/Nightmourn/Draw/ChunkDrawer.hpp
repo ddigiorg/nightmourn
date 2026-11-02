@@ -58,7 +58,7 @@ public:
         // The grass texture: a whole page (layer) of the sheet, so Repeat
         // wraps it onto itself, covering `grass_tiles` x `grass_tiles`
         // tiles. Square and seamless. WorldSheets::drawer_config() fills
-        // both from the "grass" tile prototype.
+        // both from the "grass" tile config.
         std::uint32_t grass_layer = 0;
         std::uint32_t grass_tiles = 8;
 

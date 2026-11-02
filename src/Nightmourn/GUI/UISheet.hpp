@@ -2,14 +2,14 @@
 // GUI/UISheet.hpp
 //
 // Nightmourn's UI art: one sprite sheet packed at load from the "sprite"
-// prototypes (data/base/prototypes/gui.json, PNGs in data/base/graphics/gui/
+// configs (data/base/configs/gui.json, PNGs in data/base/graphics/gui/
 // made by tools/gen_ui.py: placeholder art until hand-drawn sprites replace
-// it). Pieces are looked up by prototype name ("eagle", "menu/skills",
-// "item/wood", ...); a nine-slice's border comes from its prototype. Painted
+// it). Pieces are looked up by config name ("eagle", "menu/skills",
+// "item/wood", ...); a nine-slice's border comes from its config. Painted
 // at 2x, so every image is drawn at density 2: a 160x120 px eagle is 80x60
 // UI points.
 //
-//   ui_sheet_ = Nightmourn::UISheet::load(*engine.renderer2d(), prototypes);
+//   ui_sheet_ = Nightmourn::UISheet::load(*engine.renderer2d(), configs);
 //   ui.draw_image(rect, ui_sheet_.eagle);
 // =============================================================================
 
@@ -28,7 +28,7 @@ namespace Nezumi::Render {
 
 namespace Nightmourn {
 
-class Prototypes;
+class Configs;
 
 // The top-level menus, in the order of their buttons on the action bar
 enum class Menu : std::uint8_t {
@@ -81,8 +81,8 @@ struct UISheet {
 
     // Creates the sheet through the renderer (which owns it) and fills in
     // every image. Throws if a PNG can't be loaded or a piece has no
-    // sprite prototype.
-    static UISheet load(Nezumi::Render::Renderer2D& renderer, const Prototypes& prototypes);
+    // sprite config.
+    static UISheet load(Nezumi::Render::Renderer2D& renderer, const Configs& configs);
 };
 
 } // namespace Nightmourn

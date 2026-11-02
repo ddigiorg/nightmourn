@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/GUI/UISheet.hpp"
-#include "Nightmourn/Data/Prototypes.hpp"
+#include "Nightmourn/Data/Configs.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/Render/2D/Sprite/SpritePacker.hpp"
 #include "Nezumi/Render/Core/Image/Image.hpp"
@@ -11,14 +11,14 @@
 
 namespace Nightmourn {
 
-UISheet UISheet::load(Nezumi::Render::Renderer2D& renderer, const Prototypes& prototypes) {
+UISheet UISheet::load(Nezumi::Render::Renderer2D& renderer, const Configs& configs) {
     using Nezumi::UI::Image;
     namespace NR = Nezumi::Render;
 
-    // Every sprite prototype, untrimmed: pieces are measured by their full
+    // Every sprite config, untrimmed: pieces are measured by their full
     // image (nine-slice borders, icon sizes)
     NR::SpritePacker packer;
-    for (const SpritePrototype& s : prototypes.sprites) {
+    for (const SpriteConfig& s : configs.sprites) {
         packer.add_sprite(s.name, NR::load_image(s.filename), { .pivot = s.pivot, .trim = false });
     }
 
@@ -28,7 +28,7 @@ UISheet UISheet::load(Nezumi::Render::Renderer2D& renderer, const Prototypes& pr
 
     const auto image = [&](const char* name) { return Image::from(sheet, sheet.sprite(name), DENSITY); };
     const auto slice = [&](const char* name) -> Nezumi::UI::NineSlice {
-        return { image(name), prototypes.find_sprite(name)->border };
+        return { image(name), configs.find_sprite(name)->border };
     };
 
     UISheet a;

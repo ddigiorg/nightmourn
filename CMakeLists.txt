@@ -54,8 +54,8 @@ set(NIGHTMOURN_WARNINGS
 # ------------------------------------------------------------------------------
 # nightmourn_copy_data(TARGET)
 #
-# Copies data/ (prototypes and the graphics they name, see
-# src/Nightmourn/Data/Prototypes.hpp) next to TARGET's executable after every
+# Copies data/ (configs and the graphics they name, see
+# src/Nightmourn/Data/Configs.hpp) next to TARGET's executable after every
 # build, so the game reads it as data/... relative to its own folder. Edit
 # the files in data/ and rebuild (or copy them over) to see a change.
 # ------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ add_library(nightmourn_world STATIC
     src/Nightmourn/Character/Character.cpp
     src/Nightmourn/Chunk/Chunk.cpp
     src/Nightmourn/Chunk/Pheromones.cpp
-    src/Nightmourn/Data/Prototypes.cpp
+    src/Nightmourn/Data/Configs.cpp
     src/Nightmourn/Item/Inventory.cpp
     src/Nightmourn/Sector/Sector.cpp
     src/Nightmourn/Surface/Surface.cpp
@@ -100,7 +100,7 @@ target_link_libraries(nightmourn_world
         nezumi_logger
         glm::glm
     PRIVATE
-        nlohmann_json::nlohmann_json # prototype JSON (Nezumi fetches it)
+        nlohmann_json::nlohmann_json # config JSON (Nezumi fetches it)
 )
 
 # ------------------------------------------------------------------------------
@@ -148,7 +148,7 @@ add_executable(nightmourn src/main.cpp)
 target_link_libraries(nightmourn PRIVATE nightmourn_game)
 
 # Copy the engine's runtime assets (shaders, fonts) and this game's data/
-# (prototypes, graphics) next to the executable
+# (configs, graphics) next to the executable
 nezumi_copy_assets(nightmourn ENGINE)
 nightmourn_copy_data(nightmourn)
 

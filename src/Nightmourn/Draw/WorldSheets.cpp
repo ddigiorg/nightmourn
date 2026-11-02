@@ -3,7 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/WorldSheets.hpp"
-#include "Nightmourn/Data/Prototypes.hpp"
+#include "Nightmourn/Data/Configs.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/Render/2D/Sprite/SpritePacker.hpp"
 #include "Nezumi/Render/Core/Image/Image.hpp"
@@ -17,7 +17,7 @@ const WorldSheets::GroundTexture& WorldSheets::ground_texture(std::string_view t
     for (const auto& [name, texture] : ground_textures) {
         if (name == tile) return texture;
     }
-    throw std::runtime_error("WorldSheets: no tile prototype '" + std::string(tile) + "'");
+    throw std::runtime_error("WorldSheets: no tile config '" + std::string(tile) + "'");
 }
 
 WorldDrawer::Config WorldSheets::drawer_config() const {
@@ -30,12 +30,12 @@ WorldDrawer::Config WorldSheets::drawer_config() const {
     };
 }
 
-WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Prototypes& prototypes) {
+WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Configs& configs) {
     WorldSheets sheets;
 
     // Figures and trees, packed into one sheet so they batch together
     NR::SpritePacker packer;
-    for (const FigurePrototype& figure : prototypes.figures) {
+    for (const FigureConfig& figure : configs.figures) {
         for (const auto& [name, a] : figure.animations) {
             packer.add_animation("figure/" + figure.name + "/" + name, NR::load_image(a.filename), {
                 .frame_width  = a.width,
@@ -49,10 +49,10 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Prototypes& protot
             });
         }
     }
-    for (const TreePrototype& tree : prototypes.trees) {
+    for (const TreeConfig& tree : configs.trees) {
         const auto first = static_cast<NR::SpriteID>(packer.sprite_count());
         for (std::size_t i = 0; i < tree.pictures.size(); i++) {
-            const PicturePrototype& pic = tree.pictures[i];
+            const PictureConfig& pic = tree.pictures[i];
             packer.add_sprite("tree/" + tree.name + "/" + std::to_string(i), NR::load_image(pic.filename),
                               { .pivot = pic.pivot });
         }
@@ -72,7 +72,7 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Prototypes& protot
     // squashes the ground 2:1, so anisotropy keeps it from blurring, and a
     // small negative bias keeps the grass detail crisp.
     std::vector<NR::Image> pages;
-    for (const TilePrototype& tile : prototypes.tiles) {
+    for (const TileConfig& tile : configs.tiles) {
         sheets.ground_textures.push_back({ tile.name, { static_cast<std::uint32_t>(pages.size()), tile.tiles } });
         pages.push_back(NR::load_image(tile.filename));
     }

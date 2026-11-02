@@ -4,8 +4,8 @@
 # Generates the tree sprites in the style of Age of Empires II: DE's
 # pre-rendered trees (dark green, lit from the upper left, with a soft ground
 # shadow to the lower right): two broadleaf oak looks, then a pine
-# (data/base/graphics/entity/tree/<variety>-<look>.png; the tree prototypes
-# in data/base/prototypes/entity/trees.json list the looks and the pivot,
+# (data/base/graphics/entity/tree/<variety>-<look>.png; the tree configs
+# in data/base/configs/entity/trees.json list the looks and the pivot,
 # and the game packs them when it starts).
 #
 # Each frame is 256x512 px, four times a unit frame (64x128) on each side,

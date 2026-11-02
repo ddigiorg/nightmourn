@@ -1,8 +1,8 @@
 // =============================================================================
-// Data/Prototypes.cpp
+// Data/Configs.cpp
 // =============================================================================
 
-#include "Nightmourn/Data/Prototypes.hpp"
+#include "Nightmourn/Data/Configs.hpp"
 
 #include "Nezumi/Core/BasePath.hpp"
 #include <algorithm>  // find_if, sort
@@ -18,14 +18,14 @@ namespace {
 namespace fs = std::filesystem;
 using Json   = nlohmann::json;
 
-// Where the prototype being read came from, for error messages
+// Where the config being read came from, for error messages
 struct Source {
     std::string file;
     std::string what; // "figure 'red'"
 };
 
 [[noreturn]] void fail(const Source& src, const std::string& what) {
-    throw std::runtime_error("Prototypes: " + src.file + (src.what.empty() ? "" : ": " + src.what) + ": " + what);
+    throw std::runtime_error("Configs: " + src.file + (src.what.empty() ? "" : ": " + src.what) + ": " + what);
 }
 
 // "__<mod>__/rest" -> "<mod dir>/rest"
@@ -49,7 +49,7 @@ std::optional<glm::vec2> read_pivot(const Source& src, const Json& j) {
     return glm::vec2{ p[0].get<float>(), p[1].get<float>() };
 }
 
-// Adds or replaces the prototype named `p.name`
+// Adds or replaces the config named `p.name`
 template <typename T>
 void put(std::vector<T>& list, T p) {
     const auto it = std::find_if(list.begin(), list.end(), [&](const T& q) { return q.name == p.name; });
@@ -69,9 +69,9 @@ const T* find(const std::vector<T>& list, std::string_view name) {
 // Load
 // -----------------------------------------------------------------------------
 
-Prototypes Prototypes::load(std::string_view data_dir) {
+Configs Configs::load(std::string_view data_dir) {
     const fs::path root = Nezumi::BasePath::get(data_dir);
-    if (!fs::is_directory(root)) throw std::runtime_error("Prototypes: no data folder at '" + root.string() + "'");
+    if (!fs::is_directory(root)) throw std::runtime_error("Configs: no data folder at '" + root.string() + "'");
 
     // Mods: base first, then the rest by name
     std::vector<std::pair<std::string, fs::path>> mods;
@@ -83,9 +83,9 @@ Prototypes Prototypes::load(std::string_view data_dir) {
         return a.first < b.first;
     });
 
-    Prototypes out;
+    Configs out;
     for (const auto& [mod, mod_dir] : mods) {
-        const fs::path dir = mod_dir / "prototypes";
+        const fs::path dir = mod_dir / "configs";
         if (!fs::is_directory(dir)) continue;
 
         std::vector<fs::path> files;
@@ -104,7 +104,7 @@ Prototypes Prototypes::load(std::string_view data_dir) {
                 try { doc = Json::parse(in); }
                 catch (const Json::exception& e) { fail(src, e.what()); }
             }
-            if (!doc.is_array()) fail(src, "must hold an array of prototypes");
+            if (!doc.is_array()) fail(src, "must hold an array of configs");
 
             for (const Json& j : doc) {
                 src.what.clear();
@@ -117,9 +117,9 @@ Prototypes Prototypes::load(std::string_view data_dir) {
                     };
 
                     if (type == "figure") {
-                        FigurePrototype p{ .name = name, .animations = {} };
+                        FigureConfig p{ .name = name, .animations = {} };
                         for (const auto& [anim_name, a] : j.at("animations").items()) {
-                            AnimationPrototype anim;
+                            AnimationConfig anim;
                             anim.filename        = file_of(a);
                             anim.width           = a.at("width").get<std::uint32_t>();
                             anim.height          = a.at("height").get<std::uint32_t>();
@@ -134,7 +134,7 @@ Prototypes Prototypes::load(std::string_view data_dir) {
                         if (p.animations.empty()) fail(src, "has no animations");
                         put(out.figures, std::move(p));
                     } else if (type == "tree") {
-                        TreePrototype p{ .name = name, .pictures = {} };
+                        TreeConfig p{ .name = name, .pictures = {} };
                         for (const Json& pic : j.at("pictures")) {
                             p.pictures.push_back({ .filename = file_of(pic), .pivot = read_pivot(src, pic) });
                         }
@@ -142,11 +142,11 @@ Prototypes Prototypes::load(std::string_view data_dir) {
                         put(out.trees, std::move(p));
                     } else if (type == "tile") {
                         const Json& t = j.at("texture");
-                        TilePrototype p{ .name = name, .filename = file_of(t), .tiles = t.value("tiles", 1u) };
+                        TileConfig p{ .name = name, .filename = file_of(t), .tiles = t.value("tiles", 1u) };
                         if (p.tiles == 0) fail(src, "'tiles' must be at least 1");
                         put(out.tiles, std::move(p));
                     } else if (type == "sprite") {
-                        SpritePrototype p{ .name = name, .filename = file_of(j), .pivot = read_pivot(src, j) };
+                        SpriteConfig p{ .name = name, .filename = file_of(j), .pivot = read_pivot(src, j) };
                         if (j.contains("border")) {
                             const Json& b = j["border"];
                             if (!b.is_array() || b.size() != 4) fail(src, "'border' must be [left, top, right, bottom]");
@@ -169,17 +169,17 @@ Prototypes Prototypes::load(std::string_view data_dir) {
 // Lookup
 // -----------------------------------------------------------------------------
 
-const FigurePrototype* Prototypes::find_figure(std::string_view name) const { return find(figures, name); }
-const TreePrototype*   Prototypes::find_tree  (std::string_view name) const { return find(trees,   name); }
-const TilePrototype*   Prototypes::find_tile  (std::string_view name) const { return find(tiles,   name); }
-const SpritePrototype* Prototypes::find_sprite(std::string_view name) const { return find(sprites, name); }
+const FigureConfig* Configs::find_figure(std::string_view name) const { return find(figures, name); }
+const TreeConfig*   Configs::find_tree  (std::string_view name) const { return find(trees,   name); }
+const TileConfig*   Configs::find_tile  (std::string_view name) const { return find(tiles,   name); }
+const SpriteConfig* Configs::find_sprite(std::string_view name) const { return find(sprites, name); }
 
-std::vector<std::string> Prototypes::filenames() const {
+std::vector<std::string> Configs::filenames() const {
     std::vector<std::string> out;
-    for (const FigurePrototype& f : figures) for (const auto& [_, a] : f.animations) out.push_back(a.filename);
-    for (const TreePrototype&   t : trees)   for (const PicturePrototype& p : t.pictures) out.push_back(p.filename);
-    for (const TilePrototype&   t : tiles)   out.push_back(t.filename);
-    for (const SpritePrototype& s : sprites) out.push_back(s.filename);
+    for (const FigureConfig& f : figures) for (const auto& [_, a] : f.animations) out.push_back(a.filename);
+    for (const TreeConfig&   t : trees)   for (const PictureConfig& p : t.pictures) out.push_back(p.filename);
+    for (const TileConfig&   t : tiles)   out.push_back(t.filename);
+    for (const SpriteConfig& s : sprites) out.push_back(s.filename);
     return out;
 }
 
