@@ -26,11 +26,14 @@ static constexpr float TARGET_LINE_WIDTH = 1.0f;  // pixels
 // -----------------------------------------------------------------------------
 
 UnitDrawer::UnitDrawer(const Config& config)
-    : atlas_(config.atlas)
+    : sheet_(config.sheet)
 {
-    assert(atlas_ && "UnitDrawer: config.atlas is null");
-    for (std::size_t f = 0; f < MAX_FACTIONS; f++)
-        frames_[f] = FigureFrames::from_row(*atlas_, config.faction_rows[f], config.frame_size);
+    assert(sheet_ && "UnitDrawer: config.sheet is null");
+    assert(config.faction_figures[0] && "UnitDrawer: faction 0 needs a figure");
+    for (std::size_t f = 0; f < MAX_FACTIONS; f++) {
+        const char* name = config.faction_figures[f] ? config.faction_figures[f] : config.faction_figures[0];
+        figures_[f] = sheet_->animation(name);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -40,11 +43,12 @@ UnitDrawer::UnitDrawer(const Config& config)
 void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
     const glm::vec2 pos = unit.position.to_vec2();
 
-    // Units have one faction (faction_index asserts it); neutral ones use row 0
+    // Units have one faction (faction_index asserts it); neutral ones use
+    // faction 0's figure
     const FactionIndex faction = (unit.factions_mask == EntityFactionsMask::None)
         ? 0 : unit.faction_index();
 
-    draw_figure   (ctx, *atlas_, frames_[faction], pos, unit.facing());
+    draw_figure   (ctx, *sheet_, figures_[faction], pos, unit.facing());
     draw_healthbar(ctx, unit);
 
     if (!ctx.debug.any()) return;

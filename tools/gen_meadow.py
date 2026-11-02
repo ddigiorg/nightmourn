@@ -3,15 +3,16 @@
 #
 # Generates the seamless 1024x1024 meadow ground texture (8x8 tiles of 128 px)
 # in Age of Empires II: DE's light, warm green, as its own ground texture
-# (assets/graphics/meadow.png). The demos sample it with Repeat addressing, so
-# filtering and mips wrap across its edges (see ChunkDrawer).
+# (assets/graphics/meadow.png; its manifest meadow.json names the one sprite,
+# "meadow"). The demos sample it with Repeat addressing, so filtering and mips
+# wrap across its edges (see ChunkDrawer).
 #
 # Tileable by construction: every noise layer is white noise filtered in the
 # frequency domain (so it is periodic), and blades and flowers that cross an
 # edge are drawn again on the other side. Deterministic (fixed seed).
 #
 #   python3 tools/gen_meadow.py                       # update assets/graphics/meadow.png
-#   python3 tools/gen_meadow.py --atlas atlas.png     # paste it into an atlas instead
+#   python3 tools/gen_meadow.py --out meadow.png      # somewhere else, for a look
 #
 # Needs numpy and Pillow.
 # ==============================================================================
@@ -134,20 +135,7 @@ meadow = Image.fromarray(img.astype(np.uint8), "RGB").convert("RGBA")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--out", default="assets/graphics/meadow.png",
-                    help="where to write the texture")
-parser.add_argument("--atlas", help="paste the texture into this atlas instead")
-parser.add_argument("--at", type=int, nargs=2, default=(0, 384), metavar=("X", "Y"),
-                    help="top-left pixel of the meadow in --atlas")
+                    help="where to write the texture (assets/graphics/meadow.json names it)")
 args = parser.parse_args()
 
-if not args.atlas:
-    meadow.save(args.out, optimize=True)
-else:
-    atlas = Image.open(args.atlas).convert("RGBA")
-    x, y = args.at
-    if atlas.width < x + N or atlas.height < y + N:
-        grown = Image.new("RGBA", (max(atlas.width, x + N), max(atlas.height, y + N)), (0, 0, 0, 0))
-        grown.paste(atlas, (0, 0))
-        atlas = grown
-    atlas.paste(meadow, (x, y))
-    atlas.save(args.atlas, optimize=True)
+meadow.save(args.out, optimize=True)

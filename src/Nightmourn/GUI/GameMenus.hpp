@@ -18,7 +18,7 @@
 #pragma once
 #include "Nightmourn/Draw/DebugFlags.hpp"
 #include "Nightmourn/GUI/DebugMenu.hpp"
-#include "Nightmourn/GUI/UIAtlas.hpp"
+#include "Nightmourn/GUI/UISheet.hpp"
 #include "Nezumi/Input/ActionID.hpp"
 #include <array>       // array
 #include <string_view> // string_view

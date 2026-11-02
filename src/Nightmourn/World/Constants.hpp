@@ -11,7 +11,7 @@
 //
 // The world knows nothing about pixels. How big a tile looks on screen is the
 // camera's job (CameraConfig::pixels_per_unit and zoom), and how big a tile's
-// sprite is in its texture is the atlas's job (Atlas::tex_box).
+// sprite is in its texture is the sprite sheet's job (SPRITE_PIXELS_PER_TILE).
 // =============================================================================
 
 #pragma once

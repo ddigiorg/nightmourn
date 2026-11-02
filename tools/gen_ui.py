@@ -1,32 +1,36 @@
 # ==============================================================================
 # tools/gen_ui.py
 #
-# Generates the UI atlas, assets/graphics/ui.png: the player action bar's
+# Generates the UI sprite sheet, assets/graphics/ui.png and its manifest
+# ui.json (one named sprite per piece, for Nezumi's SpriteSheet): the player action bar's
 # art (a stone eagle, the backplate, slot frames, menu buttons and their
 # icons) and placeholder item icons. Everything is carved from cold, blue-
 # grey moonlit stone: each piece is a height map, lit from the upper left,
 # with stone grain and ambient occlusion in the creases.
 #
 # Painted at 2x (two pixels per UI point) so it stays crisp on 150% and 200%
-# screens; the game draws it with density 2 (see GUI/UIAtlas.hpp, which
-# lists every sprite's pixel box; keep the two in sync).
+# screens; the game draws it with density 2 (see GUI/UISheet.hpp, which
+# looks every piece up by its name in ui.json).
 #
 # Placeholder art: hand-drawn sprites will replace it, at the same boxes.
 #
-#   python3 tools/gen_ui.py                 # writes assets/graphics/ui.png
+#   python3 tools/gen_ui.py                 # writes assets/graphics/ui.png and ui.json
 #   python3 tools/gen_ui.py --out ui.png    # somewhere else, for a look
 #
 # Needs numpy and Pillow. Deterministic (fixed seeds).
 # ==============================================================================
 
 import argparse
+import json
 import math
+import os
 import numpy as np
 from PIL import Image, ImageDraw
 
 ATLAS_W, ATLAS_H = 1328, 208
 
-# Pixel boxes { x0, y0, x1, y1 }, matching GUI/UIAtlas.hpp
+# Pixel boxes { x0, y0, x1, y1 }, written to ui.json. At least 8 px apart, so the
+# sheet's two mip levels don't bleed one piece into the next.
 EAGLE   = (0, 0, 160, 120)          # 80 x 60 pt, crouched, faces right (inward on the left)
 PLATE   = (168, 0, 1318, 100)       # 575 x 50 pt
 SLOT    = (0, 128, 72, 200)         # 36 x 36 pt, socket under the icon
@@ -551,32 +555,45 @@ def gen_item_icon(name):
 # Main
 # ------------------------------------------------------------------------------
 
+def write_manifest(path, page, sprites):
+    rows = ",\n".join("        " + json.dumps(s, separators=(", ", ": ")) for s in sprites)
+    with open(path, "w") as f:
+        f.write("{\n")
+        f.write('    "version": 1,\n')
+        f.write(f'    "page_size": [{ATLAS_W}, {ATLAS_H}],\n')
+        f.write(f'    "pages": ["{page}"],\n')
+        f.write(f'    "sprites": [\n{rows}\n    ]\n')
+        f.write("}\n")
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="assets/graphics/ui.png")
     args = ap.parse_args()
 
     atlas = Image.new("RGBA", (ATLAS_W, ATLAS_H), (0, 0, 0, 0))
+    sprites = []
 
-    def put(img, box):
+    def put(name, img, box):
         assert img.size == (box[2] - box[0], box[3] - box[1]), (img.size, box)
         atlas.paste(img, box[:2])
+        sprites.append({ "name": name, "page": 0, "box": list(box) })
 
-    put(gen_eagle(), EAGLE)
-    put(gen_plate(), PLATE)
-    put(gen_slot(), SLOT)
-    put(gen_rim(), RIM)
-    put(gen_button(), BUTTON)
-    put(gen_divider(), DIVIDER)
-    put(gen_fill(), FILL)
+    put("eagle",   gen_eagle(),   EAGLE)
+    put("plate",   gen_plate(),   PLATE)
+    put("slot",    gen_slot(),    SLOT)
+    put("rim",     gen_rim(),     RIM)
+    put("button",  gen_button(),  BUTTON)
+    put("divider", gen_divider(), DIVIDER)
+    put("fill",    gen_fill(),    FILL)
     for k, name in enumerate(MENU_ICONS):
         x0 = MENU_ICONS_AT[0] + 48 * k
-        put(gen_menu_icon(name), (x0, MENU_ICONS_AT[1], x0 + 40, MENU_ICONS_AT[1] + 40))
+        put(f"menu/{name}", gen_menu_icon(name), (x0, MENU_ICONS_AT[1], x0 + 40, MENU_ICONS_AT[1] + 40))
     for k, name in enumerate(ITEMS):
         x0 = ITEM_ICONS_AT[0] + 80 * k
-        put(gen_item_icon(name), (x0, ITEM_ICONS_AT[1], x0 + 72, ITEM_ICONS_AT[1] + 72))
+        put(f"item/{name}", gen_item_icon(name), (x0, ITEM_ICONS_AT[1], x0 + 72, ITEM_ICONS_AT[1] + 72))
 
     atlas.save(args.out)
+    write_manifest(os.path.splitext(args.out)[0] + ".json", os.path.basename(args.out), sprites)
     print(f"wrote {args.out}")
 
 

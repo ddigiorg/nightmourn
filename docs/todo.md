@@ -51,11 +51,13 @@ Ground is world-space (AoE2: DE style): one seamless 1024² meadow covers
 terrain roadmap below: `isometric-plan/TILE-RESEARCH.md` in the project
 files.
 
-- [ ] **Atlas frames with pivots** (JSON sidecar): per-frame size and feet
-      pivot, replacing the fixed `FIGURE_SPRITE_BOUNDS` box. Comes out of
-      the packer below.
-- [ ] **Player-color mask** in a sprite shader variant, replacing one atlas
-      row per faction.
+- [x] **Sprite frames with pivots**: `tools/pack_sprites.py` packs
+      `assets-src/sprites` into `assets/graphics/sprites.json` + pages
+      (Nezumi `SpriteSheet`), each frame trimmed with its feet pivot. Drawers
+      draw at the pivot; `FIGURE_SPRITE_BOUNDS` / `TREE_SPRITE_BOUNDS` are
+      now only pick boxes.
+- [ ] **Player-color mask** in a sprite shader variant, replacing one figure
+      animation per faction.
 - [ ] **First pre-rendered unit** (Blender: orthographic, 30° elevation,
       45° yaw), 8 directions (5 stored + 3 mirrored), walk + attack. Frames
       are picked with `Projection::dir_to_heading`.
@@ -82,9 +84,10 @@ Decisions for the rest of the roadmap to build on.
   ships separate files too: one sprite file per unit graphic, one `.dds` per
   terrain. Loose files are what an artist (or Blender) produces. Atlases are
   what the GPU wants, so something has to pack them.
-  - Pack **at build time**, not at startup: a `tools/` packer run by a CMake
-    custom command that writes atlas pages plus a JSON of frames
-    (`{ page, tex_box, size, pivot }`). It's simpler in the engine, and
+  - Pack **at build time**, not at startup: `tools/pack_sprites.py`
+    (`cmake --build <dir> --target pack-sprites`) writes the pages plus a
+    JSON of frames (`{ page, box, offset, pivot }`), committed so a build
+    needs no Python. It's simpler in the engine, and
     there's no packing cost at load. Move it to startup (Factorio's way)
     only if mods need to add sprites. Then cache the result on disk.
   - Group sprites drawn together onto the same page (units with units,
@@ -115,11 +118,11 @@ The end state: one instance per visible chunk, terrains blended in the
 shader. It replaces `ChunkDrawer`'s per-tile Quads. Prerequisites first,
 each useful on its own:
 
-- [ ] **Mipmaps** (Renderer #7, `AtlasConfig::mip_levels` TODO): CPU chain or
+- [x] **Mipmaps** (Renderer #7, `SpriteSheetConfig::mip_levels`): CPU chain or
       `glGenerateMipmap`, a `mip_filter` on the sampler. Needed now as well:
       below about zoom 0.5 the meadow aliases into a shimmer, because a 128
       px tile cell lands on a few screen pixels with no mips.
-- [ ] **Texture2DArray** in the RHI and the renderer (Renderer #1): array
+- [x] **Texture2DArray** in the RHI and the renderer (Renderer #1): array
       textures, `sampler2DArray`, and atlas pages as layers with the page
       index per instance. Units batch across pages, and terrains get one
       layer each.
@@ -206,9 +209,8 @@ per pixel. Do this only if the ground kind shows up in a GPU profile
       `DrawCommand` for N instances, for tiles, decals, particles and
       bullets. `BatchBuilder` would take the stride from `KindRegistry`.
 - [ ] **Retained static layers** for tiles that rarely change (Renderer #3).
-- [ ] **Texture2DArray atlases** so y-sorted sprites from different pages
-      still batch (Renderer #1). Until then, keep all unit sprites on one
-      atlas page.
+- [x] **Texture2DArray sheets** so y-sorted sprites from different pages
+      still batch (Renderer #1): SpriteSheet pages are array layers.
 - [ ] **Stream buffer stalls.** Orphan the buffer (`glBufferData(..., nullptr,
       GL_DYNAMIC_DRAW)`) before a write at offset 0, or go to persistently
       mapped buffers (Renderer #5). Only after profiling on real hardware.
@@ -224,10 +226,6 @@ per pixel. Do this only if the ground kind shows up in a GPU profile
       overwrites view camera sizes every frame and `Camera` never stores the
       name. Drop them, or add a per-view "auto-size to backbuffer" flag (also
       useful for a fixed virtual resolution in pixel art).
-- [ ] When atlas regions come back, consider
-      `draw_sprite(const Atlas&, SpriteID, pos, ...)` to match `draw_text`.
-      `Atlas/SpritePixelBox.hpp` and `Atlas/SpriteTexelBox.hpp` are empty
-      leftovers from that.
 - [ ] Without `GL_ARB_clip_control`, `Camera` should use `glm::orthoNO`
       (check `DeviceInfo::clip_depth_zero_to_one`). Only matters for
       depth-tested 3D; 2D at z = 0 is fine as is.
@@ -293,7 +291,7 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 - [ ] **Inventory controls**: shift-click to split a stack, right-click to
       take half, ctrl-click to move to a chest (Factorio's).
 - [ ] **Hand-drawn art** to replace `tools/gen_ui.py`'s placeholders at the
-      same pixel boxes (`GUI/UIAtlas.hpp`).
+      same names (`GUI/UISheet.hpp`, `assets/graphics/ui.json`).
 
 ### World: entities and combat
 
@@ -428,8 +426,9 @@ yields (`Items::Wood`). Decorative for now.
 - [ ] A stump (and a felled-tree frame) once trees can be cut, instead of
       vanishing at 0 wood.
 - [ ] More subtypes and varieties (palm and dead trees, berry bushes, stone
-      and gold mines) as `ResourceConfig`s plus atlas looks. Once the atlas has a sidecar with
-      pivots, a kind's looks can differ in size.
+      and gold mines) as `ResourceConfig`s plus sprite-sheet looks (a
+      `looks` variant set per folder in `assets-src/sprites`); trimmed
+      frames with pivots let a kind's looks differ in size.
 - [ ] Map generation: today the demo scatters trees with value noise; a
       real map generator should own forests, clearings and resource spots.
 

@@ -31,7 +31,7 @@
 //   around, or off the bar to empty a slot) and the menu buttons.
 //
 // Drawing goes through Nightmourn::WorldDrawer (src/Nightmourn/Draw/); the
-// demo only sets up its atlas rows and draws the HUD. The debug overlays
+// demo only picks its sides' figures and draws the HUD. The debug overlays
 // (show-info among them: timings, cursor and view above the HUD) are
 // switched in the debug menu (src/Nightmourn/GUI/DebugMenu), drawn by
 // Nezumi's UI.
@@ -58,11 +58,12 @@
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/Draw/WorldSheets.hpp"
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
-#include "Nightmourn/GUI/UIAtlas.hpp"
+#include "Nightmourn/GUI/UISheet.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
@@ -212,41 +213,16 @@ static constexpr UnitGroupConfig BLOCK = {
     .columns = BLOCK_FILES,
 };
 
-// -----------------------------------------------------------------------------
-// Atlas
-//
-// Pixel boxes in assets/graphics/atlas.png { x0, y0, x1, y1 }, y down.
-// -----------------------------------------------------------------------------
-
-namespace AtlasPixels {
-    // Seamless 1024x1024 px meadow covering 8x8 tiles (128 px per tile),
-    // drawn world-space (see ChunkDrawer). Its own texture (meadow.png, so
-    // it can wrap), made by tools/gen_meadow.py.
-    constexpr glm::vec4     Meadow      = { 0.0f, 0.0f, 1024.0f, 1024.0f };
-    constexpr std::uint32_t MeadowTiles = 8;
-
-    // 64x128 px unit frames, drawn 0.5x1 tile. One row of 5 headings per
-    // color: down, down-right, right, up-right, up (left ones are mirrored).
-    constexpr glm::vec2 UnitSize   = { 64.0f, 128.0f };
-    constexpr glm::vec2 HeroOrigin = { 320.0f, 128.0f }; // cyan row
-
-    // 256x512 px tree frames (4x a unit frame each way), drawn 2x4 tiles,
-    // below the meadow: two oaks, then a pine. Made by tools/gen_trees.py.
-    constexpr glm::vec2 TreeSize   = { 256.0f, 512.0f };
-    constexpr glm::vec2 OakOrigin  = {   0.0f, 1408.0f };
-    constexpr glm::vec2 PineOrigin = { 512.0f, 1408.0f };
-}
-
 struct SideStyle {
     const char* name;
-    glm::vec2   atlas_origin; // first unit frame in the atlas
+    const char* figure;       // figure animation in the sprite sheet
     glm::vec4   color;        // group routes and slots
     float       direction;    // +1 marches right, -1 left
 };
 
 static constexpr std::array<SideStyle, SIDE_COUNT> SIDES = {{
-    { "blue", { 0.0f, 128.0f }, { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
-    { "red",  { 0.0f,   0.0f }, { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
+    { "blue", "units/blue/idle", { 0.3f, 0.5f,  1.0f, 1.0f },  1.0f },
+    { "red",  "units/red/idle",  { 1.0f, 0.25f, 0.2f, 1.0f }, -1.0f },
 }};
 
 // The hero's side
@@ -309,56 +285,20 @@ public:
             }
         );
 
-        // Atlas and font
-        atlas_ = renderer->create_atlas(
-            Render::AtlasConfig{
-                .name     = "demo-atlas",
-                .filepath = "assets/graphics/atlas.png",
-                // Mips for zooming out; sprites sit on a 64 px grid, so 4
-                // levels (8 px blocks) never average neighbors together.
-                .mip_levels = 4,
-            }
-        ).object;
-
-        // Ground: its own texture so it can wrap (Repeat), with the full mip
-        // chain. Iso squashes it 2:1, so anisotropy keeps it from blurring,
-        // and a small negative bias keeps the grass detail crisp.
-        ground_ = renderer->create_atlas({
-            .name           = "meadow",
-            .filepath       = "assets/graphics/meadow.png",
-            .address_mode   = RHI::SamplerAddressMode::Repeat,
-            .mip_levels     = 0,
-            .max_anisotropy = 4.0f,
-            .lod_bias       = -0.5f,
-        }).object;
+        // Sprites (units, trees) and ground
+        sheets_ = Nightmourn::WorldSheets::load(*renderer);
 
         WorldDrawer::Config draw_config = {
-            .chunks = {
-                .atlas       = ground_,
-                .grass       = AtlasPixels::Meadow,
-                .grass_tiles = AtlasPixels::MeadowTiles,
-            },
-            .units = {
-                .atlas      = atlas_,
-                .frame_size = AtlasPixels::UnitSize,
-            },
-            .characters = {
-                .atlas      = atlas_,
-                .frame_size = AtlasPixels::UnitSize,
-                .row        = AtlasPixels::HeroOrigin,
-            },
-            .resources = {
-                .atlas           = atlas_,
-                .tree_frame_size = AtlasPixels::TreeSize,
-            },
+            .chunks     = { .sheet = sheets_.ground  },
+            .units      = { .sheet = sheets_.sprites },
+            .characters = { .sheet = sheets_.sprites },
+            .resources  = { .sheet = sheets_.sprites },
         };
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
-            draw_config.units.faction_rows[f]         = SIDES[f].atlas_origin;
+            draw_config.units.faction_figures[f]      = SIDES[f].figure;
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
             draw_config.chunks.faction_colors[f]      = SIDES[f].color;
         }
-        draw_config.resources.trees[static_cast<size_t>(TreeVariety::Oak )] = { AtlasPixels::OakOrigin,  2 };
-        draw_config.resources.trees[static_cast<size_t>(TreeVariety::Pine)] = { AtlasPixels::PineOrigin, 1 };
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         // Mouse: remember the cursor for hover, select on left click (not
@@ -384,8 +324,8 @@ public:
         Nightmourn::apply_ui_theme(engine.ui()->style());
 
         // Action bar, with a few test items to use and drag around
-        ui_atlas_   = Nightmourn::UIAtlas::load(*renderer);
-        action_bar_ = std::make_unique<Nightmourn::ActionBar>(ui_atlas_);
+        ui_sheet_   = Nightmourn::UISheet::load(*renderer);
+        action_bar_ = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         action_bar_->set_slot(0, Nightmourn::Items::Wood);
         action_bar_->set_slot(1, Nightmourn::Items::Stone);
         action_bar_->set_slot(2, Nightmourn::Items::Gold);
@@ -799,15 +739,14 @@ private:
 
     Render::Camera2D* world_camera_  = nullptr;
     Render::Camera2D* screen_camera_ = nullptr;
-    Render::Atlas*  atlas_         = nullptr;
-    Render::Atlas*  ground_        = nullptr;
     Render::Font*   font_          = nullptr;
+    Nightmourn::WorldSheets sheets_ = {};
 
     std::unique_ptr<CameraController> camera_controller_ = nullptr;
     std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;
     DebugFlags                        debug_flags_       = {};
     GameMenus                         menus_             = {};
-    Nightmourn::UIAtlas               ui_atlas_          = {};
+    Nightmourn::UISheet               ui_sheet_          = {};
     std::unique_ptr<Nightmourn::ActionBar> action_bar_   = nullptr;
     InfoOverlay                       info_overlay_      = {};
 

@@ -9,17 +9,17 @@
 //   ShowCollisionRectangles  collision box
 //   ShowFacingArrows         arrow along facing()
 //
-// One sprite row for every character for now. When characters get their own
-// looks, map CharacterConfig (or an appearance id on it) to rows here.
+// One figure animation for every character for now. When characters get
+// their own looks, map CharacterConfig (or an appearance id on it) to
+// animations here.
 // =============================================================================
 
 #pragma once
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
-#include <glm/glm.hpp> // vec2
 
 namespace Nezumi::Render {
-    class Atlas;
+    class SpriteSheet;
 }
 
 namespace Nightmourn {
@@ -34,19 +34,18 @@ public:
     // -------------------------------------------------------------------------
 
     struct Config {
-        const Nezumi::Render::Atlas* atlas = nullptr;
+        const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // Size of one frame in the atlas (pixels), and the top-left pixel of
-        // the characters' row of frames (see FigureFrames)
-        glm::vec2 frame_size = { 64.0f, 128.0f };
-        glm::vec2 row        = {};
+        // The characters' figure animation in the sheet
+        const char* figure = "units/cyan/idle";
     };
 
     // -------------------------------------------------------------------------
     // Construction & Destruction
     // -------------------------------------------------------------------------
 
-    // `config.atlas` must outlive the drawer
+    // `config.sheet` must outlive the drawer. Throws if `config.figure`
+    // isn't in the sheet.
     explicit CharacterDrawer(const Config& config);
 
     // -------------------------------------------------------------------------
@@ -61,8 +60,8 @@ private:
     // Members
     // -------------------------------------------------------------------------
 
-    const Nezumi::Render::Atlas* atlas_  = nullptr;
-    FigureFrames                 frames_ = {};
+    const Nezumi::Render::SpriteSheet* sheet_  = nullptr;
+    Nezumi::Render::AnimationID        figure_ = 0;
 };
 
 } // namespace Nightmourn

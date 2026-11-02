@@ -21,7 +21,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nightmourn/GUI/UIAtlas.hpp"
+#include "Nightmourn/GUI/UISheet.hpp"
 #include <array>   // array
 #include <cstddef> // size_t
 #include <vector>  // vector
@@ -40,10 +40,10 @@ public:
     // -------------------------------------------------------------------------
     // Construction
     //
-    // `atlas` and `inventory` must outlive the menu.
+    // `sheet` and `inventory` must outlive the menu.
     // -------------------------------------------------------------------------
 
-    InventoryMenu(const UIAtlas& atlas, Inventory& inventory);
+    InventoryMenu(const UISheet& sheet, Inventory& inventory);
 
     // -------------------------------------------------------------------------
     // Draw
@@ -56,7 +56,7 @@ public:
     void draw(Nezumi::UI::Context& ui, bool& open);
 
 private:
-    const UIAtlas* atlas_     = nullptr;
+    const UISheet* sheet_     = nullptr;
     Inventory*     inventory_ = nullptr;
 
     // Rebuilt every frame, kept to allocate nothing after the first

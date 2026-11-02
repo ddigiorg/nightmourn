@@ -9,41 +9,23 @@
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
-#include <cmath>   // atan2, cos, sin
-#include <utility> // swap
+#include <cmath>   // atan2, cos, lround, sin
+#include <cstdint> // int64_t, uint32_t
 
 namespace Nightmourn {
 
 // -----------------------------------------------------------------------------
-// FigureFrames
-// -----------------------------------------------------------------------------
-
-FigureFrames FigureFrames::from_row(const Nezumi::Render::Atlas& atlas,
-                                    glm::vec2 row_origin, glm::vec2 frame_size)
-{
-    FigureFrames frames;
-    for (std::size_t i = 0; i < HEADINGS; i++) {
-        const glm::vec2 min = row_origin + glm::vec2{ static_cast<float>(i) * frame_size.x, 0.0f };
-        frames.tex_boxes[i] = atlas.tex_box({ min, min + frame_size });
-    }
-    return frames;
-}
-
-glm::vec4 FigureFrames::pick(glm::vec2 heading) const {
-    // Column: 0 down, 1 down-right, 2 right, 3 up-right, 4 up.
-    // 0.383 = sin(22.5 deg) splits the circle into 8 equal sectors.
-    const int dx = (heading.x > 0.383f) - (heading.x < -0.383f);
-    const int dy = (heading.y > 0.383f) - (heading.y < -0.383f);
-    const int column = (dx == 0) ? (dy > 0 ? 4 : 0) : (dy + 2);
-
-    glm::vec4 tex_box = tex_boxes[static_cast<std::size_t>(column)];
-    if (dx < 0) std::swap(tex_box.x, tex_box.z); // mirror
-    return tex_box;
-}
-
-// -----------------------------------------------------------------------------
 // Sprites
 // -----------------------------------------------------------------------------
+
+std::uint32_t heading_index(glm::vec2 heading, std::uint32_t headings) {
+    // Angle from down the screen, counter-clockwise, in headings
+    constexpr float TAU = 6.28318531f;
+    const float turns = std::atan2(heading.x, -heading.y) / TAU * static_cast<float>(headings);
+    const auto  n     = static_cast<std::int64_t>(std::lround(turns));
+    const auto  h     = static_cast<std::int64_t>(headings);
+    return static_cast<std::uint32_t>(((n % h) + h) % h);
+}
 
 const glm::vec4* sprite_bounds(const Entity& entity) {
     if (entity.is_type<Unit>() || entity.is_type<Character>()) return &FIGURE_SPRITE_BOUNDS;
@@ -56,25 +38,26 @@ glm::vec4 sprite_view_box(const Projection&         proj, glm::vec2 pos, glm::ve
     return glm::vec4{ feet, feet } + bounds * proj.tile_size().x;
 }
 
-void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                    glm::vec4 tex_box, glm::vec2 pos, glm::vec4 bounds)
+void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
+                    Nezumi::Render::SpriteID sprite, glm::vec2 pos, bool mirrored)
 {
     // Sorted by the feet's view y: further up the screen draws first
     Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Entities);
-    params.material = atlas.material();
+    params.material = sheet.material();
     params.order    = y_sort_order(ctx.to_view(pos).y);
 
-    ctx.renderer.draw_sprite(
-        Nezumi::Render::Sprite{ .pos_box = sprite_view_box(ctx.proj, pos, bounds), .tex_box = tex_box },
-        params
-    );
+    const float scale = ctx.upright_scale() / SPRITE_PIXELS_PER_TILE;
+    ctx.renderer.draw_sprite(sheet.sprite_at(sprite, ctx.to_view(pos), scale, mirrored), params);
 }
 
-void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                 const FigureFrames& frames, glm::vec2 pos, Position2D facing)
+void draw_figure(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
+                 Nezumi::Render::AnimationID animation, glm::vec2 pos, Position2D facing,
+                 float seconds)
 {
-    const glm::vec4 tex_box = frames.pick(ctx.proj.dir_to_heading(facing.to_vec2()));
-    draw_sprite_at(ctx, atlas, tex_box, pos, FIGURE_SPRITE_BOUNDS);
+    const std::uint32_t headings = sheet.anim(animation).headings;
+    const std::uint32_t heading  = heading_index(ctx.proj.dir_to_heading(facing.to_vec2()), headings);
+    const auto frame = sheet.frame(animation, heading, seconds);
+    draw_sprite_at(ctx, sheet, frame.sprite, pos, frame.mirrored);
 }
 
 // -----------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 // =============================================================================
 // Draw/DrawUtils.hpp
 //
-// Small pieces the entity drawers share: picking a figure's frame from the
-// way it faces, healthbars, and the debug shapes (collision boxes, facing
+// Small pieces the entity drawers share: drawing sheet sprites at an
+// entity's feet, picking a figure's heading from the way it faces, healthbars, and the debug shapes (collision boxes, facing
 // arrows, outlines, ground circles).
 //
 // Positions passed in are WORLD positions; these project them (DrawContext).
@@ -12,12 +12,12 @@
 // =============================================================================
 
 #pragma once
-#include "Nezumi/Render/2D/Atlas/Atlas.hpp"
+#include "Nezumi/Render/2D/Sprite/SpriteSheet.hpp"
 #include "Nightmourn/Geometry/Area2D.hpp"
 #include "Nightmourn/Geometry/Position2D.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include <array>       // array
-#include <cstdint>     // uint8_t
+#include <cstdint>     // uint8_t, uint32_t
 #include <glm/glm.hpp> // vec2, vec4
 
 namespace Nightmourn {
@@ -26,32 +26,26 @@ class Entity;
 class EntityDamageable;
 
 // -----------------------------------------------------------------------------
-// FigureFrames
+// Sprites
 //
-// One atlas row of a walking figure (unit, character): 5 frames facing down,
-// down-right, right, up-right and up. The left-facing ones are the right ones
-// mirrored. Texture boxes are computed once, not per draw.
+// Sprites come from a Nezumi SpriteSheet (assets/graphics/sprites.json, packed
+// by tools/pack_sprites.py) and are drawn upright at their pivot, which is
+// the entity's feet. Art is painted at SPRITE_PIXELS_PER_TILE: a 64x128 px
+// figure frame is 0.5x1 tile, a 256x512 px tree 2x4.
 // -----------------------------------------------------------------------------
 
-struct FigureFrames {
-    static constexpr std::size_t HEADINGS = 5;
+inline constexpr float SPRITE_PIXELS_PER_TILE = 128.0f;
 
-    std::array<glm::vec4, HEADINGS> tex_boxes = {};
+// Which of an animation's `headings` (Nezumi::Render::Animation) a figure
+// with `heading` (see Projection::dir_to_heading) shows: 0 faces down the
+// screen, counting counter-clockwise (down-right, right, ...), in equal
+// sectors centered on each heading
+std::uint32_t heading_index(glm::vec2 heading, std::uint32_t headings);
 
-    // Frames of `frame_size` pixels, left to right from `row_origin` (the
-    // top-left pixel of the "down" frame)
-    static FigureFrames from_row(const Nezumi::Render::Atlas& atlas,
-                                 glm::vec2 row_origin, glm::vec2 frame_size);
-
-    // Texture box for a figure with heading `heading` (unit length; see
-    // Projection::dir_to_heading), mirrored when it faces left. 8 equal
-    // sectors of 45 degrees: (0, -1) faces down the screen.
-    glm::vec4 pick(glm::vec2 heading) const;
-};
-
-// Sprite boxes around an entity's feet (its position), in tiles of upright
-// size. A tree is 4x a figure's size each way (AoE2's trees tower over its
-// villagers). The tallest one sets DrawContext::VIEW_OVERHANG.
+// Pick boxes around an entity's feet (its position), in tiles of upright
+// size: the frame each sprite is painted in. A tree is 4x a figure's size
+// each way (AoE2's trees tower over its villagers). The tallest one sets
+// DrawContext::VIEW_OVERHANG.
 inline constexpr glm::vec4 FIGURE_SPRITE_BOUNDS = { -0.25f, -0.25f, 0.25f, 0.75f };
 inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -1.00f, -1.00f, 1.00f, 3.00f };
 
@@ -67,14 +61,16 @@ inline glm::vec4 figure_view_box(const Projection&         proj, glm::vec2 pos) 
     return sprite_view_box(proj, pos, FIGURE_SPRITE_BOUNDS);
 }
 
-// Draws the sprite `tex_box` of `atlas` at world `pos` in the box `bounds`
-// around its feet, y-sorted on DrawLayer::Entities
-void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                    glm::vec4 tex_box, glm::vec2 pos, glm::vec4 bounds);
+// Draws `sprite` of `sheet` with its pivot at world `pos`, y-sorted on
+// DrawLayer::Entities
+void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
+                    Nezumi::Render::SpriteID sprite, glm::vec2 pos, bool mirrored = false);
 
-// Draws a figure sprite at its feet, y-sorted on DrawLayer::Entities
-void draw_figure(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
-                 const FigureFrames& frames, glm::vec2 pos, Position2D facing);
+// Draws the frame of `animation` for a figure at world `pos` facing `facing`,
+// `seconds` into the animation, y-sorted on DrawLayer::Entities
+void draw_figure(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
+                 Nezumi::Render::AnimationID animation, glm::vec2 pos, Position2D facing,
+                 float seconds = 0.0f);
 
 // -----------------------------------------------------------------------------
 // Healthbars
