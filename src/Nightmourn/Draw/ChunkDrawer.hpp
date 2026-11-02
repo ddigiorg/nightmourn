@@ -50,11 +50,13 @@ public:
     // -------------------------------------------------------------------------
 
     struct Config {
+        // Ground texture, created with AtlasConfig::address_mode = Repeat
+        // so filtering and mips wrap across its edges
         const Nezumi::Render::Atlas* atlas = nullptr;
 
-        // Ground texture: pixel box in the atlas { x0, y0, x1, y1 }, y down,
-        // covering `grass_tiles` x `grass_tiles` tiles. The box must be square
-        // and seamless (its edges wrap).
+        // Pixel box of the ground in the atlas { x0, y0, x1, y1 }, y down
+        // (usually the whole image), covering `grass_tiles` x `grass_tiles`
+        // tiles. It must be square and seamless (its edges wrap).
         glm::vec4     grass       = {};
         std::uint32_t grass_tiles = 8;
 

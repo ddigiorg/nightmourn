@@ -2,15 +2,16 @@
 # tools/gen_meadow.py
 #
 # Generates the seamless 1024x1024 meadow ground texture (8x8 tiles of 128 px)
-# in Age of Empires II: DE's light, warm green, and pastes it into the game
-# atlas at its pixel box (AtlasPixels::Meadow in demos/01-player-armies).
+# in Age of Empires II: DE's light, warm green, as its own ground texture
+# (assets/graphics/meadow.png). The demos sample it with Repeat addressing, so
+# filtering and mips wrap across its edges (see ChunkDrawer).
 #
 # Tileable by construction: every noise layer is white noise filtered in the
 # frequency domain (so it is periodic), and blades and flowers that cross an
 # edge are drawn again on the other side. Deterministic (fixed seed).
 #
-#   python3 tools/gen_meadow.py                       # update assets/graphics/atlas.png
-#   python3 tools/gen_meadow.py --out meadow.png      # texture only, for a look
+#   python3 tools/gen_meadow.py                       # update assets/graphics/meadow.png
+#   python3 tools/gen_meadow.py --atlas atlas.png     # paste it into an atlas instead
 #
 # Needs numpy and Pillow.
 # ==============================================================================
@@ -132,14 +133,15 @@ for _ in range(120):
 meadow = Image.fromarray(img.astype(np.uint8), "RGB").convert("RGBA")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--atlas", default="assets/graphics/atlas.png")
+parser.add_argument("--out", default="assets/graphics/meadow.png",
+                    help="where to write the texture")
+parser.add_argument("--atlas", help="paste the texture into this atlas instead")
 parser.add_argument("--at", type=int, nargs=2, default=(0, 384), metavar=("X", "Y"),
-                    help="top-left pixel of the meadow in the atlas")
-parser.add_argument("--out", help="write the texture alone here instead of into the atlas")
+                    help="top-left pixel of the meadow in --atlas")
 args = parser.parse_args()
 
-if args.out:
-    meadow.save(args.out)
+if not args.atlas:
+    meadow.save(args.out, optimize=True)
 else:
     atlas = Image.open(args.atlas).convert("RGBA")
     x, y = args.at
