@@ -131,8 +131,9 @@ target_link_libraries(nightmourn PRIVATE nightmourn_game)
 nezumi_copy_assets(nightmourn ENGINE)
 
 # Repack the world sprite sheet (assets/graphics/sprites.json and its pages)
-# from the loose art in assets-src/sprites. Needs Python 3 and Pillow. The
-# output is committed, so a normal build doesn't run it:
+# from the loose art in assets-src/sprites. Needs Python 3, numpy, Pillow and
+# etcpak (BC7 KTX2 pages). The output is committed, so a normal build doesn't
+# run it:
 #   cmake --build --preset release --target pack-sprites
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_FOUND)

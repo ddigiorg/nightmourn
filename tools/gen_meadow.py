@@ -3,21 +3,24 @@
 #
 # Generates the seamless 1024x1024 meadow ground texture (8x8 tiles of 128 px)
 # in Age of Empires II: DE's light, warm green, as its own ground texture
-# (assets/graphics/meadow.png; its manifest meadow.json names the one sprite,
-# "meadow"). The demos sample it with Repeat addressing, so filtering and mips
+# (source assets-src/ground/meadow.png, and the game's BC7 texture with its
+# full mip chain, assets/graphics/meadow.ktx2, whose manifest meadow.json
+# names the one sprite, "meadow"). The demos sample it with Repeat addressing, so filtering and mips
 # wrap across its edges (see ChunkDrawer).
 #
 # Tileable by construction: every noise layer is white noise filtered in the
 # frequency domain (so it is periodic), and blades and flowers that cross an
 # edge are drawn again on the other side. Deterministic (fixed seed).
 #
-#   python3 tools/gen_meadow.py                       # update assets/graphics/meadow.png
-#   python3 tools/gen_meadow.py --out meadow.png      # somewhere else, for a look
+#   python3 tools/gen_meadow.py                       # update the PNG and assets/graphics/meadow.ktx2
+#   python3 tools/gen_meadow.py --out meadow.png --ktx2 ""   # a PNG somewhere else, for a look
 #
-# Needs numpy and Pillow.
+# Needs numpy and Pillow (and etcpak for the KTX2).
 # ==============================================================================
 
 import argparse
+import os
+import sys
 import numpy as np
 from PIL import Image
 
@@ -134,8 +137,14 @@ for _ in range(120):
 meadow = Image.fromarray(img.astype(np.uint8), "RGB").convert("RGBA")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--out", default="assets/graphics/meadow.png",
-                    help="where to write the texture (assets/graphics/meadow.json names it)")
+parser.add_argument("--out", default="assets-src/ground/meadow.png",
+                    help="where to write the source PNG")
+parser.add_argument("--ktx2", default="assets/graphics/meadow.ktx2",
+                    help="where to write the game's texture (BC7, full mip chain; meadow.json names it)")
 args = parser.parse_args()
 
 meadow.save(args.out, optimize=True)
+if args.ktx2:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import ktx2
+    ktx2.save(np.asarray(meadow), args.ktx2, levels=0, fmt="bc7")

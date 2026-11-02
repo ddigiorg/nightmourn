@@ -200,7 +200,8 @@ public:
         );
 
         // Sprites (units, trees) and ground
-        sheets_ = Nightmourn::WorldSheets::load(*renderer);
+        sheets_ = Nightmourn::WorldSheets::load(*renderer, Nightmourn::WorldSheets::Options::from_env());
+        engine.logger().info("{}", sheets_.describe());
 
         WorldDrawer::Config draw_config = {
             .chunks     = { .sheet = sheets_.ground  },

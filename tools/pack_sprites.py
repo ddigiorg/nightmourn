@@ -6,9 +6,14 @@
 #
 #   python3 tools/pack_sprites.py                      # assets-src/sprites -> assets/graphics/sprites*
 #   python3 tools/pack_sprites.py SRC OUT_DIR --name sprites --page-size 1024 --mip-levels 4
+#   python3 tools/pack_sprites.py --format png         # plain PNG pages, to look at
 #
-# or `cmake --build <build dir> --target pack-sprites`. Needs Pillow. The output
-# is committed, so building the game needs neither.
+# or `cmake --build <build dir> --target pack-sprites`. Needs numpy, Pillow and
+# etcpak. The output is committed, so building the game needs none of them.
+#
+# Pages are written as KTX2 (tools/ktx2.py): BC7, with mip_levels premultiplied
+# mips baked in, so the game uploads them as they are: 1 byte per pixel in VRAM
+# instead of 4, and no PNG decode or mip generation at startup.
 #
 # Source layout: one folder per object, holding its frames as PNGs and a
 # sprite.json describing them. Names are the folder's path under SRC:
@@ -50,7 +55,11 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import ktx2
 
 def fail(msg):
     sys.exit(f"pack_sprites: {msg}")
@@ -155,7 +164,9 @@ def main():
     parser.add_argument("out", nargs="?", default=root / "assets/graphics", type=Path)
     parser.add_argument("--name",       default="sprites", help="manifest <name>.json, pages <name>-<n>.png")
     parser.add_argument("--page-size",  default=1024, type=int)
-    parser.add_argument("--mip-levels", default=4,    type=int, help="levels the game creates the sheet with")
+    parser.add_argument("--mip-levels", default=4,    type=int, help="mip levels in each page (KTX2) or the game creates (PNG)")
+    parser.add_argument("--format",     default="bc7", choices=["bc7", "rgba8", "png"],
+                        help="KTX2 page format, or png for plain images")
     args = parser.parse_args()
 
     sprites, animations = load_sources(args.src)
@@ -167,10 +178,18 @@ def main():
     pages = pack(sprites, args.page_size, grid)
 
     args.out.mkdir(parents=True, exist_ok=True)
+    # Pages from an earlier pack (any format) would be left behind
+    for old in list(args.out.glob(f"{args.name}-*.png")) + list(args.out.glob(f"{args.name}-*.ktx2")):
+        old.unlink()
+
     page_files = []
     for i, page in enumerate(pages):
-        page_files.append(f"{args.name}-{i}.png")
-        page.save(args.out / page_files[-1], optimize=True)
+        if args.format == "png":
+            page_files.append(f"{args.name}-{i}.png")
+            page.save(args.out / page_files[-1], optimize=True)
+        else:
+            page_files.append(f"{args.name}-{i}.ktx2")
+            ktx2.save(np.asarray(page), args.out / page_files[-1], args.mip_levels, args.format)
 
     manifest = {
         "version":   1,

@@ -1,7 +1,7 @@
 {
     "version": 1,
     "page_size": [1024, 1024],
-    "pages": ["sprites-0.png"],
+    "pages": ["sprites-0.ktx2"],
     "sprites": [
         {"name": "trees/oak/01", "page": 0, "box": [488, 8, 718, 396], "offset": [25, 57], "pivot": [128, 384]},
         {"name": "trees/oak/02", "page": 0, "box": [248, 8, 473, 411], "offset": [29, 41], "pivot": [128, 384]},

@@ -93,7 +93,7 @@ Decisions for the rest of the roadmap to build on.
   - Group sprites drawn together onto the same page (units with units,
     terrain with terrain). Leave padding of at least `2^(mips-1)` px between
     sprites, so mips don't blend neighbors.
-- **File format: PNG for source art; a GPU container for shipping, later.**
+- **File format: PNG for source art; KTX2 (BC7) for shipping.** Done:
   - `.dds` is a container, not a pixel format. The AoE2: DE wiki lists its
     terrain `.dds` files as linear RGBA 8-bit, uncompressed. DDS (or KTX2)
     usually earns its keep with GPU block compression (BC1/BC3/BC7: 4-8x
@@ -101,13 +101,17 @@ Decisions for the rest of the roadmap to build on.
   - Raw RGBA8 files would load without a decode step but take about 2x
     PNG's disk space (1024² is 4 MB raw vs 1.8 MB for the meadow PNG),
     and no image editor opens them. Not worth it.
-  - So: keep PNGs in `assets/` as the source of truth. When load time or
-    VRAM matters, have the packer write KTX2/DDS (BC7, with mips) next to
-    them, and have the engine load those. Until then the engine loads
-    PNGs.
+  - So: PNGs in `assets-src/` are the source of truth. `tools/ktx2.py`
+    (used by `pack_sprites.py` and `gen_meadow.py`) writes BC7 KTX2 with
+    premultiplied mips into `assets/graphics/`, and Nezumi uploads them as
+    stored, decoding BC7 on the CPU only where the GPU lacks BPTC (macOS).
+    1 byte per pixel in VRAM instead of 4. `NIGHTMOURN_LOW_RES=1` skips
+    the largest level (a quarter of that again) until there's a settings
+    menu. The UI sheet stays PNG: small, and lossless for crisp edges.
 - **Mips: one source image, generated chain.** Author one full-size image
   and generate the levels (box filter in premultiplied alpha, see
-  `AtlasConfig::mip_levels`'s TODO), either at load or in the packer. A
+  `SpriteSheetConfig::mip_levels`), either at load or in the packer
+  (`tools/ktx2.py`, matching Nezumi's filter exactly). A
   DDS/KTX2 file stores the whole chain in one file, so "one file per level"
   only makes sense if someone hand-paints the small levels, which nobody
   does for terrain.

@@ -1,7 +1,7 @@
 {
     "version": 1,
     "page_size": [1024, 1024],
-    "pages": ["meadow.png"],
+    "pages": ["meadow.ktx2"],
     "sprites": [
         {"name": "meadow", "page": 0, "box": [0, 0, 1024, 1024]}
     ]
