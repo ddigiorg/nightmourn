@@ -171,18 +171,18 @@ static constexpr uint16_t   RESPAWN_TICKS = 180; // 3 s at 60 UPS
 static constexpr CharacterConfig HERO = {
     .name       = "hero",
     .max_health = 300,
-    .move_speed = 5.0f, // faster than any unit, so the hero can run away
+    .move_speed = 10.0f, // faster than any unit, so the hero can run away
 };
 
 static constexpr UnitConfig SOLDIER = {
     .name            = "soldier",
     .subtype         = EntitySubtypeID{ 0 },
     .max_health      = 100,
-    .move_speed      = 2.5f,
+    .move_speed      = 3.0f,
     .attack_damage   = 10,
     .attack_interval = 60,
     .attack_range    = 0.75f,
-    .aggro_radius    = 6.0f,
+    .aggro_radius    = 16.0f,
     .attack_windup   = 30, // the blow lands mid-swing
 };
 
@@ -198,11 +198,11 @@ static constexpr UnitConfig ARCHER = {
     .name            = "archer",
     .subtype         = EntitySubtypeID{ 1 },
     .max_health      = 60,
-    .move_speed      = 2.2f,
+    .move_speed      = 2.5f,
     .attack_damage   = 6,
-    .attack_interval = 45,
-    .attack_range    = 4.0f,
-    .aggro_radius    = 7.0f,
+    .attack_interval = 120,
+    .attack_range    = 10.0f,
+    .aggro_radius    = 16.0f,
     .attack_windup   = 25, // draw, aim, loose
     .projectile      = &ARROW,
 };
