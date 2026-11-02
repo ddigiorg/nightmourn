@@ -54,7 +54,7 @@ namespace {
         glm::vec4 color = SWING_COLOR;
         color.a *= 1.0f - t * 0.7f;
 
-        const Nezumi::Render::DrawParams params = world_layer(DrawLayer::EntityOverlay);
+        const Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::EntityOverlay);
         const float width = SWING_PIXELS * ctx.pixel_size;
         const auto at = [&](float u) {
             const float a = start + sweep * u;

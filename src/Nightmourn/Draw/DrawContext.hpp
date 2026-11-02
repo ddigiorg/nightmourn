@@ -28,6 +28,7 @@
 #include "Nightmourn/Geometry/Area2D.hpp"
 #include "Nightmourn/Geometry/Projection.hpp"
 #include "Nightmourn/Draw/DebugFlags.hpp"
+#include "Nightmourn/Draw/DrawLayers.hpp"
 
 namespace Nezumi::Render {
     class Camera2D;
@@ -62,6 +63,11 @@ struct DrawContext {
     // The tick about to run (World::get_tick), e.g. for UnitGroup::plan
     Nezumi::Tick tick = 0;
 
+    // The view overlay layers (EntityOverlay and up) draw through: World
+    // when the game is unlit, GameView::Overlay when GameLighting runs, so
+    // healthbars and debug shapes skip the darkness
+    Nezumi::Render::ViewID overlay_view = Nezumi::Render::View::World;
+
     // How far (tiles of upright size) the view is grown on every side: the
     // tallest sprite above its feet. A figure is 0.75 tiles tall, a tree 3.
     static constexpr float VIEW_OVERHANG = 3.0f;
@@ -84,6 +90,13 @@ struct DrawContext {
         const DebugFlags&                 debug);
 
     bool show(DebugFlag flag) const { return debug.is_on(flag); }
+
+    // DrawParams for a world layer: overlay layers through overlay_view
+    Nezumi::Render::DrawParams layer(std::uint8_t draw_layer) const {
+        Nezumi::Render::DrawParams params = world_layer(draw_layer);
+        if (draw_layer >= DrawLayer::EntityOverlay) params.view = overlay_view;
+        return params;
+    }
 
     glm::vec2 to_view(glm::vec2 world_pos) const { return proj.to_view(world_pos); }
 

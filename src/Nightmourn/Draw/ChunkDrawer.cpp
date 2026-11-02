@@ -130,7 +130,7 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Chunk& chunk) const {
     const glm::vec2 ax = ctx.proj.dir_to_view({ 1.0f, 0.0f });
     const glm::vec2 by = ctx.proj.dir_to_view({ 0.0f, 1.0f });
 
-    Nezumi::Render::DrawParams params = world_layer(DrawLayer::Ground);
+    Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Ground);
     params.material = config_.atlas->material();
 
     TileCoord tile;
@@ -154,7 +154,7 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Chunk& chunk) const {
 
 void ChunkDrawer::draw_grid_(DrawContext& ctx, const Chunk& chunk) const {
     const Area2D& bounds = chunk.bounds();
-    const Nezumi::Render::DrawParams params = world_layer(DrawLayer::GroundOverlay);
+    const Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::GroundOverlay);
 
     // Tile lines: the 31 interior lines on each axis, each the chunk's full
     // length, projected (straight lines stay straight). Skipped when tiles

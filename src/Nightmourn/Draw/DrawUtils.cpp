@@ -60,7 +60,7 @@ void draw_sprite_at(DrawContext& ctx, const Nezumi::Render::Atlas& atlas,
                     glm::vec4 tex_box, glm::vec2 pos, glm::vec4 bounds)
 {
     // Sorted by the feet's view y: further up the screen draws first
-    Nezumi::Render::DrawParams params = world_layer(DrawLayer::Entities);
+    Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Entities);
     params.material = atlas.material();
     params.order    = y_sort_order(ctx.to_view(pos).y);
 
@@ -96,7 +96,7 @@ void draw_healthbar(DrawContext& ctx, const EntityDamageable& entity) {
     glm::vec4 fill = back + glm::vec4{ border, border, -border, -border };
     fill.z = fill.x + (fill.z - fill.x) * entity.health_ratio();
 
-    constexpr Nezumi::Render::DrawParams params = world_layer(DrawLayer::EntityOverlay);
+    const Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::EntityOverlay);
     ctx.renderer.draw_rectangle(Nezumi::Render::Rectangle{ .pos_box = back, .color = { 0.0f, 0.0f, 0.0f, 1.0f } }, params);
     ctx.renderer.draw_rectangle(Nezumi::Render::Rectangle{ .pos_box = fill, .color = { 1.0f, 1.0f, 1.0f, 1.0f } }, params);
 }
@@ -125,7 +125,7 @@ void draw_facing_arrow(DrawContext& ctx, glm::vec2 pos, Position2D facing, glm::
             .angle    = std::atan2(dir.y, dir.x),
             .color    = color,
         },
-        world_layer(DrawLayer::Debug)
+        ctx.layer(DrawLayer::Debug)
     );
 }
 
@@ -133,7 +133,7 @@ void draw_outline(DrawContext& ctx, const Area2D& box, glm::vec4 color,
                   float pixels, std::uint8_t layer)
 {
     const float width = pixels * ctx.pixel_size;
-    const Nezumi::Render::DrawParams params = world_layer(layer);
+    const Nezumi::Render::DrawParams params = ctx.layer(layer);
     const std::array<glm::vec2, 4> corners = ctx.proj.box_to_view(box.to_vec4());
 
     // Each edge runs past both corners by half a width, so the corners are
@@ -154,7 +154,7 @@ void draw_view_outline(DrawContext& ctx, glm::vec4 box, glm::vec4 color,
 {
     const float width = pixels * ctx.pixel_size;
     const float h     = width * 0.5f;
-    const Nezumi::Render::DrawParams params = world_layer(layer);
+    const Nezumi::Render::DrawParams params = ctx.layer(layer);
 
     // Centered on the box's edges, each running half a width past the
     // corners so they close
@@ -175,7 +175,7 @@ void draw_ground_circle(DrawContext& ctx, glm::vec2 center, float radius, glm::v
                         float pixels, std::uint8_t layer)
 {
     const float width = pixels * ctx.pixel_size;
-    const Nezumi::Render::DrawParams params = world_layer(layer);
+    const Nezumi::Render::DrawParams params = ctx.layer(layer);
 
     // Top-down the circle kind is exact; a projected circle is an ellipse,
     // drawn as a ring of segments

@@ -30,6 +30,9 @@ enum class DebugFlag : std::uint8_t {
     ShowUnitBehaviorInfo,    // unit state dot, line to its target
     ShowUnitGroupInfo,       // group bounds, route, slots and stragglers
     ShowPheromones,          // per-chunk pheromone rings and gradient arrows
+    ShowLightMap,            // the light alone: ambient plus every light
+    ShowBloom,               // the bloom alone
+    DisableLighting,         // the world as drawn, no darkness or lights
     UseTopDownView,          // draw the world top-down instead of isometric
 
     Count

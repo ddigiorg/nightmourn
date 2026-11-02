@@ -57,7 +57,7 @@ void UnitDrawer::draw(DrawContext& ctx, const Unit& unit) const {
 void UnitDrawer::draw_behavior_(DrawContext& ctx, const Unit& unit) const {
     const glm::vec2 pos   = ctx.to_view(unit.position.to_vec2());
     const glm::vec4 color = STATE_COLORS[static_cast<std::size_t>(unit.state())];
-    const Nezumi::Render::DrawParams params = world_layer(DrawLayer::Debug);
+    const Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Debug);
 
     if (const Entity* target = ctx.world.get_entity(unit.target()); target && target->is_alive()) {
         ctx.renderer.draw_line(
