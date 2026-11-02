@@ -20,8 +20,8 @@ namespace {
     constexpr float     SLOT_GAP  = 3.0f;
 }
 
-InventoryMenu::InventoryMenu(const UIAtlas& atlas, Inventory& inventory)
-    : atlas_(&atlas)
+InventoryMenu::InventoryMenu(const UISheet& sheet, Inventory& inventory)
+    : sheet_(&sheet)
     , inventory_(&inventory)
     , slots_(inventory.size())
     , counts_(inventory.size())
@@ -49,7 +49,7 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open) {
         const auto& stack = inv.slot(i);
         if (!stack) continue;
         std::snprintf(counts_[i].data(), counts_[i].size(), "%u", static_cast<unsigned>(stack->count));
-        s.icon  = atlas_->item_icon(stack->item);
+        s.icon  = sheet_->item_icon(stack->item);
         s.count = counts_[i].data();
         s.value = stack->item.value(); // what an action bar slot points at
     }
@@ -57,7 +57,7 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open) {
     const Nezumi::UI::Context::ID    grid = ui.get_id("slots");
     const Nezumi::UI::SlotGridResult r    = ui.slot_grid(
         "slots", slots_, static_cast<int>(Player::INVENTORY_COLUMNS),
-        atlas_->item_slot_style(SLOT_SIZE, SLOT_GAP), ActionBar::DRAG_TYPE);
+        sheet_->item_slot_style(SLOT_SIZE, SLOT_GAP), ActionBar::DRAG_TYPE);
 
     // Only stacks from this grid move; an action bar shortcut dropped here
     // is just a shortcut, with no stack behind it

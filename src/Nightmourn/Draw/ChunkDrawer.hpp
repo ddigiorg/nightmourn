@@ -35,7 +35,7 @@
 #include <vector>      // vector
 
 namespace Nezumi::Render {
-    class Atlas;
+    class SpriteSheet;
 }
 
 namespace Nightmourn {
@@ -50,14 +50,15 @@ public:
     // -------------------------------------------------------------------------
 
     struct Config {
-        // Ground texture, created with AtlasConfig::address_mode = Repeat
-        // so filtering and mips wrap across its edges
-        const Nezumi::Render::Atlas* atlas = nullptr;
+        // Ground textures, a sheet created with
+        // SpriteSheetConfig::address_mode = Repeat so filtering and mips
+        // wrap across its edges
+        const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // Pixel box of the ground in the atlas { x0, y0, x1, y1 }, y down
-        // (usually the whole image), covering `grass_tiles` x `grass_tiles`
-        // tiles. It must be square and seamless (its edges wrap).
-        glm::vec4     grass       = {};
+        // The grass sprite in the sheet, covering `grass_tiles` x
+        // `grass_tiles` tiles. It must fill its page (so Repeat wraps it
+        // onto itself), be square and be seamless.
+        const char*   grass       = "meadow";
         std::uint32_t grass_tiles = 8;
 
         // Grid (Factorio's: plain black)
@@ -79,7 +80,8 @@ public:
     // Construction & Destruction
     // -------------------------------------------------------------------------
 
-    // `config.atlas` must outlive the drawer
+    // `config.sheet` must outlive the drawer. Throws if `config.grass`
+    // isn't in the sheet.
     explicit ChunkDrawer(const Config& config);
 
     // -------------------------------------------------------------------------
@@ -107,6 +109,7 @@ private:
 
     Config                 config_      = {};
     std::vector<glm::vec4> grass_cells_ = {}; // grass_tiles^2 texture boxes, row-major from cell (0, 0)
+    std::uint32_t          grass_layer_ = 0;  // the grass sprite's page
 };
 
 } // namespace Nightmourn

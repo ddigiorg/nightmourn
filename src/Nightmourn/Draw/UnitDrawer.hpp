@@ -9,8 +9,8 @@
 //   ShowUnitBehaviorInfo     dot colored by UnitState, and a line to the
 //                            unit's target (yellow chasing, red attacking)
 //
-// Sprites are one atlas row per faction for now (red, blue, ...). Once units
-// have their own art, the row comes from the unit's subtype as well.
+// Sprites are one figure animation per faction for now (red, blue, ...).
+// Once units have their own art, it comes from the unit's subtype as well.
 // =============================================================================
 
 #pragma once
@@ -18,10 +18,9 @@
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
 #include <array>       // array
-#include <glm/glm.hpp> // vec2
 
 namespace Nezumi::Render {
-    class Atlas;
+    class SpriteSheet;
 }
 
 namespace Nightmourn {
@@ -36,21 +35,19 @@ public:
     // -------------------------------------------------------------------------
 
     struct Config {
-        const Nezumi::Render::Atlas* atlas = nullptr;
+        const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // Size of one frame in the atlas (pixels)
-        glm::vec2 frame_size = { 64.0f, 128.0f };
-
-        // Top-left pixel of each faction's row of frames (see FigureFrames).
-        // A unit with no faction uses row 0.
-        std::array<glm::vec2, MAX_FACTIONS> faction_rows = {};
+        // Each faction's figure animation in the sheet. A faction left null
+        // uses faction 0's, and so does a unit with no faction.
+        std::array<const char*, MAX_FACTIONS> faction_figures = { "units/red/idle" };
     };
 
     // -------------------------------------------------------------------------
     // Construction & Destruction
     // -------------------------------------------------------------------------
 
-    // `config.atlas` must outlive the drawer
+    // `config.sheet` must outlive the drawer. Throws if an animation named
+    // in the config isn't in the sheet.
     explicit UnitDrawer(const Config& config);
 
     // -------------------------------------------------------------------------
@@ -71,8 +68,8 @@ private:
     // Members
     // -------------------------------------------------------------------------
 
-    const Nezumi::Render::Atlas*                   atlas_  = nullptr;
-    std::array<FigureFrames, MAX_FACTIONS> frames_ = {};
+    const Nezumi::Render::SpriteSheet*                    sheet_   = nullptr;
+    std::array<Nezumi::Render::AnimationID, MAX_FACTIONS> figures_ = {};
 };
 
 } // namespace Nightmourn

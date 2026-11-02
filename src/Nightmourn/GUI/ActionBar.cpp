@@ -132,14 +132,14 @@ void ActionBar::draw(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
     const auto at = [&](vec2 pos, vec2 size) { return Rect::from_size(origin + pos, size); };
 
     // Back to front: the slab, what sits on it, then the eagles over its ends
-    ui.draw_nine_slice(at({ PLATE_X, PLATE_Y }, PLATE_SIZE), atlas_->plate);
+    ui.draw_nine_slice(at({ PLATE_X, PLATE_Y }, PLATE_SIZE), sheet_->plate);
     draw_hp_bar_(ui, at({ CONTENT_X, HP_Y }, { CONTENT_W, HP_H }), hero);
-    ui.draw_image(at({ CONTENT_X + SLOTS_W, SLOTS_Y }, { DIVIDER_W, SLOT_SIZE.y }), atlas_->divider);
+    ui.draw_image(at({ CONTENT_X + SLOTS_W, SLOTS_Y }, { DIVIDER_W, SLOT_SIZE.y }), sheet_->divider);
     draw_slots_(ui, input, inventory);
     draw_buttons_(ui, input, menus);
 
-    ui.draw_image(at({ 0.0f, 0.0f }, EAGLE_SIZE), atlas_->eagle);
-    ui.draw_image(at({ BAR_SIZE.x - EAGLE_SIZE.x, 0.0f }, EAGLE_SIZE), atlas_->eagle.flipped_x());
+    ui.draw_image(at({ 0.0f, 0.0f }, EAGLE_SIZE), sheet_->eagle);
+    ui.draw_image(at({ BAR_SIZE.x - EAGLE_SIZE.x, 0.0f }, EAGLE_SIZE), sheet_->eagle.flipped_x());
 
     // The hp text last, so the bar's text is one run with nothing after it
     char hp[32];
@@ -168,7 +168,7 @@ void ActionBar::draw_hp_bar_(Nezumi::UI::Context& ui, const Rect& r, const Chara
     const Rect inner = r.shrink({ 1.0f, 1.0f });
     if (frac > 0.0f) {
         const Rect fill = { inner.min, { inner.min.x + std::round(inner.width() * frac), inner.max.y } };
-        ui.draw_image(fill, atlas_->fill, HP_FILL, 1.0f);
+        ui.draw_image(fill, sheet_->fill, HP_FILL, 1.0f);
     }
 
     // Tenths, as stone ticks over the fill (2 points: a box any thinner is
@@ -186,7 +186,7 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
     for (std::size_t i = 0; i < SLOT_COUNT; i++) {
         Nezumi::UI::Slot& s = slots[i];
         if (slots_[i]) {
-            s.icon  = atlas_->item_icon(*slots_[i]);
+            s.icon  = sheet_->item_icon(*slots_[i]);
             s.value = slots_[i]->value();
 
             // How many the player carries; none: dimmed, but still a shortcut
@@ -202,7 +202,7 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         s.flash = flash_[i] > 0 || input.is_held(Action::use_slot(i));
     }
 
-    const Nezumi::UI::SlotStyle style = atlas_->item_slot_style(SLOT_SIZE, SLOT_GAP);
+    const Nezumi::UI::SlotStyle style = sheet_->item_slot_style(SLOT_SIZE, SLOT_GAP);
 
     ui.set_next_pos({ CONTENT_X, SLOTS_Y });
     const Nezumi::UI::Context::ID grid = ui.get_id("slots");
@@ -250,13 +250,13 @@ void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& i
         if (it.clicked) menus.toggle(menu);
 
         const vec4 tint = it.held ? BUTTON_HELD : it.hovered ? BUTTON_HOVER : vec4(1.0f);
-        ui.draw_nine_slice(r, atlas_->button, tint);
+        ui.draw_nine_slice(r, sheet_->button, tint);
         if (open) ui.draw_rect(r.shrink({ 1.0f, 1.0f }), {}, 3.0f, OPEN_GLOW, 1.5f);
 
         const float push = it.held ? 1.0f : 0.0f;
         const Rect  icon = Rect::from_size(
             r.min + glm::round((BUTTON - vec2(ICON_SIZE)) * 0.5f) + vec2(0.0f, push), vec2(ICON_SIZE));
-        ui.draw_image(icon, atlas_->menu_icon(menu), (it.hovered || open) ? ICON_HOVER : ICON);
+        ui.draw_image(icon, sheet_->menu_icon(menu), (it.hovered || open) ? ICON_HOVER : ICON);
 
         // "Inventory (B)"
         char tip[64];

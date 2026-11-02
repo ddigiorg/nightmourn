@@ -29,7 +29,7 @@
 // =============================================================================
 
 #pragma once
-#include "Nightmourn/GUI/UIAtlas.hpp"
+#include "Nightmourn/GUI/UISheet.hpp"
 #include "Nezumi/UI/Rect.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include <array>    // array
@@ -69,10 +69,10 @@ public:
     // -------------------------------------------------------------------------
     // Construction
     //
-    // `atlas` must outlive the bar.
+    // `sheet` must outlive the bar.
     // -------------------------------------------------------------------------
 
-    explicit ActionBar(const UIAtlas& atlas) : atlas_(&atlas) {}
+    explicit ActionBar(const UISheet& sheet) : sheet_(&sheet) {}
 
     // -------------------------------------------------------------------------
     // Slots
@@ -113,7 +113,7 @@ private:
     void draw_slots_   (Nezumi::UI::Context& ui, const Nezumi::InputMap& input, const Inventory* inventory);
     void draw_buttons_ (Nezumi::UI::Context& ui, const Nezumi::InputMap& input, GameMenus& menus);
 
-    const UIAtlas* atlas_ = nullptr;
+    const UISheet* sheet_ = nullptr;
 
     std::array<std::optional<ItemID>, SLOT_COUNT> slots_  = {};
     std::array<std::uint8_t, SLOT_COUNT>                  flash_  = {}; // frames left drawn pressed

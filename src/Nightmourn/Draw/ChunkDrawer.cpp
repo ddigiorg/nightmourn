@@ -25,7 +25,7 @@ namespace Nightmourn {
 ChunkDrawer::ChunkDrawer(const Config& config)
     : config_(config)
 {
-    assert(config_.atlas      && "ChunkDrawer: config.atlas is null");
+    assert(config_.sheet       && "ChunkDrawer: config.sheet is null");
     assert(config_.grass_tiles && "ChunkDrawer: config.grass_tiles must be > 0");
 
     // Cut the grass texture into its cells, row-major with cell (0, 0) at the
@@ -34,17 +34,19 @@ ChunkDrawer::ChunkDrawer(const Config& config)
     // tile edge samples the right pixels, and the texture's own edges wrap
     // (Repeat addressing), so the last cell filters into the first at every
     // mip level.
+    const Nezumi::Render::SpriteRegion& grass = config_.sheet->region(config_.sheet->sprite(config_.grass));
+    grass_layer_ = grass.layer;
+
     const std::uint32_t n    = config_.grass_tiles;
-    const float         cell = (config_.grass.z - config_.grass.x) / static_cast<float>(n);
+    const glm::vec4     box  = grass.tex_box;
+    const glm::vec2     cell = glm::vec2(box.z - box.x, box.w - box.y) / static_cast<float>(n);
 
     grass_cells_.resize(static_cast<std::size_t>(n) * n);
     for (std::uint32_t cy = 0; cy < n; cy++) {
         for (std::uint32_t cx = 0; cx < n; cx++) {
-            const float x0 = config_.grass.x + cell * static_cast<float>(cx);
-            const float y0 = config_.grass.y + cell * static_cast<float>(n - 1 - cy);
-
-            const glm::vec4 pixels = { x0, y0, x0 + cell, y0 + cell };
-            grass_cells_[cy * n + cx] = config_.atlas->tex_box(pixels);
+            const float x0 = box.x + cell.x * static_cast<float>(cx);
+            const float y0 = box.y + cell.y * static_cast<float>(n - 1 - cy);
+            grass_cells_[cy * n + cx] = { x0, y0, x0 + cell.x, y0 + cell.y };
         }
     }
 }
@@ -126,7 +128,7 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Chunk& chunk) const {
     const glm::vec2 by = ctx.proj.dir_to_view({ 0.0f, 1.0f });
 
     Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Ground);
-    params.material = config_.atlas->material();
+    params.material = config_.sheet->material();
 
     TileCoord tile;
     for (tile.y = min.y; tile.y <= max.y; tile.y++) {
@@ -140,6 +142,7 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Chunk& chunk) const {
                 Nezumi::Render::Quad{
                     .corners = ctx.proj.box_to_view(tile.bounds().to_vec4()),
                     .tex_box = grass_cell_(tile.x, tile.y),
+                    .layer   = grass_layer_,
                 },
                 params
             );

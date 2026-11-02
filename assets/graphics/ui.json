@@ -1,0 +1,25 @@
+{
+    "version": 1,
+    "page_size": [1328, 208],
+    "pages": ["ui.png"],
+    "sprites": [
+        {"name": "eagle", "page": 0, "box": [0, 0, 160, 120]},
+        {"name": "plate", "page": 0, "box": [168, 0, 1318, 100]},
+        {"name": "slot", "page": 0, "box": [0, 128, 72, 200]},
+        {"name": "rim", "page": 0, "box": [80, 128, 152, 200]},
+        {"name": "button", "page": 0, "box": [160, 128, 204, 192]},
+        {"name": "divider", "page": 0, "box": [212, 128, 228, 200]},
+        {"name": "fill", "page": 0, "box": [236, 128, 252, 142]},
+        {"name": "menu/skills", "page": 0, "box": [260, 128, 300, 168]},
+        {"name": "menu/equipment", "page": 0, "box": [308, 128, 348, 168]},
+        {"name": "menu/inventory", "page": 0, "box": [356, 128, 396, 168]},
+        {"name": "menu/items", "page": 0, "box": [404, 128, 444, 168]},
+        {"name": "menu/options", "page": 0, "box": [452, 128, 492, 168]},
+        {"name": "menu/debug", "page": 0, "box": [500, 128, 540, 168]},
+        {"name": "menu/main", "page": 0, "box": [548, 128, 588, 168]},
+        {"name": "item/wood", "page": 0, "box": [604, 128, 676, 200]},
+        {"name": "item/stone", "page": 0, "box": [684, 128, 756, 200]},
+        {"name": "item/gold", "page": 0, "box": [764, 128, 836, 200]},
+        {"name": "item/food", "page": 0, "box": [844, 128, 916, 200]}
+    ]
+}

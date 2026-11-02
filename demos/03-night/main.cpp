@@ -29,6 +29,7 @@
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/Draw/WorldSheets.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
@@ -126,18 +127,6 @@ static constexpr ResourceConfig PINE = {
     .max_amount = 10,
 };
 
-namespace AtlasPixels {
-    constexpr glm::vec4     Meadow      = { 0.0f, 0.0f, 1024.0f, 1024.0f }; // in meadow.png
-    constexpr std::uint32_t MeadowTiles = 8;
-
-    constexpr glm::vec2 UnitSize   = { 64.0f, 128.0f };
-    constexpr glm::vec2 HeroOrigin = { 320.0f, 128.0f };
-
-    constexpr glm::vec2 TreeSize   = { 256.0f, 512.0f };
-    constexpr glm::vec2 OakOrigin  = {   0.0f, 1408.0f };
-    constexpr glm::vec2 PineOrigin = { 512.0f, 1408.0f };
-}
-
 static constexpr float HUD_MARGIN = 8.0f;
 static constexpr float HUD_GAP    = 12.0f;
 
@@ -176,32 +165,15 @@ public:
         // Lighting replaces the engine's single pass
         lighting_ = std::make_unique<GameLighting>(*engine.render(), *renderer);
 
-        atlas_ = renderer->create_atlas({
-            .name           = "demo-atlas",
-            .filepath       = "assets/graphics/atlas.png",
-            .mip_levels     = 4, // sprites sit on a 64 px grid (see demo 01)
-        }).object;
-
-        // Ground: its own texture so it can wrap (Repeat), with the full mip
-        // chain. Iso squashes it 2:1, so anisotropy keeps it from blurring,
-        // and a small negative bias keeps the grass detail crisp.
-        ground_ = renderer->create_atlas({
-            .name           = "meadow",
-            .filepath       = "assets/graphics/meadow.png",
-            .address_mode   = RHI::SamplerAddressMode::Repeat,
-            .mip_levels     = 0,
-            .max_anisotropy = 4.0f,
-            .lod_bias       = -0.5f,
-        }).object;
+        // Sprites (units, trees) and ground
+        sheets_ = Nightmourn::WorldSheets::load(*renderer);
 
         WorldDrawer::Config draw_config = {
-            .chunks     = { .atlas = ground_, .grass = AtlasPixels::Meadow, .grass_tiles = AtlasPixels::MeadowTiles },
-            .units      = { .atlas = atlas_, .frame_size = AtlasPixels::UnitSize },
-            .characters = { .atlas = atlas_, .frame_size = AtlasPixels::UnitSize, .row = AtlasPixels::HeroOrigin },
-            .resources  = { .atlas = atlas_, .tree_frame_size = AtlasPixels::TreeSize },
+            .chunks     = { .sheet = sheets_.ground  },
+            .units      = { .sheet = sheets_.sprites },
+            .characters = { .sheet = sheets_.sprites },
+            .resources  = { .sheet = sheets_.sprites },
         };
-        draw_config.resources.trees[static_cast<size_t>(TreeVariety::Oak )] = { AtlasPixels::OakOrigin,  2 };
-        draw_config.resources.trees[static_cast<size_t>(TreeVariety::Pine)] = { AtlasPixels::PineOrigin, 1 };
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         font_ = engine.ui()->font();
@@ -383,9 +355,8 @@ private:
 
     Render::Camera2D* world_camera_  = nullptr;
     Render::Camera2D* screen_camera_ = nullptr;
-    Render::Atlas*    atlas_         = nullptr;
-    Render::Atlas*    ground_        = nullptr;
     Render::Font*     font_          = nullptr;
+    Nightmourn::WorldSheets sheets_  = {};
 
     std::unique_ptr<CameraController> camera_controller_ = nullptr;
     std::unique_ptr<WorldDrawer>      world_drawer_      = nullptr;

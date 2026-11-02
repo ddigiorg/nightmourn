@@ -98,13 +98,14 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/UnitDrawer.cpp
     src/Nightmourn/Draw/UnitGroupDrawer.cpp
     src/Nightmourn/Draw/WorldDrawer.cpp
+    src/Nightmourn/Draw/WorldSheets.cpp
     src/Nightmourn/GUI/ActionBar.cpp
     src/Nightmourn/GUI/DebugMenu.cpp
     src/Nightmourn/GUI/GameMenus.cpp
     src/Nightmourn/GUI/InfoOverlay.cpp
     src/Nightmourn/GUI/InventoryMenu.cpp
     src/Nightmourn/GUI/Theme.cpp
-    src/Nightmourn/GUI/UIAtlas.cpp
+    src/Nightmourn/GUI/UISheet.cpp
     src/Nightmourn/Lighting/DayNight.cpp
     src/Nightmourn/Lighting/GameLighting.cpp
     src/Nightmourn/Lighting/LightDrawer.cpp
@@ -126,8 +127,22 @@ target_link_libraries(nightmourn PRIVATE nightmourn_game)
 
 # Copy the engine's runtime assets (shaders, fonts), then this game's assets/
 # folder on top, next to the executable. Game files override engine files with
-# the same path (e.g. assets/graphics/atlas.png).
+# the same path (e.g. assets/graphics/sprites.json).
 nezumi_copy_assets(nightmourn ENGINE)
+
+# Repack the world sprite sheet (assets/graphics/sprites.json and its pages)
+# from the loose art in assets-src/sprites. Needs Python 3 and Pillow. The
+# output is committed, so a normal build doesn't run it:
+#   cmake --build --preset release --target pack-sprites
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_FOUND)
+    add_custom_target(pack-sprites
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/pack_sprites.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Packing assets-src/sprites into assets/graphics/sprites.json"
+        VERBATIM
+    )
+endif()
 
 # ------------------------------------------------------------------------------
 # Demos

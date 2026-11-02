@@ -3,9 +3,10 @@
 #
 # Generates the tree sprites in the style of Age of Empires II: DE's
 # pre-rendered trees (dark green, lit from the upper left, with a soft ground
-# shadow to the lower right), and pastes them into the game atlas side by
-# side (AtlasPixels::Trees in demos/01-player-armies): two broadleaf oaks,
-# then a pine.
+# shadow to the lower right), as loose sprite sources for
+# tools/pack_sprites.py: two broadleaf oak looks, then a pine
+# (assets-src/sprites/trees/<variety>/<look>.png; each folder's sprite.json
+# lists the looks and the pivot).
 #
 # Each frame is 256x512 px, four times a unit frame (64x128) on each side,
 # and is drawn 2x4 tiles. The trunk's foot is the frame's pivot, 128 px above
@@ -21,13 +22,15 @@
 #         darker near the trunk, in the shadow of the one above it.
 # Drawn 2x supersampled, then box filtered down. Deterministic (fixed seeds).
 #
-#   python3 tools/gen_trees.py                       # update assets/graphics/atlas.png
-#   python3 tools/gen_trees.py --out trees.png       # sprites only, for a look
+#   python3 tools/gen_trees.py                       # update assets-src/sprites/trees
+#   python3 tools/gen_trees.py --out trees.png       # side by side, for a look
+#   python3 tools/pack_sprites.py                    # then repack
 #
 # Needs numpy and Pillow.
 # ==============================================================================
 
 import argparse
+import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -281,26 +284,22 @@ FRAMES = [
     lambda: make_oak (seed=23, crown_c=(130, 156), crown_r=(94, 124, 76),  trunk_top=196, lean=0.5),
     lambda: make_pine(seed=37, top_y=18, base_y=330, base_r=92, tiers=7),
 ]
+NAMES = [("oak", "01"), ("oak", "02"), ("pine", "01")] # files, by FRAMES
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--atlas", default="assets/graphics/atlas.png")
-parser.add_argument("--at", type=int, nargs=2, default=(0, 1408), metavar=("X", "Y"),
-                    help="top-left pixel of the first tree frame in the atlas")
-parser.add_argument("--out", help="write the sprites alone here instead of into the atlas")
+parser.add_argument("--out-dir", default="assets-src/sprites/trees",
+                    help="writes <variety>/<look>.png here (pack with tools/pack_sprites.py)")
+parser.add_argument("--out", help="write the sprites side by side in one image instead, for a look")
 args = parser.parse_args()
 
-sheet = Image.new("RGBA", (W * len(FRAMES), H), (0, 0, 0, 0))
-for i, make in enumerate(FRAMES):
-    sheet.paste(make(), (i * W, 0))
-
+frames = [make() for make in FRAMES]
 if args.out:
+    sheet = Image.new("RGBA", (W * len(frames), H), (0, 0, 0, 0))
+    for i, frame in enumerate(frames):
+        sheet.paste(frame, (i * W, 0))
     sheet.save(args.out)
 else:
-    atlas = Image.open(args.atlas).convert("RGBA")
-    x, y = args.at
-    if atlas.width < x + sheet.width or atlas.height < y + sheet.height:
-        grown = Image.new("RGBA", (max(atlas.width, x + sheet.width), max(atlas.height, y + sheet.height)), (0, 0, 0, 0))
-        grown.paste(atlas, (0, 0))
-        atlas = grown
-    atlas.paste(sheet, (x, y))
-    atlas.save(args.atlas, optimize=True)
+    for (variety, look), frame in zip(NAMES, frames):
+        path = os.path.join(args.out_dir, variety, f"{look}.png")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        frame.save(path, optimize=True)

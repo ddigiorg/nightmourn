@@ -1,0 +1,6 @@
+{
+    "pivot": [128, 384],
+    "variants": [
+        { "name": "looks", "files": ["01"] }
+    ]
+}

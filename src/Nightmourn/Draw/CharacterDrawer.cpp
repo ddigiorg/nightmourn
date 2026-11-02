@@ -76,10 +76,10 @@ namespace {
 // -----------------------------------------------------------------------------
 
 CharacterDrawer::CharacterDrawer(const Config& config)
-    : atlas_(config.atlas)
+    : sheet_(config.sheet)
 {
-    assert(atlas_ && "CharacterDrawer: config.atlas is null");
-    frames_ = FigureFrames::from_row(*atlas_, config.row, config.frame_size);
+    assert(sheet_ && "CharacterDrawer: config.sheet is null");
+    figure_ = sheet_->animation(config.figure);
 }
 
 // -----------------------------------------------------------------------------
@@ -89,7 +89,7 @@ CharacterDrawer::CharacterDrawer(const Config& config)
 void CharacterDrawer::draw(DrawContext& ctx, const Character& character) const {
     const glm::vec2 pos = character.position.to_vec2();
 
-    draw_figure   (ctx, *atlas_, frames_, pos, character.facing());
+    draw_figure   (ctx, *sheet_, figure_, pos, character.facing());
     draw_healthbar(ctx, character);
     draw_swing    (ctx, character);
 
