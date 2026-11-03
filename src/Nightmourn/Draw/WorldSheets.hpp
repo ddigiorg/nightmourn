@@ -11,8 +11,8 @@
 //   ground   one page per tile config's texture, sampled with Repeat so
 //            each wraps onto itself
 //
-//   const Configs  protos = Configs::load();
-//   const WorldSheets sheets = WorldSheets::load(*engine.renderer2d(), protos);
+//   const Configs     configs = Configs::load();
+//   const WorldSheets sheets  = WorldSheets::load(*engine.renderer2d(), configs);
 //   WorldDrawer::Config config = sheets.drawer_config();
 // =============================================================================
 
@@ -45,12 +45,13 @@ struct WorldSheets {
     const Nezumi::Render::SpriteSheet* ground  = nullptr;
 
     std::vector<std::pair<std::string, GroundTexture>> ground_textures; // by tile name
+    std::vector<std::string>                           tree_animations; // "tree/<name>", by variety
 
     // Throws if there's no tile config by that name
     const GroundTexture& ground_texture(std::string_view tile) const;
 
-    // A drawer config using these sheets, with the default figure and tree
-    // animation names and the "grass" tile's texture; change what differs
+    // A drawer config using these sheets, with the default figure, every
+    // tree config's looks and the "grass" tile's texture; change what differs
     WorldDrawer::Config drawer_config() const;
 
     // Creates both through the renderer, which owns them. Throws if a PNG

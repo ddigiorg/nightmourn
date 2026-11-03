@@ -31,9 +31,10 @@ ResourceDrawer::ResourceDrawer(const Config& config)
 {
     assert(sheet_ && "ResourceDrawer: config.sheet is null");
 
+    trees_.resize(config.trees.size());
     for (std::size_t v = 0; v < trees_.size(); v++) {
-        if (!config.trees[v]) continue;
-        const Nezumi::Render::AnimationID* id = sheet_->find_animation(config.trees[v]);
+        if (config.trees[v].empty()) continue;
+        const Nezumi::Render::AnimationID* id = sheet_->find_animation(config.trees[v].c_str());
         if (!id) continue;
         const Nezumi::Render::Animation& looks = sheet_->anim(*id);
         trees_[v] = { looks.first, looks.frames * looks.directions };

@@ -106,28 +106,6 @@ static constexpr std::array<TreeSpawn, 16> TREES = {{
     { {  1.0f, 13.0f }, false },
 }};
 
-static constexpr CharacterConfig HERO = {
-    .name       = "hero",
-    .max_health = 300,
-    .move_speed = 5.0f,
-};
-
-static constexpr ResourceConfig OAK = {
-    .name       = "oak",
-    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
-    .variety    = Nightmourn::to_variety(TreeVariety::Oak),
-    .item       = Nightmourn::Items::Wood,
-    .max_amount = 10,
-};
-
-static constexpr ResourceConfig PINE = {
-    .name       = "pine",
-    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
-    .variety    = Nightmourn::to_variety(TreeVariety::Pine),
-    .item       = Nightmourn::Items::Wood,
-    .max_amount = 10,
-};
-
 static constexpr float HUD_MARGIN = 8.0f;
 static constexpr float HUD_GAP    = 12.0f;
 
@@ -168,8 +146,8 @@ public:
 
         // Configs from data/, then the sprites (units, trees) and ground
         // they describe
-        const Nightmourn::Configs configs = Nightmourn::Configs::load();
-        sheets_ = Nightmourn::WorldSheets::load(*renderer, configs);
+        configs_ = Nightmourn::Configs::load();
+        sheets_  = Nightmourn::WorldSheets::load(*renderer, configs_);
 
         WorldDrawer::Config draw_config = sheets_.drawer_config();
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
@@ -183,9 +161,9 @@ public:
         });
 
         for (const TreeSpawn& t : TREES)
-            world_->create_entity<Resource>(surface_id_, t.position, t.pine ? PINE : OAK);
+            world_->create_entity<Resource>(surface_id_, t.position, configs_.tree(t.pine ? "pine" : "oak").resource);
 
-        player_.possess(world_->create_entity<Character>(surface_id_, HERO_SPAWN, HERO, faction_bit(0)));
+        player_.possess(world_->create_entity<Character>(surface_id_, HERO_SPAWN, configs_.character("hero").config, faction_bit(0)));
         snap_camera_ = true;
 
         // Start at dusk, so the first minute shows night falling
@@ -264,9 +242,17 @@ private:
     std::vector<LightSource> collect_lights_(const Nightmourn::World& world) {
         lights_.clear();
 
-        lights_.push_back(Lights::campfire(CAMPFIRE, 1));
+        // A light config (data/base/configs/lights.json), placed
+        const auto light = [&](std::string_view name, glm::vec2 position, std::uint32_t seed = 0) {
+            LightSource l = configs_.light(name).light;
+            l.position = position;
+            l.seed     = seed;
+            return l;
+        };
+
+        lights_.push_back(light("campfire", CAMPFIRE, 1));
         for (std::size_t i = 0; i < TORCHES.size(); i++)
-            lights_.push_back(Lights::torch(TORCHES[i], static_cast<std::uint32_t>(10 + i)));
+            lights_.push_back(light("torch", TORCHES[i], static_cast<std::uint32_t>(10 + i)));
 
         // Wisps drift around their points, bobbing
         const auto wisp_at = [&](glm::vec2 center, float phase) {
@@ -274,11 +260,15 @@ private:
             return center + glm::vec2(2.5f * std::cos(a), 1.5f * std::sin(a * 1.3f));
         };
         const float bob = 0.15f * std::sin(seconds_ * 2.0f);
-        lights_.push_back(Lights::wisp(wisp_at(WISP_FROST,  0.0f), { 0.30f, 0.60f, 1.00f }, 1.1f + bob));
-        lights_.push_back(Lights::wisp(wisp_at(WISP_ARCANE, 2.0f), { 0.75f, 0.30f, 1.00f }, 1.1f - bob));
+        lights_.push_back(light("wisp-frost",  wisp_at(WISP_FROST,  0.0f)));
+        lights_.push_back(light("wisp-arcane", wisp_at(WISP_ARCANE, 2.0f)));
+        lights_[lights_.size() - 2].glow_height += bob;
+        lights_[lights_.size() - 1].glow_height -= bob;
 
-        if (const Character* hero = player_.character(world); hero && LANTERNS[lantern_] > 0.0f)
-            lights_.push_back(Lights::hero_light(hero->position.to_vec2(), LANTERNS[lantern_]));
+        if (const Character* hero = player_.character(world); hero && LANTERNS[lantern_] > 0.0f) {
+            lights_.push_back(light("lantern", hero->position.to_vec2()));
+            lights_.back().radius = LANTERNS[lantern_];
+        }
 
         return lights_;
     }
@@ -348,6 +338,10 @@ private:
     // -------------------------------------------------------------------------
     // Members
     // -------------------------------------------------------------------------
+
+    // Before the world, so it outlives every entity pointing into it (the
+    // hero and trees are configs in data/base/configs)
+    Nightmourn::Configs configs_ = {};
 
     std::unique_ptr<Nightmourn::World> world_ = nullptr;
 

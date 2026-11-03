@@ -7,7 +7,7 @@
 // - The hero (white) is a Nightmourn::Character on the blue side, controlled
 //   by a Nightmourn::Player: W/A/S/D move in 8 directions and the camera
 //   follows.
-// - Each army is a front line of 5 soldier groups with 3 archer groups behind
+// - Each army is a front line of 5 warrior groups with 3 archer groups behind
 //   it, every group a block of 50 (5 ranks of 10 files). The groups (Nezumi
 //   Units and UnitGroups) attack-move across the field and fight. Groups that
 //   finish their route attack the nearest enemy group. Red units treat the
@@ -52,7 +52,6 @@
 #include "Nezumi/Input/Events/OnMouseButtonDown.hpp"
 #include "Nezumi/Input/Events/OnMouseMotion.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
-#include "Nightmourn/Projectile/ProjectileConfig.hpp"
 #include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/Unit/UnitGroup.hpp"
 #include "Nightmourn/Geometry/Area2D.hpp"
@@ -73,7 +72,6 @@
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include "Nightmourn/Item/Items.hpp"
-#include "Nightmourn/Resource/ResourceTypes.hpp"
 #include "Nightmourn/World/World.hpp"
 #include <algorithm>   // erase_if, max, min
 #include <array>       // array
@@ -111,19 +109,18 @@ namespace DemoAction {
 // diamonds in iso (a tile is 2 view units wide there)
 static constexpr float TILE_PIXELS = 32.0f;
 
-// Each army spawns a front line of soldier groups FRONT_X tiles from the
+// Each army spawns a front line of warrior groups FRONT_X tiles from the
 // middle, and a line of archer groups ARCHER_BACK tiles behind it. Every
-// group is a block of BLOCK_RANKS x BLOCK_FILES units. The lanes are the
-// groups' y; groups march straight across the field along them.
+// group is a "block" unit-group of BLOCK_UNITS units, its "columns" (from
+// data/) to a rank. The lanes are the groups' y; groups march straight
+// across the field along them.
 static constexpr size_t SIDE_COUNT  = 2;
 static constexpr float  FRONT_X     = 40.0f;
 static constexpr float  ARCHER_BACK = 6.0f; // a block is ~4 tiles deep
 
-static constexpr uint16_t BLOCK_RANKS = 5;  // rows, front to back
-static constexpr uint16_t BLOCK_FILES = 10; // units per rank
-static constexpr size_t   BLOCK_UNITS = BLOCK_RANKS * BLOCK_FILES;
+static constexpr size_t BLOCK_UNITS = 50;   // 5 ranks of 10
 
-static constexpr std::array<float, 5> SOLDIER_LANES = { -20.0f, -10.0f, 0.0f, 10.0f, 20.0f };
+static constexpr std::array<float, 5> WARRIOR_LANES = { -20.0f, -10.0f, 0.0f, 10.0f, 20.0f };
 static constexpr std::array<float, 3> ARCHER_LANES  = {  -10.0f,   0.0f, 10.0f };
 
 // Spawned units stand up to this far off their slot, so the blocks look
@@ -162,76 +159,16 @@ static constexpr std::array<Grove, 4> GROVES = {{
 static constexpr Position2D HERO_SPAWN    = { -FRONT_X - ARCHER_BACK - 8.0f, 0.0f };
 static constexpr uint16_t   RESPAWN_TICKS = 180; // 3 s at 60 UPS
 
-// -----------------------------------------------------------------------------
-// Configs
-//
-// Static storage, so they outlive every entity that points at them.
-// -----------------------------------------------------------------------------
+// The hero runs faster here than its config says, faster than any unit, so
+// it can get away from a fight
+static constexpr float HERO_MOVE_SPEED = 10.0f;
 
-static constexpr CharacterConfig HERO = {
-    .name       = "hero",
-    .max_health = 300,
-    .move_speed = 10.0f, // faster than any unit, so the hero can run away
-};
-
-static constexpr UnitConfig SOLDIER = {
-    .name            = "soldier",
-    .subtype         = EntitySubtypeID{ 0 },
-    .max_health      = 100,
-    .move_speed      = 3.0f,
-    .attack_damage   = 10,
-    .attack_interval = 60,
-    .attack_range    = 0.75f,
-    .aggro_radius    = 16.0f,
-    .attack_windup   = 30, // the blow lands mid-swing
-};
-
-// Dumb arrows (AoE2 before Ballistics): they fly to where the target stood
-// on release and hit whatever enemy is there on landing
-static constexpr ProjectileConfig ARROW = {
-    .name     = "arrow",
-    .guidance = ProjectileGuidance::Ground,
-    .speed    = 8.0f, // ~0.5 s at full range
-};
-
-static constexpr UnitConfig ARCHER = {
-    .name            = "archer",
-    .subtype         = EntitySubtypeID{ 1 },
-    .max_health      = 60,
-    .move_speed      = 2.5f,
-    .attack_damage   = 6,
-    .attack_interval = 120,
-    .attack_range    = 10.0f,
-    .aggro_radius    = 16.0f,
-    .attack_windup   = 25, // draw, aim, loose
-    .projectile      = &ARROW,
-};
-
-static constexpr ResourceConfig OAK = {
-    .name       = "oak",
-    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
-    .variety    = Nightmourn::to_variety(TreeVariety::Oak),
-    .item       = Nightmourn::Items::Wood,
-    .max_amount = 100,
-};
-
-static constexpr ResourceConfig PINE = {
-    .name       = "pine",
-    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
-    .variety    = Nightmourn::to_variety(TreeVariety::Pine),
-    .item       = Nightmourn::Items::Wood,
-    .max_amount = 100,
-};
-
-static constexpr UnitGroupConfig BLOCK = {
-    .name    = "block",
-    .spacing = 0.9f,
-    .columns = BLOCK_FILES,
-};
+// The units, groups, hero and trees are configs in data/base/configs
+// (Data/Configs.hpp): warrior, archer (firing arrows), block, hero, oak, pine
 
 struct SideStyle {
     const char* name;
-    glm::vec4   soldier;      // unit tints: human warriors blue, archers cyan;
+    glm::vec4   warrior;      // unit tints: human warriors blue, archers cyan;
     glm::vec4   archer;       //   undead warriors red, archers purple
     glm::vec4   color;        // group routes and slots
     float       direction;    // +1 marches right, -1 left
@@ -309,13 +246,23 @@ public:
 
         // Configs from data/, then the sprites (units, trees) and ground
         // they describe
-        const Nightmourn::Configs configs = Nightmourn::Configs::load();
-        sheets_ = Nightmourn::WorldSheets::load(*renderer, configs);
+        configs_ = Nightmourn::Configs::load();
+        sheets_  = Nightmourn::WorldSheets::load(*renderer, configs_);
+
+        const UnitPrototype& warrior = configs_.unit("warrior");
+        const UnitPrototype& archer  = configs_.unit("archer");
+        warrior_ = &warrior.config;
+        archer_  = &archer.config;
+        block_   = &configs_.unit_group("block").config;
+        oak_     = &configs_.tree("oak").resource;
+        pine_    = &configs_.tree("pine").resource;
+        hero_    = configs_.character("hero").config;
+        hero_.move_speed = HERO_MOVE_SPEED;
 
         WorldDrawer::Config draw_config = sheets_.drawer_config();
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
-            draw_config.units.looks[f][SOLDIER.subtype.value()] = { "figure", SIDES[f].soldier };
-            draw_config.units.looks[f][ARCHER.subtype.value()]  = { "figure", SIDES[f].archer  };
+            draw_config.units.looks[f][warrior_->subtype.value()] = { warrior.sprite.c_str(), SIDES[f].warrior };
+            draw_config.units.looks[f][archer_->subtype.value()]  = { archer.sprite.c_str(),  SIDES[f].archer  };
             draw_config.unit_groups.faction_colors[f] = SIDES[f].color;
             draw_config.chunks.faction_colors[f]      = SIDES[f].color;
         }
@@ -344,7 +291,7 @@ public:
         Nightmourn::apply_ui_theme(engine.ui()->style());
 
         // Action bar, with a few test items to use and drag around
-        ui_sheet_   = Nightmourn::UISheet::load(*renderer, configs);
+        ui_sheet_   = Nightmourn::UISheet::load(*renderer, configs_);
         action_bar_ = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         action_bar_->set_slot(0, Nightmourn::Items::Wood);
         action_bar_->set_slot(1, Nightmourn::Items::Stone);
@@ -471,6 +418,16 @@ private:
     // World
     // -------------------------------------------------------------------------
 
+    // Before the world, so it outlives every entity pointing into it
+    Nightmourn::Configs configs_ = {};
+
+    const UnitConfig*      warrior_ = nullptr;
+    const UnitConfig*      archer_  = nullptr;
+    const UnitGroupConfig* block_   = nullptr;
+    const ResourceConfig*  oak_     = nullptr;
+    const ResourceConfig*  pine_    = nullptr;
+    CharacterConfig        hero_    = {}; // name views configs_
+
     std::unique_ptr<Nightmourn::World> world_ = nullptr;
 
     // -------------------------------------------------------------------------
@@ -481,7 +438,7 @@ private:
         const EntityHandle hero = world.create_entity<Character>(
             /*.surface  = */surface_id_,
             /*.position = */HERO_SPAWN,
-            /*.config   = */HERO,
+            /*.config   = */hero_,
             /*.factions = */faction_bit(BLUE)
         );
         player_.possess(hero);
@@ -538,16 +495,16 @@ private:
                     center.y + rng.get<float>(-TREE_JITTER, TREE_JITTER),
                 };
                 const bool pine = noise(pine_grid, center.x, center.y) > PINE_STANDS;
-                world.create_entity<Resource>(surface_id_, position, pine ? PINE : OAK);
+                world.create_entity<Resource>(surface_id_, position, pine ? *pine_ : *oak_);
             }
         }
     }
 
-    // Per side: soldier groups in front, archer groups behind them
+    // Per side: warrior groups in front, archer groups behind them
     void spawn_sides_(Nezumi::Engine& engine) {
         for (FactionIndex f = 0; f < SIDE_COUNT; f++) {
-            for (float lane_y : SOLDIER_LANES) spawn_group_(engine, f, SOLDIER, FRONT_X,               lane_y);
-            for (float lane_y : ARCHER_LANES)  spawn_group_(engine, f, ARCHER,  FRONT_X + ARCHER_BACK, lane_y);
+            for (float lane_y : WARRIOR_LANES) spawn_group_(engine, f, *warrior_, FRONT_X,               lane_y);
+            for (float lane_y : ARCHER_LANES)  spawn_group_(engine, f, *archer_,  FRONT_X + ARCHER_BACK, lane_y);
         }
     }
 
@@ -563,15 +520,19 @@ private:
         const Position2D destination = {  dir * FRONT_X, lane_y };
 
         const EntityHandle group_handle = world.create_entity<UnitGroup>(
-            surface_id_, center, BLOCK, faction_bit(f));
+            surface_id_, center, *block_, faction_bit(f));
         UnitGroup* group = world.get_entity_as<UnitGroup>(group_handle);
+
+        // The block's shape, as the group will form it
+        const size_t files = block_->columns > 0 ? block_->columns : 10;
+        const size_t ranks = (BLOCK_UNITS + files - 1) / files;
 
         for (size_t i = 0; i < BLOCK_UNITS; i++) {
             // Rank 0 is the front; the block is centered on `center`
-            const float rank = static_cast<float>(i / BLOCK_FILES);
-            const float file = static_cast<float>(i % BLOCK_FILES);
-            const float forward = ((BLOCK_RANKS - 1) * 0.5f - rank) * BLOCK.spacing;
-            const float lateral = (file - (BLOCK_FILES - 1) * 0.5f) * BLOCK.spacing;
+            const float rank = static_cast<float>(i / files);
+            const float file = static_cast<float>(i % files);
+            const float forward = (static_cast<float>(ranks - 1) * 0.5f - rank) * block_->spacing;
+            const float lateral = (file - static_cast<float>(files - 1) * 0.5f) * block_->spacing;
 
             const Position2D position = {
                 center.x + dir * forward + engine.random().get<float>(-SPAWN_JITTER, SPAWN_JITTER),

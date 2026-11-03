@@ -401,7 +401,7 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 Trees are `Nightmourn::Resource`s (an `EntityResource`: they never tick; mining
 goes through `World::mine_entity` and `OnEntityMined`). `type_id` is
 Resource, `subtype_id` what it is (`ResourceType::Tree`), `variety_id` which
-one (`TreeVariety::Oak`, `Pine`), and `item` the `Nightmourn::ItemID` mining
+one (a tree config's place in `trees.json`: oak, pine), and `item` the `Nightmourn::ItemID` mining
 yields (`Items::Wood`). Decorative for now.
 
 - [x] The player mines trees: `CharacterCommand::mine_target`, a cooldown

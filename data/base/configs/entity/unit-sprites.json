@@ -1,0 +1,52 @@
+[
+    {
+        "type": "unit-sprite",
+        "name": "figure",
+        "animations": {
+            "idle": {
+                "filename": "__base__/graphics/entity/unit/figure/idle_mask.png",
+                "width": 64,
+                "height": 128,
+                "frame_count": 8,
+                "direction_count": 8,
+                "headings": 8,
+                "fps": 6,
+                "loop": true,
+                "pivot": [32, 96]
+            },
+            "walk": {
+                "filename": "__base__/graphics/entity/unit/figure/walk_mask.png",
+                "width": 64,
+                "height": 128,
+                "frame_count": 8,
+                "direction_count": 8,
+                "headings": 8,
+                "fps": 10,
+                "loop": true,
+                "pivot": [32, 96]
+            },
+            "attack": {
+                "filename": "__base__/graphics/entity/unit/figure/attack_mask.png",
+                "width": 64,
+                "height": 128,
+                "frame_count": 8,
+                "direction_count": 8,
+                "headings": 8,
+                "fps": 10,
+                "loop": true,
+                "pivot": [32, 96]
+            },
+            "death": {
+                "filename": "__base__/graphics/entity/unit/figure/death_mask.png",
+                "width": 64,
+                "height": 128,
+                "frame_count": 8,
+                "direction_count": 8,
+                "headings": 8,
+                "fps": 10,
+                "loop": false,
+                "pivot": [32, 96]
+            }
+        }
+    }
+]

@@ -18,9 +18,10 @@
 #pragma once
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
-#include <array>       // array
 #include <cstddef>     // size_t
 #include <cstdint>     // uint32_t
+#include <string>      // string
+#include <vector>      // vector
 
 namespace Nezumi::Render {
     class SpriteSheet;
@@ -35,14 +36,14 @@ public:
     // Config
     // -------------------------------------------------------------------------
 
-    static constexpr std::size_t TREE_VARIETIES = static_cast<std::size_t>(TreeVariety::Count);
-
     struct Config {
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
         // Looks animation of each tree variety in the sheet, indexed by
-        // TreeVariety. A variety left null, or not in the sheet, isn't drawn.
-        std::array<const char*, TREE_VARIETIES> trees = { "tree/oak", "tree/pine" };
+        // Resource::variety_id (WorldSheets::drawer_config fills it from the
+        // tree configs). A variety left empty, or not in the sheet, isn't
+        // drawn.
+        std::vector<std::string> trees = {};
     };
 
     // -------------------------------------------------------------------------
@@ -71,7 +72,7 @@ private:
     };
 
     const Nezumi::Render::SpriteSheet*  sheet_ = nullptr;
-    std::array<Looks, TREE_VARIETIES>   trees_ = {};
+    std::vector<Looks>                  trees_ = {};
 };
 
 } // namespace Nightmourn

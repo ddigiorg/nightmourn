@@ -1,20 +1,76 @@
 [
-    { "type": "sprite", "name": "eagle", "filename": "__base__/graphics/gui/eagle.png" },
-    { "type": "sprite", "name": "plate", "filename": "__base__/graphics/gui/plate.png", "border": [8, 8, 8, 8] },
-    { "type": "sprite", "name": "slot", "filename": "__base__/graphics/gui/slot.png", "border": [4, 4, 4, 4] },
-    { "type": "sprite", "name": "rim", "filename": "__base__/graphics/gui/rim.png", "border": [4, 4, 4, 4] },
-    { "type": "sprite", "name": "button", "filename": "__base__/graphics/gui/button.png", "border": [4, 4, 4, 4] },
-    { "type": "sprite", "name": "divider", "filename": "__base__/graphics/gui/divider.png" },
-    { "type": "sprite", "name": "fill", "filename": "__base__/graphics/gui/fill.png" },
-    { "type": "sprite", "name": "menu/skills", "filename": "__base__/graphics/gui/menu/skills.png" },
-    { "type": "sprite", "name": "menu/equipment", "filename": "__base__/graphics/gui/menu/equipment.png" },
-    { "type": "sprite", "name": "menu/inventory", "filename": "__base__/graphics/gui/menu/inventory.png" },
-    { "type": "sprite", "name": "menu/items", "filename": "__base__/graphics/gui/menu/items.png" },
-    { "type": "sprite", "name": "menu/options", "filename": "__base__/graphics/gui/menu/options.png" },
-    { "type": "sprite", "name": "menu/debug", "filename": "__base__/graphics/gui/menu/debug.png" },
-    { "type": "sprite", "name": "menu/main", "filename": "__base__/graphics/gui/menu/main.png" },
-    { "type": "sprite", "name": "item/wood", "filename": "__base__/graphics/gui/item/wood.png" },
-    { "type": "sprite", "name": "item/stone", "filename": "__base__/graphics/gui/item/stone.png" },
-    { "type": "sprite", "name": "item/gold", "filename": "__base__/graphics/gui/item/gold.png" },
-    { "type": "sprite", "name": "item/food", "filename": "__base__/graphics/gui/item/food.png" }
+    {
+        "type": "sprite",
+        "name": "eagle",
+        "filename": "__base__/graphics/gui/eagle.png"
+    },
+    {
+        "type": "sprite",
+        "name": "plate",
+        "filename": "__base__/graphics/gui/plate.png",
+        "border": [8, 8, 8, 8]
+    },
+    {
+        "type": "sprite",
+        "name": "slot",
+        "filename": "__base__/graphics/gui/slot.png",
+        "border": [4, 4, 4, 4]
+    },
+    {
+        "type": "sprite",
+        "name": "rim",
+        "filename": "__base__/graphics/gui/rim.png",
+        "border": [4, 4, 4, 4]
+    },
+    {
+        "type": "sprite",
+        "name": "button",
+        "filename": "__base__/graphics/gui/button.png",
+        "border": [4, 4, 4, 4]
+    },
+    {
+        "type": "sprite",
+        "name": "divider",
+        "filename": "__base__/graphics/gui/divider.png"
+    },
+    {
+        "type": "sprite",
+        "name": "fill",
+        "filename": "__base__/graphics/gui/fill.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/skills",
+        "filename": "__base__/graphics/gui/menu/skills.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/equipment",
+        "filename": "__base__/graphics/gui/menu/equipment.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/inventory",
+        "filename": "__base__/graphics/gui/menu/inventory.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/items",
+        "filename": "__base__/graphics/gui/menu/items.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/options",
+        "filename": "__base__/graphics/gui/menu/options.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/debug",
+        "filename": "__base__/graphics/gui/menu/debug.png"
+    },
+    {
+        "type": "sprite",
+        "name": "menu/main",
+        "filename": "__base__/graphics/gui/menu/main.png"
+    }
 ]

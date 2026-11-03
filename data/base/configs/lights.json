@@ -1,0 +1,67 @@
+[
+    {
+        "type": "light",
+        "name": "torch",
+        "color": [1.0, 0.56, 0.24],
+        "intensity": 1.8,
+        "radius": 5.5,
+        "core": 14.0,
+        "softness": 0.0,
+        "flicker": 0.8,
+        "glow_height": 1.15,
+        "glow_radius": 0.12,
+        "glow_intensity": 4.0
+    },
+    {
+        "type": "light",
+        "name": "campfire",
+        "color": [1.0, 0.45, 0.18],
+        "intensity": 2.4,
+        "radius": 7.5,
+        "core": 12.0,
+        "softness": 0.1,
+        "flicker": 1.0,
+        "glow_height": 0.25,
+        "glow_radius": 0.3,
+        "glow_intensity": 3.5
+    },
+    {
+        "type": "light",
+        "name": "lantern",
+        "color": [1.0, 0.9, 0.75],
+        "intensity": 1.1,
+        "radius": 4.0,
+        "core": 4.0,
+        "softness": 0.5,
+        "flicker": 0.0,
+        "glow_height": 0.0,
+        "glow_radius": 0.0,
+        "glow_intensity": 10.0
+    },
+    {
+        "type": "light",
+        "name": "wisp-frost",
+        "color": [0.3, 0.6, 1.0],
+        "intensity": 1.8,
+        "radius": 4.5,
+        "core": 6.0,
+        "softness": 0.4,
+        "flicker": 0.0,
+        "glow_height": 1.1,
+        "glow_radius": 0.14,
+        "glow_intensity": 6.0
+    },
+    {
+        "type": "light",
+        "name": "wisp-arcane",
+        "color": [0.75, 0.3, 1.0],
+        "intensity": 1.8,
+        "radius": 4.5,
+        "core": 6.0,
+        "softness": 0.4,
+        "flicker": 0.0,
+        "glow_height": 1.1,
+        "glow_radius": 0.14,
+        "glow_intensity": 6.0
+    }
+]

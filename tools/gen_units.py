@@ -16,7 +16,7 @@
 # labels never read mirrored: down, down-right, right, up-right, up,
 # up-left, left, down-left (counter-clockwise on screen, as heading_index
 # counts). Frames are 64x128 px with the feet at (32, 96);
-# data/base/configs/entity/units.json names them.
+# data/base/configs/entity/unit-sprites.json names them.
 #
 #   python3 tools/gen_units.py                    # write data/base/graphics/entity/unit/figure
 #   python3 tools/gen_units.py --out somewhere    # somewhere else, for a look

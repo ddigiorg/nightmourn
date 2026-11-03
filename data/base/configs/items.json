@@ -1,0 +1,26 @@
+[
+    {
+        "type": "item",
+        "name": "wood",
+        "icon": "__base__/graphics/gui/item/wood.png",
+        "stack_size": 100
+    },
+    {
+        "type": "item",
+        "name": "stone",
+        "icon": "__base__/graphics/gui/item/stone.png",
+        "stack_size": 100
+    },
+    {
+        "type": "item",
+        "name": "gold",
+        "icon": "__base__/graphics/gui/item/gold.png",
+        "stack_size": 50
+    },
+    {
+        "type": "item",
+        "name": "food",
+        "icon": "__base__/graphics/gui/item/food.png",
+        "stack_size": 20
+    }
+]

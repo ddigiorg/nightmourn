@@ -10,8 +10,8 @@
 //                            unit's target (yellow chasing, red attacking)
 //
 // Each unit has a look picked by its faction and its subtype
-// (UnitConfig::subtype): a unit config's sprites (data/base/configs/entity/
-// units.json) and the color they are tinted with. It plays the animation for
+// (UnitConfig::subtype): a unit-sprite config's animations (data/base/configs/
+// entity/unit-sprites.json) and the color they are tinted with. It plays the animation for
 // its UnitState: idle, walk, or attack, the attack stretched over
 // attack_interval from the start of the attack, so the hit or release
 // lands UnitConfig::attack_windup ticks into it.
@@ -34,8 +34,9 @@ class Unit;
 class UnitDrawer {
 public:
 
-    // Unit subtypes with a look of their own; higher ones use subtype 0's
-    static constexpr std::size_t MAX_SUBTYPES = 4;
+    // Unit subtypes with a look of their own; higher ones use subtype 0's.
+    // A unit config's subtype is its place among the unit configs.
+    static constexpr std::size_t MAX_SUBTYPES = 16;
 
     // -------------------------------------------------------------------------
     // Config
@@ -45,7 +46,7 @@ public:
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
         struct Look {
-            const char* unit  = nullptr;          // a unit config's name
+            const char* unit  = nullptr;          // a unit-sprite config's name
             glm::vec4   color = glm::vec4(1.0f);  // tints its (mask) sprites
         };
 

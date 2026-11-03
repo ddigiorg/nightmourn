@@ -1,0 +1,22 @@
+[
+    {
+        "type": "unit-group",
+        "name": "block",
+        "formation": "block",
+        "spacing": 0.9,
+        "columns": 10,
+        "aspect": 2.0,
+        "ranged_in_back": true,
+        "max_members": 512,
+        "march_speed_factor": 0.85,
+        "catch_up_gain": 4.0,
+        "straggler_distance": 1.5,
+        "slowdown_lag": 0.25,
+        "stop_lag": 2.0,
+        "min_speed_factor": 0.2,
+        "scan_interval": 15,
+        "disengage_ticks": 90,
+        "reform_lag": 0.3,
+        "reform_timeout": 300
+    }
+]

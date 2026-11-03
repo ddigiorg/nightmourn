@@ -4,10 +4,11 @@
 // Nightmourn's kinds of Resource, as the ids a Resource stores:
 //
 //   ResourceType  -> Entity::subtype_id    what it is: tree, stone, gold
-//   TreeVariety   -> Resource::variety_id  which tree: oak, pine
 //
-// World does the rest (mining, OnEntityMined, the item it yields); this file
-// only names the ids, and the ResourceConfigs say what each one is.
+// Which tree (Resource::variety_id: oak, pine) is data: a tree config's
+// place among the trees in data/ (Data/Configs.hpp). World does the rest
+// (mining, OnEntityMined, the item it yields); this file only names the ids,
+// and the ResourceConfigs say what each one is.
 // =============================================================================
 
 #pragma once
@@ -23,19 +24,8 @@ enum class ResourceType : std::uint16_t {
     BerryBush,
 };
 
-enum class TreeVariety : std::uint8_t {
-    Oak,
-    Pine,
-
-    Count
-};
-
 constexpr EntitySubtypeID to_subtype(ResourceType type) {
     return EntitySubtypeID{ static_cast<std::uint16_t>(type) };
-}
-
-constexpr ResourceVarietyID to_variety(TreeVariety variety) {
-    return ResourceVarietyID{ static_cast<std::uint8_t>(variety) };
 }
 
 constexpr bool is_tree(const Resource& resource) {

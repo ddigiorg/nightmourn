@@ -85,6 +85,7 @@ add_library(nightmourn_world STATIC
     src/Nightmourn/Chunk/Pheromones.cpp
     src/Nightmourn/Data/Configs.cpp
     src/Nightmourn/Item/Inventory.cpp
+    src/Nightmourn/Item/Items.cpp
     src/Nightmourn/Sector/Sector.cpp
     src/Nightmourn/Surface/Surface.cpp
     src/Nightmourn/Unit/Unit.cpp

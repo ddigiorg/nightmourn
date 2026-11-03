@@ -129,37 +129,6 @@ constexpr Render::DrawParams DRAW_PARAMS_HUD = {
 };
 
 // -----------------------------------------------------------------------------
-// Configs
-//
-// Static storage, so they outlive every entity that points at them.
-// -----------------------------------------------------------------------------
-
-static constexpr CharacterConfig HERO = {
-    .name          = "hero",
-    .max_health    = 300,
-    .move_speed    = 5.0f,
-    .mine_interval = 30, // a swing every 0.5 s
-    .mine_amount   = 1,
-    .mine_reach    = 2.0f,
-};
-
-static constexpr ResourceConfig OAK = {
-    .name       = "oak",
-    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
-    .variety    = Nightmourn::to_variety(TreeVariety::Oak),
-    .item       = Nightmourn::Items::Wood,
-    .max_amount = 10,
-};
-
-static constexpr ResourceConfig PINE = {
-    .name       = "pine",
-    .subtype    = Nightmourn::to_subtype(ResourceType::Tree),
-    .variety    = Nightmourn::to_variety(TreeVariety::Pine),
-    .item       = Nightmourn::Items::Wood,
-    .max_amount = 10,
-};
-
-// -----------------------------------------------------------------------------
 // MiningDemo
 // -----------------------------------------------------------------------------
 
@@ -202,8 +171,8 @@ public:
 
         // Configs from data/, then the sprites (units, trees) and ground
         // they describe
-        const Nightmourn::Configs configs = Nightmourn::Configs::load();
-        sheets_ = Nightmourn::WorldSheets::load(*renderer, configs);
+        configs_ = Nightmourn::Configs::load();
+        sheets_  = Nightmourn::WorldSheets::load(*renderer, configs_);
 
         WorldDrawer::Config draw_config = sheets_.drawer_config();
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
@@ -232,7 +201,7 @@ public:
         Nightmourn::apply_ui_theme(engine.ui()->style());
 
         // Action bar and inventory, both over the player's inventory
-        ui_sheet_       = Nightmourn::UISheet::load(*renderer, configs);
+        ui_sheet_       = Nightmourn::UISheet::load(*renderer, configs_);
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory());
 
@@ -347,6 +316,10 @@ private:
     // World
     // -------------------------------------------------------------------------
 
+    // Before the world, so it outlives every entity pointing into it (the
+    // hero and trees are configs in data/base/configs)
+    Nightmourn::Configs configs_ = {};
+
     std::unique_ptr<Nightmourn::World> world_ = nullptr;
 
     // -------------------------------------------------------------------------
@@ -357,7 +330,7 @@ private:
         player_.possess(world.create_entity<Character>(
             /*.surface  = */surface_id_,
             /*.position = */HERO_SPAWN,
-            /*.config   = */HERO,
+            /*.config   = */configs_.character("hero").config,
             /*.factions = */faction_bit(0)
         ));
         snap_camera_ = true;
@@ -365,7 +338,7 @@ private:
 
     void spawn_trees_(Nightmourn::World& world) {
         for (const TreeSpawn& t : TREES)
-            world.create_entity<Resource>(surface_id_, t.position, t.pine ? PINE : OAK);
+            world.create_entity<Resource>(surface_id_, t.position, configs_.tree(t.pine ? "pine" : "oak").resource);
     }
 
     // Removes what is left of every tree and plants them all again, full
