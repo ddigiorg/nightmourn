@@ -3,11 +3,14 @@
 //
 // Headless checks for Data/Configs: the shipped data/ loads, names every
 // config the game looks up, and points only at files that exist; a mod
-// replaces a base config by type and name; and broken configs throw
-// with their file and name. Test mods are written to a temp folder.
+// replaces a base config by type and name; configs name each other across
+// mods; and broken configs throw with their file and name. Test mods are
+// written to a temp folder.
 // =============================================================================
 
 #include "Nightmourn/Data/Configs.hpp"
+#include "Nightmourn/Item/Items.hpp"
+#include "Nightmourn/Resource/ResourceTypes.hpp"
 #include <cstdio>     // printf
 #include <cstdlib>    // EXIT_FAILURE, EXIT_SUCCESS
 #include <filesystem> // exists, path, temp_directory_path
@@ -53,14 +56,43 @@ static void test_shipped_data() {
 
     // What the drawers and UI look up by default
     {
-        const UnitSpriteConfig* u = p.find_unit("figure");
+        const UnitSpriteConfig* u = p.find_unit_sprite("figure");
         CHECK(u != nullptr);
         if (u) for (const char* anim : { "idle", "walk", "attack", "death" }) CHECK(u->animations.contains(anim));
     }
     CHECK(p.find_tree("oak") && p.find_tree("pine"));
+
+    // What the demos spawn, linked up
+    {
+        const UnitPrototype* warrior = p.find_unit("warrior");
+        const UnitPrototype* archer  = p.find_unit("archer");
+        CHECK(warrior && archer);
+        if (warrior && archer) {
+            CHECK(warrior->config.name == "warrior" && warrior->sprite == "figure");
+            CHECK(!warrior->config.projectile);
+            CHECK(archer->config.projectile && archer->config.projectile->name == "arrow");
+            CHECK(warrior->config.subtype != archer->config.subtype);
+        }
+        CHECK(p.find_unit_group("block") && p.find_unit_group("block")->config.columns == 10);
+        CHECK(p.find_character("hero") && p.find_character("hero")->config.max_health == 300);
+        const TreeConfig& oak = p.tree("oak");
+        CHECK(oak.resource.item == Items::Wood && oak.resource.subtype == to_subtype(ResourceType::Tree));
+        CHECK(oak.resource.variety != p.tree("pine").resource.variety);
+        for (const char* light : { "torch", "campfire", "lantern", "wisp-frost", "wisp-arcane" })
+            CHECK(p.find_light(light) != nullptr);
+    }
+
+    // Items, and what inventories now go by
+    {
+        const ItemPrototype* wood = p.find_item("wood");
+        CHECK(wood && wood->id == Items::Wood && !wood->icon.empty());
+        CHECK(p.find_item("food") && p.find_item("food")->id == Items::Food);
+        CHECK(item_name(Items::Gold) == "gold");
+        CHECK(item_stack_size(Items::Wood) == 100 && item_stack_size(Items::Food) == 20);
+    }
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
     for (const char* sprite : { "eagle", "plate", "slot", "rim", "button", "divider", "fill",
-                                "menu/skills", "menu/main", "item/wood", "item/food" }) {
+                                "menu/skills", "menu/main" }) {
         CHECK(p.find_sprite(sprite) != nullptr);
     }
     CHECK(p.find_sprite("plate")->border == glm::vec4(8.0f));
@@ -80,22 +112,39 @@ static void test_mods() {
 
     write(dir / "base/configs/a.json", R"([
         { "type": "tile", "name": "grass", "texture": { "filename": "__base__/grass.png", "tiles": 4 } },
-        { "type": "tree", "name": "oak", "pictures": [ { "filename": "__base__/oak.png" } ] }
+        { "type": "tree", "name": "oak", "pictures": [ { "filename": "__base__/oak.png" } ] },
+        { "type": "unit", "name": "archer", "max_health": 60, "projectile": "bolt" },
+        { "type": "item", "name": "wood", "stack_size": 100 }
     ])");
     write(dir / "zmod/configs/sub/b.json", R"([
         { "type": "tile", "name": "grass", "texture": { "filename": "__zmod__/lush.png", "tiles": 2 } },
-        { "type": "unit", "name": "x", "animations": {
+        { "type": "unit-sprite", "name": "x", "animations": {
             "walk": { "filename": "__base__/x.png", "width": 8, "height": 16, "frame_count": 4,
-                      "direction_count": 5, "headings": 8, "fps": 10, "pivot": [4, 12] } } }
+                      "direction_count": 5, "headings": 8, "fps": 10, "pivot": [4, 12] } } },
+        { "type": "unit", "name": "archer", "max_health": 80, "sprite": "x", "projectile": "bolt" },
+        { "type": "projectile", "name": "bolt", "guidance": "tracking" },
+        { "type": "item", "name": "rope", "stack_size": 5 },
+        { "type": "tree", "name": "birch", "item": "rope", "pictures": [ { "filename": "__zmod__/b.png" } ] }
     ])");
 
     const Configs p = Configs::load(dir.string());
     CHECK(p.tiles.size() == 1);
     CHECK(p.tiles[0].tiles == 2);
     CHECK(p.tiles[0].filename == (dir / "zmod" / "lush.png").string());
-    CHECK(p.trees.size() == 1 && !p.trees[0].pictures[0].pivot);
+    CHECK(p.trees.size() == 2 && !p.trees[0].pictures[0].pivot);
 
-    const AnimationConfig& walk = p.find_unit("x")->animations.at("walk");
+    // The mod's archer replaces base's whole, and fires the mod's bolt
+    const UnitPrototype& archer = p.unit("archer");
+    CHECK(p.units.size() == 1 && archer.config.max_health == 80 && archer.sprite == "x");
+    CHECK(archer.config.projectile && archer.config.projectile->guidance == ProjectileGuidance::Tracking);
+    CHECK(archer.config.attack_damage == UnitConfig{}.attack_damage); // left out: the C++ default
+
+    // Items and trees get ids by place; a mod's item comes after base's
+    CHECK(p.find_item("rope") && p.find_item("rope")->id == ItemID{ 1 });
+    CHECK(p.tree("birch").resource.item == ItemID{ 1 } && p.tree("birch").resource.variety == ResourceVarietyID{ 1 });
+    CHECK(item_name(ItemID{ 1 }) == "rope" && item_stack_size(ItemID{ 1 }) == 5);
+
+    const AnimationConfig& walk = p.find_unit_sprite("x")->animations.at("walk");
     CHECK(walk.filename == (dir / "base" / "x.png").string());
     CHECK(walk.width == 8 && walk.height == 16 && walk.frame_count == 4);
     CHECK(walk.direction_count == 5 && walk.headings == 8 && walk.fps == 10.0f && walk.loop);
@@ -121,8 +170,28 @@ static void test_errors() {
               .find("__<mod>__") != std::string::npos);
     CHECK(broken(R"([ { "type": "tree", "name": "t", "pictures": [ { "filename": "__nope__/oak.png" } ] } ])")
               .find("unknown mod 'nope'") != std::string::npos);
-    CHECK(broken(R"([ { "type": "unit", "name": "f", "animations": { "idle": { "filename": "__base__/f.png" } } } ])")
-              .find("unit 'f'") != std::string::npos); // no width
+    CHECK(broken(R"([ { "type": "unit-sprite", "name": "f", "animations": { "idle": { "filename": "__base__/f.png" } } } ])")
+              .find("unit-sprite 'f': animation 'idle': needs 'width'") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "max_heatlh": 5 } ])")
+              .find("unit 'u': unknown field 'max_heatlh'") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "max_health": -5 } ])")
+              .find("'max_health' must be a whole number from 0 to 65535") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "move_speed": "fast" } ])")
+              .find("'move_speed' must be a number") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "attack_interval": 10, "attack_windup": 10 } ])")
+              .find("'attack_windup' must be less than") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "projectile": "rock" } ])")
+              .find("bad.json: unit 'u': 'projectile' names no projectile 'rock'") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "sprite": "ghost" } ])")
+              .find("names no unit-sprite 'ghost'") != std::string::npos);
+    CHECK(broken(R"([ { "type": "unit", "name": "u", "collision_box": [[1, 0], [0, 1]] } ])")
+              .find("'collision_box' must have its min below its max") != std::string::npos);
+    CHECK(broken(R"([ { "type": "projectile", "name": "p", "guidance": "homing" } ])")
+              .find("'guidance' must be") != std::string::npos);
+    CHECK(broken(R"([ { "type": "item", "name": "stone" } ])")
+              .find("item 'stone': must be item number 2") != std::string::npos);
+    CHECK(broken(R"([ { "type": "tree", "name": "t", "item": "gem", "pictures": [ { "filename": "__base__/t.png" } ] } ])")
+              .find("'item' names no item 'gem'") != std::string::npos);
     CHECK(broken(R"([ { "type": "sprite", "name": "s", "filename": "__base__/s.png", "pivot": [1] } ])")
               .find("'pivot' must be [x, y]") != std::string::npos);
     fs::remove_all(dir);

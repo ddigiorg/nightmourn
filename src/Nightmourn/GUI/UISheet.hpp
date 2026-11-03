@@ -21,6 +21,7 @@
 #include <cstddef>     // size_t
 #include <cstdint>     // uint8_t
 #include <glm/glm.hpp> // vec2
+#include <vector>      // vector
 
 namespace Nezumi::Render {
     class Renderer2D;
@@ -45,14 +46,11 @@ inline constexpr std::size_t MENU_COUNT = 7;
 struct UISheet {
     static constexpr float DENSITY = 2.0f; // sheet pixels per UI point
 
-    // Sprite names of the menu glyphs, by Menu, and of the item icons, by
-    // ItemID (Items::Wood, Stone, Gold, Food)
+    // Sprite names of the menu glyphs, by Menu. Item icons come from the
+    // item configs' "icon" instead.
     static constexpr std::array<const char*, MENU_COUNT> MENU_ICON_NAMES = {
         "menu/skills", "menu/equipment", "menu/inventory", "menu/items",
         "menu/options", "menu/debug", "menu/main",
-    };
-    static constexpr std::array<const char*, 4> ITEM_ICON_NAMES = {
-        "item/wood", "item/stone", "item/gold", "item/food",
     };
 
     Nezumi::UI::Image     eagle   = {}; // crouched, faces right
@@ -64,7 +62,7 @@ struct UISheet {
     Nezumi::UI::Image     fill    = {}; // white bar fill, tinted when drawn
 
     std::array<Nezumi::UI::Image, MENU_COUNT>                     menu_icons = {};
-    std::array<Nezumi::UI::Image, ITEM_ICON_NAMES.size()>        item_icons = {};
+    std::vector<Nezumi::UI::Image>                               item_icons = {}; // by ItemID
 
     const Nezumi::UI::Image& menu_icon(Menu menu) const {
         return menu_icons[static_cast<std::size_t>(menu)];

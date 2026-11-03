@@ -78,7 +78,7 @@ void draw_figure(DrawContext& ctx, const Nezumi::Render::SpriteSheet& sheet,
 // Seconds per simulation tick (60 UPS), for timing animations by ticks
 inline constexpr float TICK_SECONDS = 1.0f / 60.0f;
 
-// A figure's animations in the sheet, packed from its unit config as
+// A figure's animations in the sheet, packed from its unit-sprite config as
 // "unit/<name>/<animation>". Any but idle may be missing, and then plays
 // idle. Throws if there's no idle.
 struct FigureAnimations {

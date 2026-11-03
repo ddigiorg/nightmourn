@@ -34,7 +34,7 @@ public:
     struct Config {
         const Nezumi::Render::SpriteSheet* sheet = nullptr;
 
-        // The characters' look: a unit config's name, and the color its
+        // The characters' look: a unit-sprite config's name, and the color its
         // (mask) sprites are tinted with
         const char* unit  = "figure";
         glm::vec4   color = glm::vec4(1.0f);

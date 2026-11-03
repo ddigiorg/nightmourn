@@ -1,0 +1,14 @@
+[
+    {
+        "type": "projectile",
+        "name": "arrow",
+        "guidance": "ground",
+        "speed": 8.0,
+        "arc": 0.25,
+        "max_height": 3.0,
+        "launch_height": 0.5,
+        "lead_target": false,
+        "hit_radius": 0.15,
+        "friendly_fire": false
+    }
+]

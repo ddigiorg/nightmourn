@@ -26,7 +26,7 @@ WorldDrawer::Config WorldSheets::drawer_config() const {
         .chunks     = { .sheet = ground, .grass_layer = grass.layer, .grass_tiles = grass.tiles },
         .units      = { .sheet = sprites },
         .characters = { .sheet = sprites },
-        .resources  = { .sheet = sprites },
+        .resources  = { .sheet = sprites, .trees = tree_animations },
     };
 }
 
@@ -35,7 +35,7 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Configs& configs) 
 
     // Figures and trees, packed into one sheet so they batch together
     NR::SpritePacker packer;
-    for (const UnitSpriteConfig& figure : configs.units) {
+    for (const UnitSpriteConfig& figure : configs.unit_sprites) {
         for (const auto& [name, a] : figure.animations) {
             packer.add_animation("unit/" + figure.name + "/" + name, NR::load_image(a.filename), {
                 .frame_width  = a.width,
@@ -56,6 +56,7 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Configs& configs) 
             packer.add_sprite("tree/" + tree.name + "/" + std::to_string(i), NR::load_image(pic.filename),
                               { .pivot = pic.pivot });
         }
+        sheets.tree_animations.push_back("tree/" + tree.name);
         packer.add_animation("tree/" + tree.name, NR::Animation{
             .first  = first,
             .frames = static_cast<std::uint32_t>(tree.pictures.size()),

@@ -1,10 +1,10 @@
 // =============================================================================
 // Data/Configs.hpp
 //
-// Everything the game reads from data/: what each kind of thing looks like
-// (and, later, its stats), the way Factorio's prototypes work. Adding a unit
-// look, a tree or a terrain is a PNG and a few lines of JSON, with no code
-// change or build step.
+// Everything the game reads from data/: what each kind of thing is, how it
+// plays and how it looks, the way Factorio's prototypes work. Adding a unit,
+// a tree, an item or a light is a few lines of JSON (and a PNG if it needs
+// one), with no code change or build step.
 //
 // ## Layout
 //
@@ -16,26 +16,54 @@
 //         terrain/meadow.png
 //         gui/eagle.png
 //       configs/                  JSON, any file names and folders
-//         entity/units.json
-//         entity/trees.json
-//         tiles.json
-//         gui.json
+//         entity/units.json         unit         warrior, archer
+//         entity/unit-sprites.json  unit-sprite  figure
+//         entity/unit-groups.json   unit-group   block
+//         entity/projectiles.json   projectile   arrow
+//         entity/characters.json    character    hero
+//         entity/trees.json         tree         oak, pine
+//         items.json                item         wood, stone, gold, food
+//         lights.json               light        torch, campfire, lantern, ...
+//         tiles.json                tile         grass
+//         gui.json                  sprite       plate, slot, menu/...
 //
 // Every .json under a mod's configs/ holds an array of configs, each
 // with a "type" and a "name". Mods load in order (base first, then the rest
 // alphabetically, files sorted by path), and a later config with the same
-// type and name replaces the earlier one, so a mod can restyle the base game.
-// File names start with "__<mod>__/", the mod's folder.
+// type and name replaces the earlier one, so a mod can retune or restyle the
+// base game. File names start with "__<mod>__/", the mod's folder. A config
+// names another by its name ("projectile": "arrow"), and the names are
+// checked once every mod has loaded, so a mod can point at a base config and
+// the other way round.
+//
+// Any field but "type", "name" and the file names may be left out for the
+// C++ default (UnitConfig.hpp and friends document every field). A field
+// the type doesn't have is an error, so a typo can't go unnoticed.
+//
+// Units and durations are the C++ ones: distances in tiles, speeds in tiles
+// per second, durations in ticks (60 per second). Format the files with
+// tools/format_json.py.
 //
 // ## Types
 //
-//   unit     an upright unit look (units, characters): its animations by
-//            name, one sheet PNG each, a column per frame and a row per
-//            stored direction (see Nezumi's SpritePacker.hpp). The drawers
-//            tint it, so a "_mask" sheet (white where the color goes) serves
-//            every side
+//   unit         a kind of unit (Unit/UnitConfig.hpp): its stats, the
+//                "sprite" (a unit-sprite) it is drawn with, and for a ranged
+//                one the "projectile" it fires
 //
-//     { "type": "unit", "name": "figure",
+//     { "type": "unit", "name": "archer", "sprite": "figure",
+//       "max_health": 60, "move_speed": 2.5,
+//       "attack_damage": 6, "attack_interval": 120, "attack_windup": 25,
+//       "attack_range": 10.0, "aggro_radius": 16.0,
+//       "projectile": "arrow",                     // none: melee
+//       "collision_box": [[-0.25, -0.25], [0.25, 0.25]] }   // [min, max]
+//
+//   unit-sprite  an upright figure's look (units, characters): its
+//                animations by name, one sheet PNG each, a column per frame
+//                and a row per stored direction (see Nezumi's
+//                SpritePacker.hpp). The drawers tint it, so a "_mask" sheet
+//                (white where the color goes) serves every side
+//
+//     { "type": "unit-sprite", "name": "figure",
 //       "animations": {
 //         "idle": { "filename": "__base__/graphics/entity/unit/figure/idle_mask.png",
 //                   "width": 64, "height": 128,     // one frame, px
@@ -48,31 +76,86 @@
 //                   "fps": 6, "loop": true,         // (defaults 0, true)
 //                   "pivot": [32, 96] } } }         // feet, px in a frame, y down
 //
-//            Animations the drawers play: idle, walk, attack (frame 0 is
-//            the hit) and death; any but idle may be left out
+//                Animations the drawers play: idle, walk, attack (frame 0 is
+//                the hit) and death; any but idle may be left out
 //
-//   tree     a tree variety and its looks, one PNG each; a tree picks one
+//   unit-group   a kind of formation (Unit/UnitGroupConfig.hpp)
 //
-//     { "type": "tree", "name": "oak",
+//     { "type": "unit-group", "name": "block", "formation": "block",
+//       "spacing": 0.9, "columns": 10, ... }
+//
+//   projectile   a kind of projectile (Projectile/ProjectileConfig.hpp);
+//                "guidance" is "ground" or "tracking"
+//
+//     { "type": "projectile", "name": "arrow", "guidance": "ground",
+//       "speed": 8.0, "arc": 0.25, ... }
+//
+//   character    a kind of character, e.g. the player's hero
+//                (Character/CharacterConfig.hpp), and its "sprite"
+//
+//     { "type": "character", "name": "hero", "sprite": "figure",
+//       "max_health": 300, "move_speed": 5.0, "mine_interval": 30, ... }
+//
+//   tree         a tree variety: what mining it yields ("item", up to
+//                "max_amount" of it; Resource/ResourceConfig.hpp) and its
+//                looks, one PNG each; a tree picks one
+//
+//     { "type": "tree", "name": "oak", "item": "wood", "max_amount": 10,
+//       "collision_box": [[-0.4, -0.4], [0.4, 0.4]],
 //       "pictures": [ { "filename": "...", "pivot": [128, 384] }, ... ] }
 //
-//   tile     a ground texture covering `tiles` x `tiles` tiles, seamless
+//   item         something an inventory holds, its icon and how many fit
+//                in one slot
+//
+//     { "type": "item", "name": "wood",
+//       "icon": "__base__/graphics/gui/item/wood.png", "stack_size": 100 }
+//
+//   light        a light's look (Lighting/LightSource.hpp); the game places
+//                it. "color" is linear RGB
+//
+//     { "type": "light", "name": "torch", "color": [1.0, 0.56, 0.24],
+//       "intensity": 1.8, "radius": 5.5, "flicker": 0.8, ... }
+//
+//   tile         a ground texture covering `tiles` x `tiles` tiles, seamless
 //
 //     { "type": "tile", "name": "grass",
 //       "texture": { "filename": "__base__/graphics/terrain/meadow.png", "tiles": 8 } }
 //
-//   sprite   a lone image, e.g. a GUI piece, drawn at its full size;
-//            "border" keeps that many UI points unstretched when it is drawn
-//            as a nine-slice (left, top, right, bottom)
+//   sprite       a lone image, e.g. a GUI piece, drawn at its full size;
+//                "border" keeps that many UI points unstretched when it is
+//                drawn as a nine-slice (left, top, right, bottom)
 //
 //     { "type": "sprite", "name": "plate",
 //       "filename": "__base__/graphics/gui/plate.png", "border": [8, 8, 8, 8] }
 //
 // "pivot" defaults to the bottom center of the frame.
+//
+// ## Ids
+//
+// The simulation's ids come from load order, so they are the same on every
+// machine that loads the same mods: a unit's subtype is its place among the
+// units, a tree's variety its place among the trees, and an item's ItemID
+// its place among the items. The base items the code names (Items::Wood,
+// Stone, Gold, Food) must come first and in that order, so a mod adds items
+// after them and never reorders them.
+//
+// ## Lifetime
+//
+// Entities keep pointers to their configs (a Unit to its UnitConfig, and
+// that to its ProjectileConfig), so keep the Configs alive, and in one
+// place, as long as the world is. Configs can be moved (the configs inside
+// stay where they are) but not copied.
 // =============================================================================
 
 #pragma once
-#include <cstdint>     // uint32_t
+#include "Nightmourn/Character/CharacterConfig.hpp"
+#include "Nightmourn/Item/ItemID.hpp"
+#include "Nightmourn/Lighting/LightSource.hpp"
+#include "Nightmourn/Projectile/ProjectileConfig.hpp"
+#include "Nightmourn/Resource/ResourceConfig.hpp"
+#include "Nightmourn/Unit/UnitConfig.hpp"
+#include "Nightmourn/Unit/UnitGroupConfig.hpp"
+#include <cstdint>     // uint16_t, uint32_t
 #include <glm/glm.hpp> // vec2, vec4
 #include <map>         // map
 #include <optional>    // optional
@@ -105,25 +188,74 @@ struct PictureConfig {
 
 // -----------------------------------------------------------------------------
 // Configs by type
+//
+// The ones the simulation uses wrap its config (`config`), whose name views
+// `name` and whose ids and pointers are filled in once every mod has loaded.
 // -----------------------------------------------------------------------------
 
-// A "unit" config: how a kind of unit looks (not the simulation's UnitConfig)
+// "unit"
+struct UnitPrototype {
+    std::string name;
+    std::string sprite;     // a unit-sprite's name, or empty
+    std::string projectile; // a projectile's name, or empty for melee
+    UnitConfig  config;     // subtype: place among the units
+};
+
+// "unit-sprite": how a figure looks
 struct UnitSpriteConfig {
     std::string                            name;
     std::map<std::string, AnimationConfig> animations;
 };
 
+// "unit-group"
+struct UnitGroupPrototype {
+    std::string     name;
+    UnitGroupConfig config;
+};
+
+// "projectile"
+struct ProjectilePrototype {
+    std::string      name;
+    ProjectileConfig config;
+};
+
+// "character"
+struct CharacterPrototype {
+    std::string     name;
+    std::string     sprite; // a unit-sprite's name, or empty
+    CharacterConfig config;
+};
+
+// "tree": a Resource of subtype ResourceType::Tree
 struct TreeConfig {
-    std::string                   name;
+    std::string                name;
+    std::string                item;     // an item's name, or empty for none
+    ResourceConfig             resource; // variety: place among the trees
     std::vector<PictureConfig> pictures;
 };
 
+// "item"
+struct ItemPrototype {
+    std::string   name;
+    ItemID        id         = {}; // place among the items
+    std::string   icon;            // resolved file name, or empty
+    std::uint16_t stack_size = 1;
+};
+
+// "light": `light.position` and `light.seed` are the game's to set
+struct LightPrototype {
+    std::string name;
+    LightSource light;
+};
+
+// "tile"
 struct TileConfig {
     std::string   name;
     std::string   filename;
     std::uint32_t tiles = 1;
 };
 
+// "sprite"
 struct SpriteConfig {
     std::string              name;
     std::string              filename;
@@ -141,21 +273,51 @@ public:
     // Loads every mod under `data_dir`, relative to the executable's folder
     // (or absolute). File names come out as paths the same way:
     // "__base__/graphics/x.png" -> "<data_dir>/base/graphics/x.png". Throws
-    // naming the file and config on any error: bad JSON, an unknown type,
-    // a missing field, an unknown mod in a file name.
+    // naming the file and config on any error: bad JSON, an unknown type or
+    // field, a missing field, a value out of range, an unknown mod in a file
+    // name, or a name that doesn't match a config.
+    //
+    // Also makes the items the ones item_name() and item_stack_size() (and
+    // so inventories) go by.
     static Configs load(std::string_view data_dir = "data");
 
+    Configs()                          = default;
+    Configs(Configs&&)                 = default;
+    Configs& operator=(Configs&&)      = default;
+    Configs(const Configs&)            = delete; // entities point into it
+    Configs& operator=(const Configs&) = delete;
+
     // In load order; a replaced config keeps its first place
-    std::vector<UnitSpriteConfig> units;
-    std::vector<TreeConfig>       trees;
-    std::vector<TileConfig>       tiles;
-    std::vector<SpriteConfig>     sprites;
+    std::vector<UnitPrototype>       units;
+    std::vector<UnitSpriteConfig>    unit_sprites;
+    std::vector<UnitGroupPrototype>  unit_groups;
+    std::vector<ProjectilePrototype> projectiles;
+    std::vector<CharacterPrototype>  characters;
+    std::vector<TreeConfig>          trees;
+    std::vector<ItemPrototype>       items;
+    std::vector<LightPrototype>      lights;
+    std::vector<TileConfig>          tiles;
+    std::vector<SpriteConfig>        sprites;
 
     // Null if there's none by that name
-    const UnitSpriteConfig* find_unit  (std::string_view name) const;
-    const TreeConfig*       find_tree  (std::string_view name) const;
-    const TileConfig*       find_tile  (std::string_view name) const;
-    const SpriteConfig*     find_sprite(std::string_view name) const;
+    const UnitPrototype*       find_unit       (std::string_view name) const;
+    const UnitSpriteConfig*    find_unit_sprite(std::string_view name) const;
+    const UnitGroupPrototype*  find_unit_group (std::string_view name) const;
+    const ProjectilePrototype* find_projectile (std::string_view name) const;
+    const CharacterPrototype*  find_character  (std::string_view name) const;
+    const TreeConfig*          find_tree       (std::string_view name) const;
+    const ItemPrototype*       find_item       (std::string_view name) const;
+    const LightPrototype*      find_light      (std::string_view name) const;
+    const TileConfig*          find_tile       (std::string_view name) const;
+    const SpriteConfig*        find_sprite     (std::string_view name) const;
+
+    // The same, but throws naming the type if there's none, for configs the
+    // game can't do without
+    const UnitPrototype&       unit      (std::string_view name) const;
+    const UnitGroupPrototype&  unit_group(std::string_view name) const;
+    const CharacterPrototype&  character (std::string_view name) const;
+    const TreeConfig&          tree      (std::string_view name) const;
+    const LightPrototype&      light     (std::string_view name) const;
 
     // Every file name the configs use, for checks
     std::vector<std::string> filenames() const;

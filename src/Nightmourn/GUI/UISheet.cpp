@@ -21,6 +21,11 @@ UISheet UISheet::load(Nezumi::Render::Renderer2D& renderer, const Configs& confi
     for (const SpriteConfig& s : configs.sprites) {
         packer.add_sprite(s.name, NR::load_image(s.filename), { .pivot = s.pivot, .trim = false });
     }
+    // Item icons, as "item/<name>"
+    for (const ItemPrototype& item : configs.items) {
+        if (!item.icon.empty())
+            packer.add_sprite("item/" + item.name, NR::load_image(item.icon), { .trim = false });
+    }
 
     // Drawn at DENSITY sheet pixels per point, so usually minified 2x: one
     // extra level (the packer leaves 2 px between pieces for it)
@@ -41,7 +46,9 @@ UISheet UISheet::load(Nezumi::Render::Renderer2D& renderer, const Configs& confi
     a.fill    = image("fill");
 
     for (std::size_t i = 0; i < a.menu_icons.size(); i++) a.menu_icons[i] = image(MENU_ICON_NAMES[i]);
-    for (std::size_t i = 0; i < a.item_icons.size(); i++) a.item_icons[i] = image(ITEM_ICON_NAMES[i]);
+    for (const ItemPrototype& item : configs.items) {
+        a.item_icons.push_back(item.icon.empty() ? Image{} : image(("item/" + item.name).c_str()));
+    }
     return a;
 }
 

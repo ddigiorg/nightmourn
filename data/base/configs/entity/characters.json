@@ -1,0 +1,13 @@
+[
+    {
+        "type": "character",
+        "name": "hero",
+        "sprite": "figure",
+        "max_health": 300,
+        "move_speed": 5.0,
+        "mine_interval": 30,
+        "mine_amount": 1,
+        "mine_reach": 2.0,
+        "collision_box": [[-0.25, -0.25], [0.25, 0.25]]
+    }
+]

@@ -1,36 +1,29 @@
 [
     {
         "type": "unit",
-        "name": "figure",
-        "animations": {
-            "idle": {
-                "filename": "__base__/graphics/entity/unit/figure/idle_mask.png",
-                "width": 64, "height": 128,
-                "frame_count": 8, "direction_count": 8, "headings": 8,
-                "fps": 6, "loop": true,
-                "pivot": [32, 96]
-            },
-            "walk": {
-                "filename": "__base__/graphics/entity/unit/figure/walk_mask.png",
-                "width": 64, "height": 128,
-                "frame_count": 8, "direction_count": 8, "headings": 8,
-                "fps": 10, "loop": true,
-                "pivot": [32, 96]
-            },
-            "attack": {
-                "filename": "__base__/graphics/entity/unit/figure/attack_mask.png",
-                "width": 64, "height": 128,
-                "frame_count": 8, "direction_count": 8, "headings": 8,
-                "fps": 10, "loop": true,
-                "pivot": [32, 96]
-            },
-            "death": {
-                "filename": "__base__/graphics/entity/unit/figure/death_mask.png",
-                "width": 64, "height": 128,
-                "frame_count": 8, "direction_count": 8, "headings": 8,
-                "fps": 10, "loop": false,
-                "pivot": [32, 96]
-            }
-        }
+        "name": "warrior",
+        "sprite": "figure",
+        "max_health": 100,
+        "move_speed": 3.0,
+        "attack_damage": 10,
+        "attack_interval": 60,
+        "attack_windup": 30,
+        "attack_range": 0.75,
+        "aggro_radius": 16.0,
+        "collision_box": [[-0.25, -0.25], [0.25, 0.25]]
+    },
+    {
+        "type": "unit",
+        "name": "archer",
+        "sprite": "figure",
+        "max_health": 60,
+        "move_speed": 2.5,
+        "attack_damage": 6,
+        "attack_interval": 120,
+        "attack_windup": 25,
+        "attack_range": 10.0,
+        "aggro_radius": 16.0,
+        "projectile": "arrow",
+        "collision_box": [[-0.25, -0.25], [0.25, 0.25]]
     }
 ]
