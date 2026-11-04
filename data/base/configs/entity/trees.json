@@ -4,15 +4,15 @@
         "name": "oak",
         "item": "wood",
         "max_amount": 10,
-        "collision_box": [[-0.4, -0.4], [0.4, 0.4]],
+        "collision_box": [[0, 0], [0, 0]],
         "pictures": [
             {
                 "filename": "__base__/graphics/entity/tree/oak-01.png",
-                "pivot": [128, 384]
+                "pivot": [192, 576]
             },
             {
                 "filename": "__base__/graphics/entity/tree/oak-02.png",
-                "pivot": [128, 384]
+                "pivot": [192, 576]
             }
         ]
     },
@@ -21,11 +21,11 @@
         "name": "pine",
         "item": "wood",
         "max_amount": 10,
-        "collision_box": [[-0.4, -0.4], [0.4, 0.4]],
+        "collision_box": [[0, 0], [0, 0]],
         "pictures": [
             {
                 "filename": "__base__/graphics/entity/tree/pine-01.png",
-                "pivot": [128, 384]
+                "pivot": [192, 576]
             }
         ]
     }

@@ -7,11 +7,12 @@
 // "building/<name>" (WorldSheets): one frame, or 16 for a connecting wall,
 // whose frame is its Building::connections. Pictures are masks, like the
 // unit figures: white takes the owner faction's color, black stays black.
-// The art is isometric (tools/gen_buildings.py: boxes standing on their
-// footprint), drawn with its pivot on the footprint's center. A 1 x 1 is
-// y-sorted with the figures by that center; a bigger one is drawn in
-// vertical strips, each sorted by the footprint's front edge in its column,
-// so figures beside it are in front of or behind it as they should be.
+// The art is top-down (tools/gen_buildings.py: squares filling the
+// footprint, poles standing on its center), drawn with its pivot on the
+// footprint's center and y-sorted with the figures by the footprint's
+// bottom edge. In the isometric debug view a building bigger than 1 x 1 is
+// drawn in vertical strips instead, each sorted by the footprint's front
+// edge in its column.
 //
 // fill_ground() fills a world box on the ground (a diamond in iso) with a
 // color, for ghosts and the settlement's build area.

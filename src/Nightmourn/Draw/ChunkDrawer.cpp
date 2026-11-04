@@ -123,12 +123,33 @@ void ChunkDrawer::draw_tiles_(DrawContext& ctx, const Chunk& chunk) const {
         std::min(bounds.max.y, world.max.y) - 0.001f,
     });
 
+    Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Ground);
+    params.material = config_.sheet->material();
+
+    // Top-down, the visible tiles are a rectangle: one quad over all of
+    // them, its texture coordinates running past 1 so the meadow repeats
+    // (Repeat addressing) exactly as the per-tile cells would lay it out.
+    // A tile x, y gets cell (x, y) mod n, whose v runs from 1 - y/n at its
+    // bottom edge up to 1 - (y + 1)/n.
+    if (ctx.proj.is_top_down()) {
+        if (min.x > max.x || min.y > max.y) return;
+        const float n  = static_cast<float>(config_.grass_tiles);
+        const float x0 = static_cast<float>(min.x), x1 = static_cast<float>(max.x + 1);
+        const float y0 = static_cast<float>(min.y), y1 = static_cast<float>(max.y + 1);
+        ctx.renderer.draw_quad(
+            Nezumi::Render::Quad{
+                .corners = ctx.proj.box_to_view({ x0, y0, x1, y1 }),
+                .tex_box = { x0 / n, 1.0f - y1 / n, x1 / n, 1.0f - y0 / n },
+                .layer   = grass_layer_,
+            },
+            params
+        );
+        return;
+    }
+
     // Where world +x and +y land in view space
     const glm::vec2 ax = ctx.proj.dir_to_view({ 1.0f, 0.0f });
     const glm::vec2 by = ctx.proj.dir_to_view({ 0.0f, 1.0f });
-
-    Nezumi::Render::DrawParams params = ctx.layer(DrawLayer::Ground);
-    params.material = config_.sheet->material();
 
     TileCoord tile;
     for (tile.y = min.y; tile.y <= max.y; tile.y++) {

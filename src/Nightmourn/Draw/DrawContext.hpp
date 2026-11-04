@@ -69,15 +69,16 @@ struct DrawContext {
     Nezumi::Render::ViewID overlay_view = Nezumi::Render::View::World;
 
     // How far (tiles of upright size) the view is grown on every side: the
-    // tallest sprite above its feet. A figure is 0.75 tiles tall, a tree 3.
-    static constexpr float VIEW_OVERHANG = 3.0f;
+    // tallest sprite above its feet. A figure is 0.75 tiles tall, a tree 4.5.
+    static constexpr float VIEW_OVERHANG = 4.5f;
 
-    // The projection the game draws with: 2:1 isometric, or top-down while
-    // use-top-down-view is on. Input and picking use the same one, so call
-    // this wherever the game needs it rather than caching it across frames.
+    // The projection the game draws with: top-down (Factorio, Core Keeper),
+    // or 2:1 isometric while use-isometric-view is on. Input and picking use
+    // the same one, so call this wherever the game needs it rather than
+    // caching it across frames.
     static Projection projection(const DebugFlags& debug) {
-        return debug.is_on(DebugFlag::UseTopDownView) ? Projection::top_down()
-                                                      : Projection::iso_2to1();
+        return debug.is_on(DebugFlag::UseIsometricView) ? Projection::iso_2to1()
+                                                        : Projection::top_down();
     }
 
     // Context for drawing `world` through `camera` (the World view's camera)

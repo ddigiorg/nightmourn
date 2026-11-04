@@ -18,8 +18,8 @@
 //   still hit another enemy standing there.
 // - A dead hero respawns at the blue camp, behind the archers, after a few
 //   seconds.
-// - The world is drawn 2:1 isometric (use-top-down-view in the debug menu
-//   switches to top-down). The sim is the same either way: only drawing,
+// - The world is drawn top-down (use-isometric-view in the debug menu
+//   switches to 2:1 isometric). The sim is the same either way: only drawing,
 //   the move keys and mouse picking go through the projection.
 // - Forests line the top and bottom of the field, with groves behind each
 //   camp and lone trees scattered between: oaks, with stands of pines.
@@ -604,7 +604,7 @@ private:
     // Projection
     // -------------------------------------------------------------------------
 
-    // Iso unless use-top-down-view is on. Drawing, the move keys and picking
+    // Top-down unless use-isometric-view is on. Drawing, the move keys and picking
     // all ask here, so they always agree.
     Projection projection_() const { return DrawContext::projection(debug_flags_); }
 

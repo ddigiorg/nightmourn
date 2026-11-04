@@ -59,6 +59,9 @@ struct BuildingConfig {
     // Walls: joins up with the buildings next to it that also connect
     bool connects = false;
 
+    // Blocks movement over its footprint (false: a torch figures walk past)
+    bool solid = true;
+
     // Banners: the settlement it founds (its build area, inventory, ...)
     const SettlementConfig* settlement = nullptr;
 };

@@ -112,7 +112,7 @@ static constexpr float     HOVER_PIXELS  = 2.0f;
 
 // The outline hugs the trunk and crown rather than the whole frame (a tree
 // sprite has shadow and air around it): TREE_SPRITE_BOUNDS, shrunk
-static constexpr glm::vec4 TREE_HOVER_BOUNDS = { -0.80f, -0.35f, 0.80f, 2.85f };
+static constexpr glm::vec4 TREE_HOVER_BOUNDS = { -1.20f, -0.50f, 1.20f, 4.30f };
 
 // "+1 wood" over a chopped tree: rises this far (tiles) over its lifetime
 static constexpr Tick  POPUP_TICKS = 50;

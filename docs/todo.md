@@ -40,9 +40,14 @@ These change how later items are built, so they come first.
 
 ## Isometric
 
+**Reverted to top-down (Factorio, Core Keeper style) as the default view**
+for simpler logic, controls and drawing; isometric stays as the
+`use-isometric-view` debug toggle, and the plan below is on hold. Art
+(square buildings, larger trees) is top-down now.
+
 Phases 0 and 1 of the isometric plan are done: `Nightmourn::Projection`, the
 `Quad` kind, every drawer in view space, screen-relative WASD, tile and
-figure picking, and a `use-top-down-view` debug toggle. Decided: projection
+figure picking, and a debug toggle (now `use-isometric-view`). Decided: projection
 on the CPU in the drawers, square textures projected onto diamonds, flat
 world, footprint depth for buildings, 3D pre-rendered art, 64x32 tiles.
 
@@ -411,9 +416,11 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
 - [x] Building entity (banner, wall, torch, house, crafter, barracks), placement preview,
       territory outline and fill, wall painting, settlement inventory,
       spawn exclusion (demo 04-settlement).
-- [x] Isometric cube building art (`tools/gen_buildings.py`), torch (a
-      building with a `light`, drawn by `append_building_lights`), barracks,
-      day/night in demo 04-settlement.
+- [x] Top-down square building art (`tools/gen_buildings.py`), torch (a
+      building with a `light`, drawn by `append_building_lights`, not
+      `solid`), barracks, day/night in demo 04-settlement.
+- [x] Trees 1.5x bigger and without collision (`collision_box` of zeros);
+      they still keep buildings off the tile their trunk stands on.
 - [x] **Collision response**: figures slide along Collidable boxes one axis
       at a time (`Surface::slide_`), and may walk out of a box they start in.
 - [x] Gate building: a connecting wall its own faction walks through

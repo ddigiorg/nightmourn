@@ -69,16 +69,19 @@ public:
     {
         // Not Tickable or Active: it sleeps in its chunk's inactive list
         this->set_drawable();
-        this->set_collidable();
         this->set_selectable();
 
         subtype_id    = to_subtype(config.type);
         factions_mask = factions;
 
-        // The whole footprint, relative to its center
-        const Position2D half = Position2D(static_cast<float>(config.footprint.x),
-                                           static_cast<float>(config.footprint.y)) * 0.5f;
-        collision_bounds = Area2D(-half, half);
+        // Solid: the whole footprint, relative to its center, blocks
+        // movement. Otherwise (a torch) figures walk through it.
+        if (config.solid) {
+            this->set_collidable();
+            const Position2D half = Position2D(static_cast<float>(config.footprint.x),
+                                               static_cast<float>(config.footprint.y)) * 0.5f;
+            collision_bounds = Area2D(-half, half);
+        }
     }
 
     // Static buildings have nothing to do. Ticking ones override this.

@@ -1,7 +1,7 @@
 // =============================================================================
 // demos/04-settlement/main.cpp
 //
-// The player founds a settlement and lays out a base, in isometric view,
+// The player founds a settlement and lays out a base, seen top-down,
 // through the day and into the night.
 //
 // - 7 x 7 chunks of meadow, forests around the edges and a few trees near
@@ -168,7 +168,7 @@ static constexpr std::array<Position2D, 6> NEAR_TREES = {{
 static constexpr glm::vec4 HOVER_COLOR   = { 1.0f, 1.0f, 1.0f, 1.0f  };
 static constexpr glm::vec4 HOVER_TOO_FAR = { 1.0f, 1.0f, 1.0f, 0.35f };
 static constexpr float     HOVER_PIXELS  = 2.0f;
-static constexpr glm::vec4 TREE_HOVER_BOUNDS = { -0.80f, -0.35f, 0.80f, 2.85f };
+static constexpr glm::vec4 TREE_HOVER_BOUNDS = { -1.20f, -0.50f, 1.20f, 4.30f };
 static constexpr glm::vec4 FIGURE_HOVER_BOUNDS = { -0.45f, -0.20f, 0.45f, 1.30f };
 static constexpr glm::vec4 ENEMY_HOVER       = { 1.0f, 0.35f, 0.30f, 1.0f  };
 static constexpr glm::vec4 ENEMY_TOO_FAR     = { 1.0f, 0.35f, 0.30f, 0.35f };
@@ -228,7 +228,7 @@ public:
             /*.camera   = */renderer->get_view(Render::View::World),
             CameraControllerConfig{
                 .enable_drag_pan = false,
-                .zoom_init       = 0.6f,
+                .zoom_init       = 0.8f,
                 .zoom_min        = 0.2f,
                 .zoom_max        = 4.0f,
                 .follow_rate     = 0.0f,

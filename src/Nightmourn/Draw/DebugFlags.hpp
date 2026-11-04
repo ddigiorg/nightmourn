@@ -4,7 +4,7 @@
 // Visual debug options, like Factorio's F4 menu (show-info, show-world-grid,
 // show-collision-rectangles, ...). Each flag turns on one overlay in the
 // drawers or the HUD (show-info, see GUI/InfoOverlay), or changes how the
-// world is viewed (use-top-down-view); none of them changes the simulation.
+// world is viewed (use-isometric-view); none of them changes the simulation.
 //
 // The game owns one DebugFlags and hands it to the drawers through the
 // DrawContext, so there is no global state for a future draw thread to race
@@ -34,7 +34,7 @@ enum class DebugFlag : std::uint8_t {
     ShowLightMap,            // the light alone: ambient plus every light
     ShowBloom,               // the bloom alone
     DisableLighting,         // the world as drawn, no darkness or lights
-    UseTopDownView,          // draw the world top-down instead of isometric
+    UseIsometricView,        // draw the world 2:1 isometric instead of top-down
 
     Count
 };

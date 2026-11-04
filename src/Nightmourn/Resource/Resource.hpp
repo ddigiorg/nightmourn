@@ -51,11 +51,12 @@ public:
     {
         // Not Tickable or Active: it sleeps in its chunk's inactive list
         this->set_drawable();
-        this->set_collidable();
         this->set_selectable();
 
+        // A tree with no collision box ([[0, 0], [0, 0]]) doesn't block
         subtype_id       = config.subtype;
         collision_bounds = config.collision_bounds;
+        if (collision_bounds.min != collision_bounds.max) this->set_collidable();
     }
 
     // -------------------------------------------------------------------------

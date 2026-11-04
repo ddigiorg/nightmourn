@@ -121,11 +121,22 @@ void BuildingDrawer::draw(DrawContext& ctx, const Building& building) const {
     const glm::vec2 anchor    = anchor_of(footprint);
     const std::uint32_t frame = building.config().connects ? (building.connections % frames->count) : 0u;
 
-    if (footprint.width() > 1 || footprint.height() > 1)
-        draw_sliced_(ctx, frames->first + frame, footprint, faction_color(building.factions_mask));
-    else
-        draw_sprite_at(ctx, *sheet_, frames->first + frame, anchor, false,
-                       faction_color(building.factions_mask));
+    const glm::vec4 color = faction_color(building.factions_mask);
+    if (ctx.proj.is_top_down()) {
+        // Sorted by the footprint's bottom edge: a figure south of it draws
+        // over it, one north of it under it. One sprite, whatever the size.
+        NR::DrawParams params = ctx.layer(DrawLayer::Entities);
+        params.material = sheet_->material();
+        params.order    = y_sort_order(static_cast<float>(footprint.min.y));
+        const float scale = ctx.upright_scale() / SPRITE_PIXELS_PER_TILE;
+        NR::Sprite s = sheet_->sprite_at(frames->first + frame, ctx.to_view(anchor), scale);
+        s.tint = NR::rgba8(color);
+        ctx.renderer.draw_sprite(s, params);
+    } else if (footprint.width() > 1 || footprint.height() > 1) {
+        draw_sliced_(ctx, frames->first + frame, footprint, color);
+    } else {
+        draw_sprite_at(ctx, *sheet_, frames->first + frame, anchor, false, color);
+    }
 
     // Healthbar over the picture, as wide as the footprint (up to a limit)
     if (!building.is_full_health()) {

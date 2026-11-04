@@ -104,6 +104,8 @@ static void test_shipped_data() {
         CHECK(p.building("torch").config.type == BuildingType::Torch && p.building("torch").light == "building-torch");
         CHECK(p.building("barracks").config.type == BuildingType::Barracks);
         CHECK(p.building("gate").config.type == BuildingType::Gate && p.building("gate").config.connects);
+        CHECK(!p.building("torch").config.solid && p.building("wall").config.solid);
+        CHECK(p.tree("oak").resource.collision_bounds.min == p.tree("oak").resource.collision_bounds.max);
         CHECK(p.raid("night").config.unit == &p.unit("raider").config && p.raid("night").config.max_alive >= 1);
         CHECK(p.character("hero").config.attack_damage > 0);
         CHECK(p.building("barracks").config.footprint == TileCoord({ 3, 3 }));
