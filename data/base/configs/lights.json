@@ -14,6 +14,19 @@
     },
     {
         "type": "light",
+        "name": "building-torch",
+        "color": [1.0, 0.56, 0.24],
+        "intensity": 1.8,
+        "radius": 5.5,
+        "core": 14.0,
+        "softness": 0.0,
+        "flicker": 0.8,
+        "glow_height": 0.55,
+        "glow_radius": 0.12,
+        "glow_intensity": 4.0
+    },
+    {
+        "type": "light",
         "name": "campfire",
         "color": [1.0, 0.45, 0.18],
         "intensity": 2.4,

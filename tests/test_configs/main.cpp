@@ -101,7 +101,7 @@ static void test_shipped_data() {
         CHECK(p.building("crafter").config.footprint == TileCoord({ 3, 3 }));
         CHECK(p.building_for_item(p.find_item("house")->id) == p.find_building("house"));
         CHECK(!p.building_for_item(Items::Wood));
-        CHECK(p.building("torch").config.type == BuildingType::Torch && p.building("torch").light == "torch");
+        CHECK(p.building("torch").config.type == BuildingType::Torch && p.building("torch").light == "building-torch");
         CHECK(p.building("barracks").config.type == BuildingType::Barracks);
         CHECK(p.building("barracks").config.footprint == TileCoord({ 3, 3 }));
         CHECK(p.building_for_item(p.find_item("barracks")->id) == p.find_building("barracks"));

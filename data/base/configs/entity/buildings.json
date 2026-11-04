@@ -37,12 +37,12 @@
         "size": [1, 1],
         "max_health": 50,
         "item": "torch",
-        "light": "torch",
+        "light": "building-torch",
         "picture": {
             "filename": "__base__/graphics/entity/building/torch_mask.png",
             "width": 140,
-            "height": 236,
-            "pivot": [70, 198]
+            "height": 156,
+            "pivot": [70, 118]
         }
     },
     {

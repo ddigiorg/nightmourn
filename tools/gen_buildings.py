@@ -92,34 +92,37 @@ class Canvas:
 # ------------------------------------------------------------------------------
 
 def gen_cube(name, n, height, font_size):
-    """A box filling its n x n footprint, its name across the front corner."""
+    """A box filling its n x n footprint, its name centered on the top."""
     c = Canvas(n, n, height)
     inset = 0.06
     c.box(inset, inset, n - inset, n - inset, height)
-    c.label(name, (0.06, 0.06, height * 0.5), font_size)
+    c.label(name, (n / 2, n / 2, height), font_size)
     return c.image(), c.pivot()
 
 def gen_banner():
-    """A pole 2 tiles tall on a small plinth, a flag hanging from it."""
+    """A pole 2 tiles tall on a small plinth, and a flag facing the viewer,
+    centered on the pole: it hangs from a crossbar in the vertical plane
+    through the pole that faces the camera (x + y = 1)."""
     c = Canvas(1, 1, 270)
     c.box(0.3, 0.3, 0.7, 0.7, 10)                    # plinth
     c.box(0.46, 0.46, 0.54, 0.54, 256)               # pole
-    # The flag hangs off the pole toward the viewer's left: a flat sheet
-    # in the x = 0.5 plane, swallowtail at the bottom
-    top, bottom = 250, 120
-    c.face([(0.45, 0.5, top), (0.45, -0.25, top), (0.45, -0.25, bottom),
-            (0.45, 0.125, bottom + 22), (0.45, 0.5, bottom)], TOP)
-    c.label("banner", (0.45, 0.12, (top + bottom) / 2 + 20), 13)
+    top, bottom, half = 238, 118, 0.32
+    at = lambda t, z: (0.5 + t, 0.5 - t, z)          # t: across the flag
+    c.face([at(-half - 0.04, top + 7), at(half + 0.04, top + 7),
+            at(half + 0.04, top), at(-half - 0.04, top)], LEFT)   # crossbar
+    c.face([at(-half, top), at(half, top), at(half, bottom),
+            at(0, bottom + 24), at(-half, bottom)], TOP)          # swallowtail flag
+    c.label("banner", at(0, (top + bottom) / 2 + 14), 15)
     return c.image(), c.pivot()
 
 def gen_torch():
-    """A post on a plinth with a lit head: the light sits on top
-    (glow_height of the "torch" light, 1.15 upright tiles)."""
-    c = Canvas(1, 1, 160)
-    c.box(0.25, 0.25, 0.75, 0.75, 14)                # plinth
-    c.box(0.45, 0.45, 0.55, 0.55, 124)               # post
-    c.box(0.37, 0.37, 0.63, 0.63, 150, 120)          # head, where the flame is
-    c.label("torch", (0.25, 0.25, 30), 12)
+    """A short post with a lit head, all inside a 1 x 1 x 1 tile cube (78 px
+    tall at this projection): the "building-torch" light glows at the head
+    (glow_height 0.55 upright tiles, 70 px)."""
+    c = Canvas(1, 1, 80)
+    c.box(0.3, 0.3, 0.7, 0.7, 8)                     # plinth
+    c.box(0.45, 0.45, 0.55, 0.55, 60)                # post
+    c.box(0.37, 0.37, 0.63, 0.63, 78, 56)            # head, where the flame is
     return c.image(), c.pivot()
 
 def gen_wall_frame(bits, height):
@@ -131,7 +134,7 @@ def gen_wall_frame(bits, height):
     if bits & 4: boxes.append((a, 0.0, b, a, height))   # south, -y
     if bits & 8: boxes.append((0.0, a, a, b, height))   # west, -x
     c.boxes(boxes)
-    c.label("wall", (a, a, height * 0.5), 12)
+    c.label("wall", (0.5, 0.5, height), 12)
     return c.image(), c.pivot()
 
 def gen_wall():
