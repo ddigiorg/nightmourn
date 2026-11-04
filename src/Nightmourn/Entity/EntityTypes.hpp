@@ -14,5 +14,6 @@ inline constexpr EntityTypeID Unit     { 1 };
 inline constexpr EntityTypeID UnitGroup{ 2 };
 inline constexpr EntityTypeID Resource { 3 };
 inline constexpr EntityTypeID Character{ 4 };
+inline constexpr EntityTypeID Building { 5 };
 
 } // namespace Nightmourn::EntityTypes

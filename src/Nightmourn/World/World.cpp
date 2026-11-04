@@ -5,6 +5,7 @@
 #include "Nightmourn/World/World.hpp"
 
 #include "Nezumi/Core/Clock.hpp"
+#include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Events/OnSurfaceCreated.hpp"
 #include "Nightmourn/Entity/EntityDamageable.hpp"
 #include "Nightmourn/Entity/EntityResource.hpp"
@@ -133,6 +134,204 @@ void World::mine_entity(EntityHandle target, uint16_t amount, EntityHandle sourc
 }
 
 // -----------------------------------------------------------------------------
+// Buildings & Settlements
+// -----------------------------------------------------------------------------
+
+namespace {
+
+// The neighbour tile on each TileSide, and the side it sees us from
+struct Side {
+    std::uint8_t bit;
+    std::uint8_t opposite;
+    int32_t      dx, dy;
+};
+
+constexpr Side SIDES[4] = {
+    { TileSide::North, TileSide::South,  0,  1 },
+    { TileSide::East,  TileSide::West,   1,  0 },
+    { TileSide::South, TileSide::North,  0, -1 },
+    { TileSide::West,  TileSide::East,  -1,  0 },
+};
+
+// A footprint's world box, pulled in a hair so neighbours that only touch
+// along an edge don't count as overlapping
+Area2D inset_bounds(const TileRect& rect) {
+    Area2D box = rect.bounds();
+    box.min += 0.01f;
+    box.max -= 0.01f;
+    return box;
+}
+
+} // namespace
+
+PlacementResult World::check_placement(
+    SurfaceID             surface_id,
+    const BuildingConfig& config,
+    TileCoord             origin,
+    EntityFactionsMask    factions) const
+{
+    const Surface* surface = get_surface(surface_id);
+    assert(surface && "SurfaceID is not valid");
+
+    const TileRect footprint = TileRect::from_size(origin, config.footprint);
+
+    if (config.type == BuildingType::Banner) {
+        assert(config.settlement && "a banner's config needs a settlement config");
+        if (settlement_of(factions)) return PlacementResult::HasSettlement;
+
+        // Its build area, grown by the gap, may not reach another's
+        const TileRect area = TileRect::around(footprint.min, config.settlement->build_radius);
+        for (const auto& s : settlements_) {
+            if (!s || s->surface() != surface_id) continue;
+            const std::int32_t gap = std::max(config.settlement->min_gap, s->config().min_gap);
+            if (area.grow(gap).overlaps(s->build_area())) return PlacementResult::TooCloseToOther;
+        }
+    } else {
+        const Settlement* s = settlement_of(factions);
+        if (!s || s->surface() != surface_id) return PlacementResult::NoSettlement;
+        if (!s->build_area().contains(footprint)) return PlacementResult::OutsideBuildArea;
+        if (!s->is_free(footprint))               return PlacementResult::Occupied;
+    }
+
+    // Trees, and buildings no settlement holds any more
+    std::vector<EntityHandle> hits;
+    surface->find_colliding(inset_bounds(footprint), {}, hits);
+    if (!hits.empty()) return PlacementResult::Blocked;
+
+    return PlacementResult::Ok;
+}
+
+EntityHandle World::place_building(
+    SurfaceID             surface_id,
+    const BuildingConfig& config,
+    TileCoord             origin,
+    EntityFactionsMask    factions,
+    PlacementResult*      result)
+{
+    const PlacementResult r = check_placement(surface_id, config, origin, factions);
+    if (result) *result = r;
+    if (!is_ok(r)) return {};
+
+    const TileRect   footprint = TileRect::from_size(origin, config.footprint);
+    const Position2D center    = Building::center_of(config, origin);
+
+    if (config.type == BuildingType::Banner) {
+        const SettlementID id{ static_cast<SettlementID::value_t>(settlements_.size()) };
+        const EntityHandle banner = create_entity<Building>(surface_id, center, config, origin, factions, id);
+        settlements_.push_back(std::make_unique<Settlement>(
+            id, *config.settlement, surface_id, footprint.min, factions, banner));
+        Settlement* settlement = settlements_.back().get();
+
+        // Adopt the faction's buildings left standing in the new area by a
+        // fallen settlement, and keep everyone else's tiles taken
+        const Surface* surface = get_surface(surface_id);
+        surface->visit_entities_in(settlement->build_area().bounds(), [&](const Entity& e) {
+            if (!e.is_type<Building>()) return true;
+            Building& b = *get_entity_as<Building>(e.handle);
+            settlement->set_occupant_(b.footprint(), b.handle);
+            if (!b.settlement_id && b.is_friend(factions) && settlement->build_area().contains(b.footprint())) {
+                b.settlement_id = id;
+                settlement->building_count_++;
+            }
+            return true;
+        });
+        settlement->set_occupant_(footprint, banner);
+        settlement->building_count_++;
+        return banner;
+    }
+
+    Settlement* settlement = settlement_of(factions);
+    const EntityHandle handle = create_entity<Building>(surface_id, center, config, origin, factions, settlement->id());
+    settlement->set_occupant_(footprint, handle);
+    settlement->building_count_++;
+
+    // Join up with the walls next to it
+    if (config.connects && config.footprint == TileCoord{ 1, 1 }) {
+        Building& self = *get_entity_as<Building>(handle);
+        for (const Side& side : SIDES) {
+            Building* n = get_entity_as<Building>(settlement->building_at({ origin.x + side.dx, origin.y + side.dy }));
+            if (!n || n->is_pending_remove() || !n->config().connects) continue;
+            self.connections |= side.bit;
+            n->connections   |= side.opposite;
+        }
+    }
+    return handle;
+}
+
+void World::on_building_removed_(Building& building) {
+    const TileRect footprint = building.footprint();
+
+    // Free its tiles in every settlement that marked them (its own, and any
+    // that was founded around it while it stood unowned)
+    for (const auto& s : settlements_) {
+        if (!s || s->surface() != building.surface_id || !s->build_area().overlaps(footprint)) continue;
+        footprint.each([&](TileCoord t) {
+            if (s->building_at(t) == building.handle) s->set_occupant_(TileRect{ t, t }, {});
+        });
+    }
+
+    Settlement* settlement = get_settlement(building.settlement_id);
+    if (!settlement) return;
+    settlement->building_count_--;
+
+    // Its neighbours lose their connection to it
+    if (building.connections) {
+        for (const Side& side : SIDES) {
+            if (!(building.connections & side.bit)) continue;
+            if (Building* n = get_entity_as<Building>(settlement->building_at({ footprint.min.x + side.dx, footprint.min.y + side.dy })))
+                n->connections &= static_cast<std::uint8_t>(~side.opposite);
+        }
+    }
+
+    // A fallen banner disbands its settlement: the rest stand on, unowned
+    if (building.handle == settlement->banner()) {
+        settlement->build_area().each([&](TileCoord t) {
+            Building* b = get_entity_as<Building>(settlement->building_at(t));
+            if (b && b->settlement_id == settlement->id()) b->settlement_id = {};
+        });
+        settlements_[settlement->id().value()].reset();
+    }
+}
+
+Settlement* World::get_settlement(SettlementID id) {
+    return id && id.value() < settlements_.size() ? settlements_[id.value()].get() : nullptr;
+}
+
+const Settlement* World::get_settlement(SettlementID id) const {
+    return id && id.value() < settlements_.size() ? settlements_[id.value()].get() : nullptr;
+}
+
+const Settlement* World::settlement_at(SurfaceID surface, TileCoord tile) const {
+    for (const auto& s : settlements_)
+        if (s && s->surface() == surface && s->build_area().contains(tile)) return s.get();
+    return nullptr;
+}
+
+Settlement* World::settlement_of(EntityFactionsMask factions) {
+    for (const auto& s : settlements_)
+        if (s && has_any(s->factions(), factions)) return s.get();
+    return nullptr;
+}
+
+const Settlement* World::settlement_of(EntityFactionsMask factions) const {
+    for (const auto& s : settlements_)
+        if (s && has_any(s->factions(), factions)) return s.get();
+    return nullptr;
+}
+
+EntityHandle World::building_at(SurfaceID surface, TileCoord tile) const {
+    const Settlement* s = settlement_at(surface, tile);
+    return s ? s->building_at(tile) : EntityHandle{};
+}
+
+bool World::is_spawn_blocked(SurfaceID surface, Position2D position) const {
+    const TileCoord tile = TileCoord::from_position(position);
+    for (const auto& s : settlements_)
+        if (s && s->surface() == surface && s->spawn_area().contains(tile)) return true;
+    return false;
+}
+
+// -----------------------------------------------------------------------------
 // Projectiles
 // -----------------------------------------------------------------------------
 
@@ -222,6 +421,8 @@ void World::apply_commands_() {
         EntityHandle handle = cmd.handle;
         Entity* entity = entities_.get(handle);
         if (!entity) return;
+
+        if (entity->is_type<Building>()) on_building_removed_(*entity->as_type<Building>());
 
         get_surface(entity->surface_id)->remove_entity_(entity);
 

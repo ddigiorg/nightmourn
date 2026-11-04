@@ -9,6 +9,8 @@
 #include "Nezumi/Core/Tick.hpp"
 #include "Nezumi/Event/EventBus.hpp"
 #include "Nezumi/Object/SlotMap.hpp"
+#include "Nightmourn/Building/BuildingConfig.hpp"
+#include "Nightmourn/Building/BuildingPlacement.hpp"
 #include "Nightmourn/Chunk/Pheromones.hpp"
 #include "Nightmourn/Command/CommandRegistry.hpp"
 #include "Nightmourn/Entity/Entity.hpp"
@@ -16,6 +18,8 @@
 #include "Nightmourn/Geometry/Position2D.hpp"
 #include "Nightmourn/Projectile/Projectile.hpp"
 #include "Nightmourn/Projectile/ProjectileConfig.hpp"
+#include "Nightmourn/Settlement/Settlement.hpp"
+#include "Nightmourn/Settlement/SettlementID.hpp"
 #include "Nightmourn/Surface/Surface.hpp"
 #include "Nightmourn/Surface/SurfaceConfig.hpp"
 #include "Nightmourn/Surface/SurfaceID.hpp"
@@ -24,6 +28,7 @@
 #include <cassert> // assert
 #include <cstddef> // size_t
 #include <cstdint> // uint16_t
+#include <memory>  // unique_ptr
 #include <vector>  // vector
 
 namespace Nezumi {
@@ -31,6 +36,8 @@ namespace Nezumi {
 }
 
 namespace Nightmourn {
+
+class Building;
 
 class World {
 public:
@@ -154,6 +161,63 @@ public:
     template <typename Fn>
     void each_entity(Fn&& fn) const { entities_.for_each(fn); }
 
+    // -------------------------------------------------------------------------
+    // Buildings & Settlements
+    //
+    // Buildings snap to the tile grid: `origin` is the bottom-left tile of
+    // the footprint. A banner founds a settlement for `factions` (one per
+    // faction for now) with its build area centered on the banner; every
+    // other building goes wholly inside its faction's build area, on tiles no
+    // other building or collidable entity (a tree) covers.
+    //
+    // place_building checks, then creates the building (it joins the world
+    // at the next command phase, like create_entity) and registers it with
+    // its settlement at once, so a second placement on the same tiles before
+    // the next tick is refused. Item costs are the caller's (the Player
+    // spends the item). Removing a building frees its tiles in the next
+    // command phase; removing a banner disbands its settlement, leaving its
+    // buildings standing with no settlement until a new banner adopts them.
+    // -------------------------------------------------------------------------
+
+    PlacementResult check_placement(
+        SurfaceID             surface,
+        const BuildingConfig& config,
+        TileCoord             origin,
+        EntityFactionsMask    factions) const;
+
+    // The new building's handle, or a null one if it can't go there (and
+    // `result` says why)
+    EntityHandle place_building(
+        SurfaceID             surface,
+        const BuildingConfig& config,
+        TileCoord             origin,
+        EntityFactionsMask    factions,
+        PlacementResult*      result = nullptr);
+
+    Settlement*       get_settlement(SettlementID id);
+    const Settlement* get_settlement(SettlementID id) const;
+
+    // The settlement whose build area holds `tile`, or nullptr
+    const Settlement* settlement_at(SurfaceID surface, TileCoord tile) const;
+
+    // The settlement of a faction in `factions`, or nullptr
+    Settlement*       settlement_of(EntityFactionsMask factions);
+    const Settlement* settlement_of(EntityFactionsMask factions) const;
+
+    // The building standing on `tile` in a settlement's build area, or a
+    // null handle
+    EntityHandle building_at(SurfaceID surface, TileCoord tile) const;
+
+    // True if enemies may not spawn at `position`: inside some settlement's
+    // spawn area (its build area and spawn_margin around it)
+    bool is_spawn_blocked(SurfaceID surface, Position2D position) const;
+
+    // Every settlement, oldest first
+    template <typename Fn>
+    void each_settlement(Fn&& fn) const {
+        for (const auto& s : settlements_) if (s) fn(*s);
+    }
+
 private:
     friend class Surface; // publish_
 
@@ -226,6 +290,14 @@ private:
         Projectile projectile;
     };
     std::vector<Launch> launches_ = {};
+
+    // Settlements by SettlementID (index); a disbanded one leaves a null
+    // slot, so ids are never reused
+    std::vector<std::unique_ptr<Settlement>> settlements_ = {};
+
+    // A building leaving the world: frees its tiles, disconnects its walls,
+    // disbands its settlement if it was the banner
+    void on_building_removed_(Building& building);
 
     // Scratch (reused every tick to avoid allocation)
     std::vector<Entity*> moved_ = {};

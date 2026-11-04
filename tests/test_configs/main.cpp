@@ -90,6 +90,18 @@ static void test_shipped_data() {
         CHECK(item_name(Items::Gold) == "gold");
         CHECK(item_stack_size(Items::Wood) == 100 && item_stack_size(Items::Food) == 20);
     }
+    // Buildings and the settlement a banner founds
+    {
+        const BuildingPrototype& banner = p.building("banner");
+        const BuildingPrototype& wall   = p.building("wall");
+        CHECK(banner.config.type == BuildingType::Banner && banner.config.settlement);
+        CHECK(banner.config.settlement && banner.config.settlement->name == "player");
+        CHECK(wall.config.connects && wall.picture.frame_count == 16);
+        CHECK(p.building("house").config.footprint == TileCoord({ 2, 2 }));
+        CHECK(p.building("crafter").config.footprint == TileCoord({ 3, 3 }));
+        CHECK(p.building_for_item(p.find_item("house")->id) == p.find_building("house"));
+        CHECK(!p.building_for_item(Items::Wood));
+    }
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
     for (const char* sprite : { "eagle", "plate", "slot", "rim", "button", "divider", "fill",
                                 "menu/skills", "menu/main" }) {

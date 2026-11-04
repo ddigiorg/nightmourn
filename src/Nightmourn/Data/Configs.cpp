@@ -8,6 +8,7 @@
 #include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
 #include <algorithm>   // find_if, sort
+#include <cmath>       // floor
 #include <filesystem>  // directory_iterator, path, recursive_directory_iterator
 #include <fstream>     // ifstream
 #include <limits>      // numeric_limits
@@ -277,6 +278,56 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
     return p;
 }
 
+BuildingPrototype read_building(Fields& f, const std::string& name, const auto& file_of) {
+    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .config = {}, .picture = {} };
+    BuildingConfig& c = p.config;
+
+    const std::string kind = f.get<std::string>("kind");
+    if      (kind == "banner")  c.type = BuildingType::Banner;
+    else if (kind == "wall")    c.type = BuildingType::Wall;
+    else if (kind == "house")   c.type = BuildingType::House;
+    else if (kind == "crafter") c.type = BuildingType::Crafter;
+    else fail(f.source(), "'kind' must be \"banner\", \"wall\", \"house\" or \"crafter\"");
+
+    if (const Json* v = f.find("size")) {
+        const glm::vec2 size = as_vec<2>(f.source(), "size", *v, "[x, y]");
+        if (size.x < 1.0f || size.y < 1.0f || size.x != std::floor(size.x) || size.y != std::floor(size.y) ||
+            size.x > 16.0f || size.y > 16.0f)
+            fail(f.source(), "'size' must be whole tiles from 1 to 16");
+        c.footprint = { static_cast<std::int32_t>(size.x), static_cast<std::int32_t>(size.y) };
+    }
+    f.get("max_health", c.max_health);
+    f.get("connects",   c.connects);
+    f.get("item",       p.item);
+    f.get("settlement", p.settlement);
+
+    Fields pf({ f.source().file, f.source().what + ": picture" }, f.need("picture"));
+    p.picture = read_animation(pf, file_of);
+    pf.done();
+
+    if (c.max_health == 0) fail(f.source(), "'max_health' must be at least 1");
+    if (c.connects && c.footprint != TileCoord{ 1, 1 })
+        fail(f.source(), "only a 1 x 1 building can connect");
+    if (c.connects && p.picture.frame_count != 16)
+        fail(f.source(), "a connecting building's picture needs 16 frames, one per set of connected sides");
+    if ((c.type == BuildingType::Banner) != !p.settlement.empty())
+        fail(f.source(), "a banner, and only a banner, names its 'settlement'");
+    return p;
+}
+
+SettlementPrototype read_settlement(Fields& f, const std::string& name) {
+    SettlementPrototype p{ .name = name, .config = {} };
+    SettlementConfig& c = p.config;
+    f.get("build_radius",    c.build_radius);
+    f.get("spawn_margin",    c.spawn_margin);
+    f.get("min_gap",         c.min_gap);
+    f.get("inventory_slots", c.inventory_slots);
+    if (c.build_radius < 1 || c.build_radius > 256) fail(f.source(), "'build_radius' must be from 1 to 256");
+    if (c.spawn_margin < 0) fail(f.source(), "'spawn_margin' must be 0 or more");
+    if (c.min_gap < 0)      fail(f.source(), "'min_gap' must be 0 or more");
+    return p;
+}
+
 LightPrototype read_light(Fields& f, const std::string& name) {
     LightPrototype p{ .name = name, .light = {} };
     LightSource& l = p.light;
@@ -392,6 +443,10 @@ Configs Configs::load(std::string_view data_dir) {
                         }
                         if (p.pictures.empty()) fail(src, "has no pictures");
                         put(out.trees, std::move(p));
+                    } else if (type == "building") {
+                        put(out.buildings, read_building(f, name, file_of));
+                    } else if (type == "settlement") {
+                        put(out.settlements, read_settlement(f, name));
                     } else if (type == "item") {
                         ItemPrototype p{ .name = name, .id = {}, .icon = {}, .stack_size = 1 };
                         if (f.find("icon")) p.icon = resolve(src, mods, f.get<std::string>("icon"));
@@ -485,6 +540,24 @@ Configs Configs::load(std::string_view data_dir) {
         }
     }
 
+    for (SettlementPrototype& p : out.settlements) p.config.name = p.name;
+
+    for (std::size_t i = 0; i < out.buildings.size(); i++) {
+        BuildingPrototype& p = out.buildings[i];
+        p.config.name  = p.name;
+        p.config.index = static_cast<std::uint16_t>(i);
+        if (!p.item.empty()) {
+            const ItemPrototype* item = out.find_item(p.item);
+            if (!item) fail(where("building", p.name), "'item' names no item '" + p.item + "'");
+            p.config.item = item->id;
+        }
+        if (!p.settlement.empty()) {
+            const SettlementPrototype* s = out.find_settlement(p.settlement);
+            if (!s) fail(where("building", p.name), "'settlement' names no settlement '" + p.settlement + "'");
+            p.config.settlement = &s->config;
+        }
+    }
+
     // What inventories go by
     std::vector<ItemInfo> table;
     for (const ItemPrototype& item : out.items) table.push_back({ item.name, item.stack_size });
@@ -503,6 +576,8 @@ const UnitGroupPrototype*  Configs::find_unit_group (std::string_view n) const {
 const ProjectilePrototype* Configs::find_projectile (std::string_view n) const { return find(projectiles,  n); }
 const CharacterPrototype*  Configs::find_character  (std::string_view n) const { return find(characters,   n); }
 const TreeConfig*          Configs::find_tree       (std::string_view n) const { return find(trees,        n); }
+const BuildingPrototype*   Configs::find_building   (std::string_view n) const { return find(buildings,    n); }
+const SettlementPrototype* Configs::find_settlement (std::string_view n) const { return find(settlements,  n); }
 const ItemPrototype*       Configs::find_item       (std::string_view n) const { return find(items,        n); }
 const LightPrototype*      Configs::find_light      (std::string_view n) const { return find(lights,       n); }
 const TileConfig*          Configs::find_tile       (std::string_view n) const { return find(tiles,        n); }
@@ -512,12 +587,21 @@ const UnitPrototype&      Configs::unit      (std::string_view n) const { return
 const UnitGroupPrototype& Configs::unit_group(std::string_view n) const { return need(unit_groups, "unit-group", n); }
 const CharacterPrototype& Configs::character (std::string_view n) const { return need(characters,  "character",  n); }
 const TreeConfig&         Configs::tree      (std::string_view n) const { return need(trees,       "tree",       n); }
+const BuildingPrototype&  Configs::building  (std::string_view n) const { return need(buildings,   "building",   n); }
 const LightPrototype&     Configs::light     (std::string_view n) const { return need(lights,      "light",      n); }
+
+const BuildingPrototype* Configs::building_for_item(ItemID item) const {
+    if (!item) return nullptr;
+    for (const BuildingPrototype& b : buildings)
+        if (b.config.item == item) return &b;
+    return nullptr;
+}
 
 std::vector<std::string> Configs::filenames() const {
     std::vector<std::string> out;
     for (const UnitSpriteConfig& u : unit_sprites) for (const auto& [_, a] : u.animations) out.push_back(a.filename);
     for (const TreeConfig&    t : trees)   for (const PictureConfig& p : t.pictures) out.push_back(p.filename);
+    for (const BuildingPrototype& b : buildings) out.push_back(b.picture.filename);
     for (const ItemPrototype& i : items)   if (!i.icon.empty()) out.push_back(i.icon);
     for (const TileConfig&    t : tiles)   out.push_back(t.filename);
     for (const SpriteConfig&  s : sprites) out.push_back(s.filename);

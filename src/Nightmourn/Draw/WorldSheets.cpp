@@ -4,6 +4,7 @@
 
 #include "Nightmourn/Draw/WorldSheets.hpp"
 #include "Nightmourn/Data/Configs.hpp"
+#include "Nightmourn/Draw/DrawUtils.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/Render/2D/Sprite/SpritePacker.hpp"
 #include "Nezumi/Render/Core/Image/Image.hpp"
@@ -27,6 +28,7 @@ WorldDrawer::Config WorldSheets::drawer_config() const {
         .units      = { .sheet = sprites },
         .characters = { .sheet = sprites },
         .resources  = { .sheet = sprites, .trees = tree_animations },
+        .buildings  = { .sheet = sprites, .pictures = building_pictures, .faction_colors = {} },
     };
 }
 
@@ -63,6 +65,22 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Configs& configs) 
             .fps    = 0.0f,
             .loop   = false,
         });
+    }
+
+    for (const BuildingPrototype& b : configs.buildings) {
+        const AnimationConfig& a = b.picture;
+        packer.add_animation("building/" + b.name, NR::load_image(a.filename), {
+            .frame_width  = a.width,
+            .frame_height = a.height,
+            .frames       = a.frame_count,
+            .directions   = a.direction_count,
+            .headings     = a.headings,
+            .fps          = a.fps,
+            .loop         = a.loop,
+            .pivot        = a.pivot,
+        });
+        const float pivot_y = a.pivot ? a.pivot->y : static_cast<float>(a.height);
+        sheets.building_pictures.push_back({ "building/" + b.name, pivot_y / SPRITE_PIXELS_PER_TILE });
     }
 
     // Mips for zooming out: 4 levels, so the packer leaves an 8 px grid and

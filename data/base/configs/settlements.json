@@ -1,0 +1,10 @@
+[
+    {
+        "type": "settlement",
+        "name": "player",
+        "build_radius": 16,
+        "spawn_margin": 8,
+        "min_gap": 4,
+        "inventory_slots": 60
+    }
+]

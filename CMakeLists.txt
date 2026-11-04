@@ -112,6 +112,7 @@ target_link_libraries(nightmourn_world
 # ------------------------------------------------------------------------------
 
 add_library(nightmourn_game STATIC
+    src/Nightmourn/Draw/BuildingDrawer.cpp
     src/Nightmourn/Draw/CharacterDrawer.cpp
     src/Nightmourn/Draw/ChunkDrawer.cpp
     src/Nightmourn/Draw/DebugFlags.cpp
@@ -119,6 +120,7 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/DrawUtils.cpp
     src/Nightmourn/Draw/ProjectileDrawer.cpp
     src/Nightmourn/Draw/ResourceDrawer.cpp
+    src/Nightmourn/Draw/SettlementDrawer.cpp
     src/Nightmourn/Draw/UnitDrawer.cpp
     src/Nightmourn/Draw/UnitGroupDrawer.cpp
     src/Nightmourn/Draw/WorldDrawer.cpp
@@ -135,6 +137,7 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Lighting/LightDrawer.cpp
     src/Nightmourn/Input/Actions.cpp
     src/Nightmourn/Input/Picking.cpp
+    src/Nightmourn/Player/BuildPlacer.cpp
     src/Nightmourn/Player/Player.cpp
 )
 

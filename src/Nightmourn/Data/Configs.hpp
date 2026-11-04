@@ -22,6 +22,8 @@
 //         entity/projectiles.json   projectile   arrow
 //         entity/characters.json    character    hero
 //         entity/trees.json         tree         oak, pine
+//         entity/buildings.json     building     banner, wall, house, crafter
+//         settlements.json          settlement   player
 //         items.json                item         wood, stone, gold, food
 //         lights.json               light        torch, campfire, lantern, ...
 //         tiles.json                tile         grass
@@ -104,6 +106,25 @@
 //       "collision_box": [[-0.4, -0.4], [0.4, 0.4]],
 //       "pictures": [ { "filename": "...", "pivot": [128, 384] }, ... ] }
 //
+//   building     a kind of building (Building/BuildingConfig.hpp): what it
+//                does ("kind": "banner", "wall", "house" or "crafter"), its
+//                footprint in tiles, the item placing it costs, and its
+//                "picture": a sheet like a unit-sprite animation's, drawn at
+//                the footprint's bottom-center (pivot defaults there). A
+//                connecting wall has 16 frames, one per set of connected
+//                sides (bits north 1, east 2, south 4, west 8). A banner
+//                names the "settlement" it founds
+//
+//     { "type": "building", "name": "house", "kind": "house",
+//       "size": [2, 2], "max_health": 400, "item": "house",
+//       "picture": { "filename": "__base__/graphics/entity/building/house_mask.png",
+//                    "width": 256, "height": 256 } }
+//
+//   settlement   what a banner's settlement gets (Settlement/SettlementConfig.hpp)
+//
+//     { "type": "settlement", "name": "player", "build_radius": 16,
+//       "spawn_margin": 8, "min_gap": 4, "inventory_slots": 60 }
+//
 //   item         something an inventory holds, its icon and how many fit
 //                in one slot
 //
@@ -148,11 +169,13 @@
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Building/BuildingConfig.hpp"
 #include "Nightmourn/Character/CharacterConfig.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include "Nightmourn/Lighting/LightSource.hpp"
 #include "Nightmourn/Projectile/ProjectileConfig.hpp"
 #include "Nightmourn/Resource/ResourceConfig.hpp"
+#include "Nightmourn/Settlement/SettlementConfig.hpp"
 #include "Nightmourn/Unit/UnitConfig.hpp"
 #include "Nightmourn/Unit/UnitGroupConfig.hpp"
 #include <cstdint>     // uint16_t, uint32_t
@@ -234,6 +257,21 @@ struct TreeConfig {
     std::vector<PictureConfig> pictures;
 };
 
+// "building"
+struct BuildingPrototype {
+    std::string     name;
+    std::string     item;       // an item's name, or empty for none
+    std::string     settlement; // banners: a settlement's name
+    BuildingConfig  config;     // index: place among the buildings
+    AnimationConfig picture;    // frames: 1, or 16 for a connecting wall
+};
+
+// "settlement"
+struct SettlementPrototype {
+    std::string      name;
+    SettlementConfig config;
+};
+
 // "item"
 struct ItemPrototype {
     std::string   name;
@@ -294,6 +332,8 @@ public:
     std::vector<ProjectilePrototype> projectiles;
     std::vector<CharacterPrototype>  characters;
     std::vector<TreeConfig>          trees;
+    std::vector<BuildingPrototype>   buildings;
+    std::vector<SettlementPrototype> settlements;
     std::vector<ItemPrototype>       items;
     std::vector<LightPrototype>      lights;
     std::vector<TileConfig>          tiles;
@@ -306,6 +346,8 @@ public:
     const ProjectilePrototype* find_projectile (std::string_view name) const;
     const CharacterPrototype*  find_character  (std::string_view name) const;
     const TreeConfig*          find_tree       (std::string_view name) const;
+    const BuildingPrototype*   find_building   (std::string_view name) const;
+    const SettlementPrototype* find_settlement (std::string_view name) const;
     const ItemPrototype*       find_item       (std::string_view name) const;
     const LightPrototype*      find_light      (std::string_view name) const;
     const TileConfig*          find_tile       (std::string_view name) const;
@@ -317,7 +359,11 @@ public:
     const UnitGroupPrototype&  unit_group(std::string_view name) const;
     const CharacterPrototype&  character (std::string_view name) const;
     const TreeConfig&          tree      (std::string_view name) const;
+    const BuildingPrototype&   building  (std::string_view name) const;
     const LightPrototype&      light     (std::string_view name) const;
+
+    // The building that `item` places, or null if it places none
+    const BuildingPrototype* building_for_item(ItemID item) const;
 
     // Every file name the configs use, for checks
     std::vector<std::string> filenames() const;
