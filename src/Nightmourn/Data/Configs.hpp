@@ -22,7 +22,7 @@
 //         entity/projectiles.json   projectile   arrow
 //         entity/characters.json    character    hero
 //         entity/trees.json         tree         oak, pine
-//         entity/buildings.json     building     banner, wall, house, crafter
+//         entity/buildings.json     building     banner, wall, torch, house, crafter, barracks
 //         settlements.json          settlement   player
 //         items.json                item         wood, stone, gold, food
 //         lights.json               light        torch, campfire, lantern, ...
@@ -107,18 +107,20 @@
 //       "pictures": [ { "filename": "...", "pivot": [128, 384] }, ... ] }
 //
 //   building     a kind of building (Building/BuildingConfig.hpp): what it
-//                does ("kind": "banner", "wall", "house" or "crafter"), its
-//                footprint in tiles, the item placing it costs, and its
-//                "picture": a sheet like a unit-sprite animation's, drawn at
-//                the footprint's bottom-center (pivot defaults there). A
-//                connecting wall has 16 frames, one per set of connected
-//                sides (bits north 1, east 2, south 4, west 8). A banner
-//                names the "settlement" it founds
+//                does ("kind": "banner", "wall", "torch", "house",
+//                "crafter" or "barracks"), its footprint in tiles, the item
+//                placing it costs, the "light" it gives off (a light's name,
+//                optional), and its "picture": a sheet like a unit-sprite
+//                animation's whose "pivot" is the footprint's center in the
+//                image (tools/gen_buildings.py prints them). A connecting
+//                wall has 16 frames, one per set of connected sides (bits
+//                north 1, east 2, south 4, west 8). A banner names the
+//                "settlement" it founds
 //
 //     { "type": "building", "name": "house", "kind": "house",
 //       "size": [2, 2], "max_health": 400, "item": "house",
 //       "picture": { "filename": "__base__/graphics/entity/building/house_mask.png",
-//                    "width": 256, "height": 256 } }
+//                    "width": 268, "height": 250, "pivot": [134, 180] } }
 //
 //   settlement   what a banner's settlement gets (Settlement/SettlementConfig.hpp)
 //
@@ -262,6 +264,7 @@ struct BuildingPrototype {
     std::string     name;
     std::string     item;       // an item's name, or empty for none
     std::string     settlement; // banners: a settlement's name
+    std::string     light;      // a light's name, or empty for none
     BuildingConfig  config;     // index: place among the buildings
     AnimationConfig picture;    // frames: 1, or 16 for a connecting wall
 };

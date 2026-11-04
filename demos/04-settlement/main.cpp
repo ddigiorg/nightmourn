@@ -1,11 +1,12 @@
 // =============================================================================
 // demos/04-settlement/main.cpp
 //
-// The player founds a settlement and lays out a base, drawn top-down.
+// The player founds a settlement and lays out a base, in isometric view,
+// through the day and into the night.
 //
 // - 7 x 7 chunks of meadow, forests around the edges and a few trees near
-//   the hero, who starts at 0, 0 with a banner, 50 walls, 5 houses and 2
-//   crafters (the action bar's slots 1-4).
+//   the hero, who starts at 0, 0 with a banner, 100 walls, 10 torches, 5
+//   houses, 2 crafters and 2 barracks (the action bar's slots 1-6).
 // - Pick a building with its slot (key or click) and its ghost follows the
 //   cursor, snapped to the tile grid: green where it fits, red where it
 //   doesn't, with the reason by the cursor. Left click places it and spends
@@ -15,7 +16,12 @@
 //   place_building) and its build area, a square of tiles around it outlined
 //   in the player's blue; while placing anything else the area is filled, and
 //   every other building has to fit inside it. Walls join up with the walls
-//   next to them.
+//   next to them. Buildings are solid: the hero (and any figure) slides
+//   along their footprints and around tree trunks instead of walking
+//   through.
+// - The day lasts 12 minutes and starts late in the afternoon; T speeds it
+//   up (1x, 20x, paused), N jumps to midnight and M to noon. Torches light
+//   the base at night, and the hero carries a small lantern.
 // - The settlement has its own inventory: F, inside the build area, hands it
 //   everything you've chopped (left click a tree, as in 02-mining).
 // - Enemies can't spawn in the build area or spawn_margin tiles around it.
@@ -27,12 +33,13 @@
 //   50, to see buildings take damage and fall.
 //
 // Tuning is data: data/base/configs/entity/buildings.json (footprints,
-// health, pictures) and data/base/configs/settlements.json (build radius,
-// spawn margin, inventory size).
+// health, lights, pictures) and data/base/configs/settlements.json (build
+// radius, spawn margin, inventory size).
 //
 // Controls: W/A/S/D move, mouse wheel zooms, 1-0 slots, left click place /
 // chop, right click stop placing, F deposit, X deconstruct, H hit, P spawn
-// points, B inventory, tilde (~) debug menu, Escape main menu.
+// points, T time speed, N midnight, M noon, B inventory, tilde (~) debug
+// menu, Escape main menu.
 // =============================================================================
 
 #include "Nezumi/Control/CameraController.hpp"
@@ -61,6 +68,11 @@
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Item/Items.hpp"
+#include "Nightmourn/Lighting/BuildingLights.hpp"
+#include "Nightmourn/Lighting/DayNight.hpp"
+#include "Nightmourn/Lighting/GameLighting.hpp"
+#include "Nightmourn/Lighting/LightDrawer.hpp"
+#include "Nightmourn/Lighting/LightSource.hpp"
 #include "Nightmourn/Player/BuildPlacer.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
@@ -93,6 +105,9 @@ namespace DemoAction {
     inline constexpr ActionID Deconstruct  = 1002;
     inline constexpr ActionID HitBuilding  = 1003;
     inline constexpr ActionID SpawnPoints  = 1004;
+    inline constexpr ActionID TimeSpeed    = 1005;
+    inline constexpr ActionID Midnight     = 1006;
+    inline constexpr ActionID Noon         = 1007;
 }
 
 // -----------------------------------------------------------------------------
@@ -113,9 +128,17 @@ static constexpr glm::vec4    PLAYER_COLOR   = { 0.42f, 0.62f, 1.00f, 1.0f };
 
 // What the hero starts with, in action bar order
 struct StartItem { const char* item; std::uint32_t count; };
-static constexpr std::array<StartItem, 4> START_ITEMS = {{
-    { "banner", 1 }, { "wall", 50 }, { "house", 5 }, { "crafter", 2 },
+static constexpr std::array<StartItem, 6> START_ITEMS = {{
+    { "banner", 1 }, { "wall", 100 }, { "torch", 10 }, { "house", 5 }, { "crafter", 2 }, { "barracks", 2 },
 }};
+
+// Time speeds T cycles through, and the time of day it starts at (0
+// midnight, 0.5 noon): late afternoon, so night falls a few minutes in
+static constexpr std::array<float, 3> TIME_SPEEDS = { 1.0f, 20.0f, 0.0f };
+static constexpr float                START_TIME  = 0.68f;
+
+// The hero's lantern: a "lantern" light this wide (tiles)
+static constexpr float LANTERN_RADIUS = 3.5f;
 
 // Trees: a clear meadow of this radius around the spawn with a few trees
 // to chop, then forest thickening toward the map's edge
@@ -171,9 +194,9 @@ public:
         input.bind(DemoAction::Deconstruct, ScanCode::X);
         input.bind(DemoAction::HitBuilding, ScanCode::H);
         input.bind(DemoAction::SpawnPoints, ScanCode::P);
-
-        // Cartesian: the settlement is laid out top-down
-        debug_flags_.set(DebugFlag::UseTopDownView, true);
+        input.bind(DemoAction::TimeSpeed,   ScanCode::T);
+        input.bind(DemoAction::Midnight,    ScanCode::N);
+        input.bind(DemoAction::Noon,        ScanCode::M);
 
         world_camera_  = renderer->get_view_camera(Render::View::World );
         screen_camera_ = renderer->get_view_camera(Render::View::Screen);
@@ -186,7 +209,7 @@ public:
             /*.camera   = */renderer->get_view(Render::View::World),
             CameraControllerConfig{
                 .enable_drag_pan = false,
-                .zoom_init       = 0.75f,
+                .zoom_init       = 0.6f,
                 .zoom_min        = 0.2f,
                 .zoom_max        = 4.0f,
                 .follow_rate     = 0.0f,
@@ -217,7 +240,11 @@ public:
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory());
 
-        // The kit, on slots 1-4, and wood on 5
+        // Lighting replaces the engine's single pass
+        lighting_ = std::make_unique<GameLighting>(*engine.render(), *renderer);
+        day_night_.set_time(START_TIME);
+
+        // The kit, on slots 1-6, and wood after it
         for (std::size_t i = 0; i < START_ITEMS.size(); i++) {
             const ItemPrototype* item = configs_.find_item(START_ITEMS[i].item);
             if (!item) continue;
@@ -271,6 +298,14 @@ public:
         }
         if (input.was_pressed(DemoAction::SpawnPoints)) sample_spawns_(world);
 
+        if (input.was_pressed(DemoAction::TimeSpeed)) {
+            speed_index_ = (speed_index_ + 1) % TIME_SPEEDS.size();
+            day_night_.set_speed(TIME_SPEEDS[speed_index_]);
+        }
+        if (input.was_pressed(DemoAction::Midnight)) day_night_.set_time(0.0f);
+        if (input.was_pressed(DemoAction::Noon))     day_night_.set_time(0.5f);
+        day_night_.tick();
+
         world.tick();
     }
 
@@ -292,14 +327,22 @@ public:
             snap_camera_ = false;
         }
         camera_controller_->update(engine.clock().get_real_dt());
+        seconds_ += engine.clock().get_real_dt();
+
+        lighting_->update(day_night_.ambient(), debug_flags_);
 
         if (const Nightmourn::Surface* surface = world.get_surface(surface_id_)) {
             DrawContext ctx = DrawContext::make(*r, world, *world_camera_, proj, debug_flags_);
+            ctx.overlay_view = GameLighting::OVERLAY_VIEW;
 
-            // Territory under everything; filled while placing into it
+            // Territory on the ground; while placing, filled and drawn over
+            // the dark so it's clear where things can go
+            const bool placing = placer_.active() && placer_.building()->type != BuildingType::Banner;
             SettlementDrawStyle style;
-            style.color = PLAYER_COLOR;
-            style.fill  = placer_.active() && placer_.building()->type != BuildingType::Banner;
+            style.filler = &world_drawer_->buildings();
+            style.layer  = placing ? DrawLayer::EntityOverlay : DrawLayer::GroundOverlay;
+            style.color  = PLAYER_COLOR;
+            style.fill   = placing;
             style.show_spawn_area = !spawn_points_.empty() && ctx.tick - spawn_shown_at_ <= SPAWN_SHOW_TICKS;
             draw_settlements(ctx, *surface, style);
 
@@ -307,6 +350,17 @@ public:
             placer_.draw(ctx, world_drawer_->buildings(), surface_id_);
             if (!placer_.active()) draw_hover_(ctx, engine);
             draw_spawn_points_(ctx);
+
+            // Torches, and the hero's lantern
+            lights_.clear();
+            append_building_lights(*surface, ctx.world_view, configs_, lights_);
+            if (const Character* hero = player_.character(world)) {
+                LightSource lantern = configs_.light("lantern").light;
+                lantern.position = hero->position.to_vec2();
+                lantern.radius   = LANTERN_RADIUS;
+                lights_.push_back(lantern);
+            }
+            light_drawer_.draw(ctx, lights_, seconds_, day_night_.light_strength());
         }
 
         info_overlay_.update(engine);
@@ -331,6 +385,7 @@ public:
         for (EventListenerID id : listeners_) engine.event_bus().unsubscribe(id);
         camera_controller_.reset();
         world_drawer_.reset();
+        lighting_.reset();
         action_bar_.reset();
         inventory_menu_.reset();
         engine.logger().info("Goodbye!");
@@ -519,7 +574,14 @@ private:
             text += line;
         }
 
-        text += "\n1-4: pick a building  click: place (hold: wall)  right click: stop  F: deposit  P: spawn points\n";
+        char clock[16];
+        day_night_.format_clock(clock, sizeof clock);
+        std::snprintf(line, sizeof line, "%s  %s  x%.0f\n", clock, day_night_.is_night() ? "night" : "day",
+                      day_night_.get_speed());
+        text += line;
+
+        text += "\n1-6: pick a building  click: place (hold: wall)  right click: stop  F: deposit  P: spawn points\n"
+                "T: time speed  N: midnight  M: noon\n";
 
         r->draw_text(
             text, { HUD_MARGIN, top }, *font_,
@@ -579,6 +641,13 @@ private:
 
     Player      player_      = {};
     BuildPlacer placer_      { BuildPlacer::Config{ .place = Action::Mine, .cancel = DemoAction::CancelBuild } };
+
+    std::unique_ptr<GameLighting> lighting_    = nullptr;
+    LightDrawer                   light_drawer_ = {};
+    std::vector<LightSource>      lights_       = {};
+    DayNight                      day_night_;
+    std::size_t                   speed_index_  = 0;
+    float                         seconds_      = 0.0f;
     bool        snap_camera_ = false;
 
     SurfaceID surface_id_ = {};

@@ -19,10 +19,9 @@ static constexpr float HEALTHBAR_GAP    = 0.10f;
 static constexpr float HEALTHBAR_BORDER = 0.04f;
 static constexpr float HEALTHBAR_MAX_W  = 1.5f;
 
-// Where a picture's pivot goes: the footprint's bottom-center
+// Where a picture's pivot goes: the footprint's center
 static glm::vec2 anchor_of(const TileRect& footprint) {
-    const Area2D b = footprint.bounds();
-    return { (b.min.x + b.max.x) * 0.5f, b.min.y };
+    return footprint.center().to_vec2();
 }
 
 // -----------------------------------------------------------------------------
@@ -43,6 +42,32 @@ BuildingDrawer::BuildingDrawer(const Config& config)
         const NR::Animation& a = sheet_->anim(*id);
         pictures_[i] = { a.first, a.frames * a.directions, p.top };
     }
+
+    if (!config.fill_sprite.empty()) {
+        if (const NR::SpriteID* id = sheet_->find_sprite(config.fill_sprite.c_str())) {
+            // The middle of the sprite, clear of its edges' filtering
+            const NR::SpriteRegion& r = sheet_->region(*id);
+            const glm::vec2 c = { (r.tex_box.x + r.tex_box.z) * 0.5f, (r.tex_box.y + r.tex_box.w) * 0.5f };
+            const glm::vec2 h = { (r.tex_box.z - r.tex_box.x) * 0.25f, (r.tex_box.w - r.tex_box.y) * 0.25f };
+            fill_tex_   = { c - h, c + h };
+            fill_layer_ = r.layer;
+            has_fill_   = true;
+        }
+    }
+}
+
+void BuildingDrawer::fill_ground(DrawContext& ctx, const Area2D& box, glm::vec4 color, std::uint8_t layer) const {
+    if (!has_fill_) return;
+    NR::DrawParams params = ctx.layer(layer);
+    params.material = sheet_->material();
+    ctx.renderer.draw_quad(
+        NR::Quad{
+            .corners = ctx.proj.box_to_view(box.to_vec4()),
+            .tex_box = fill_tex_,
+            .tint    = color,
+            .layer   = fill_layer_,
+        },
+        params);
 }
 
 // -----------------------------------------------------------------------------
@@ -97,14 +122,9 @@ void BuildingDrawer::draw_ghost(DrawContext& ctx, const BuildingConfig& config, 
 {
     const TileRect footprint = TileRect::from_size(origin, config.footprint);
 
-    // The footprint, filled faintly and outlined
-    const glm::vec4 fill = { tint.r, tint.g, tint.b, tint.a * 0.35f };
-    if (ctx.proj.is_top_down()) {
-        ctx.renderer.draw_rectangle(
-            NR::Rectangle{ .pos_box = ctx.proj.box_to_view_bounds(footprint.bounds().to_vec4()), .color = fill },
-            ctx.layer(DrawLayer::GroundOverlay));
-    }
-    draw_outline(ctx, footprint.bounds(), { tint.r, tint.g, tint.b, 1.0f }, 2.0f, DrawLayer::GroundOverlay);
+    // The footprint, filled faintly and outlined, over the lighting
+    fill_ground(ctx, footprint.bounds(), { tint.r, tint.g, tint.b, tint.a * 0.35f }, DrawLayer::EntityOverlay);
+    draw_outline(ctx, footprint.bounds(), { tint.r, tint.g, tint.b, 1.0f }, 2.0f, DrawLayer::EntityOverlay);
 
     const Frames* frames = frames_(config);
     if (!frames) return;

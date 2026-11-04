@@ -26,12 +26,15 @@ namespace Nightmourn {
 
 struct SettlementConfig;
 
-// What a building does. Stored as Entity::subtype_id.
+// What a building does. Stored as Entity::subtype_id. How a building looks
+// and lights up is data (its config), not its type.
 enum class BuildingType : std::uint16_t {
     Banner,  // founds a settlement; its build area is centered on it
     Wall,    // joins up with the walls next to it
     House,   // (later) housing for settlers
     Crafter, // (later) turns settlement items into other items each tick
+    Torch,   // lights the ground around it (its config's "light")
+    Barracks,// (later) trains units from the settlement's stock
 };
 
 constexpr EntitySubtypeID to_subtype(BuildingType type) {

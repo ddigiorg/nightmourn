@@ -279,15 +279,17 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
 }
 
 BuildingPrototype read_building(Fields& f, const std::string& name, const auto& file_of) {
-    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .config = {}, .picture = {} };
+    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .light = {}, .config = {}, .picture = {} };
     BuildingConfig& c = p.config;
 
     const std::string kind = f.get<std::string>("kind");
-    if      (kind == "banner")  c.type = BuildingType::Banner;
-    else if (kind == "wall")    c.type = BuildingType::Wall;
-    else if (kind == "house")   c.type = BuildingType::House;
-    else if (kind == "crafter") c.type = BuildingType::Crafter;
-    else fail(f.source(), "'kind' must be \"banner\", \"wall\", \"house\" or \"crafter\"");
+    if      (kind == "banner")   c.type = BuildingType::Banner;
+    else if (kind == "wall")     c.type = BuildingType::Wall;
+    else if (kind == "house")    c.type = BuildingType::House;
+    else if (kind == "crafter")  c.type = BuildingType::Crafter;
+    else if (kind == "torch")    c.type = BuildingType::Torch;
+    else if (kind == "barracks") c.type = BuildingType::Barracks;
+    else fail(f.source(), "'kind' must be \"banner\", \"wall\", \"torch\", \"house\", \"crafter\" or \"barracks\"");
 
     if (const Json* v = f.find("size")) {
         const glm::vec2 size = as_vec<2>(f.source(), "size", *v, "[x, y]");
@@ -300,6 +302,7 @@ BuildingPrototype read_building(Fields& f, const std::string& name, const auto& 
     f.get("connects",   c.connects);
     f.get("item",       p.item);
     f.get("settlement", p.settlement);
+    f.get("light",      p.light);
 
     Fields pf({ f.source().file, f.source().what + ": picture" }, f.need("picture"));
     p.picture = read_animation(pf, file_of);
@@ -556,6 +559,8 @@ Configs Configs::load(std::string_view data_dir) {
             if (!s) fail(where("building", p.name), "'settlement' names no settlement '" + p.settlement + "'");
             p.config.settlement = &s->config;
         }
+        if (!p.light.empty() && !out.find_light(p.light))
+            fail(where("building", p.name), "'light' names no light '" + p.light + "'");
     }
 
     // What inventories go by

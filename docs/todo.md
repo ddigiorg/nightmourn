@@ -295,7 +295,8 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 
 ### World: entities and combat
 
-- [ ] **Unit separation / collision response.** Units stack when they
+- [ ] **Unit separation.** (Figures already stop at Collidable boxes,
+      `Surface::slide_`.) Units stack when they
       fight and overlap when converging on a group's engage position. A
       push-apart steer in phase 6 using `find_colliding` (needs
       `set_collidable()` on units; ROADMAP §8).
@@ -407,12 +408,20 @@ may not spawn in `Settlement::spawn_area()` (`World::is_spawn_blocked`).
 Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
 (demo 04-settlement, test `test_settlement`).
 
-- [x] Building entity (banner, wall, house, crafter), placement preview,
+- [x] Building entity (banner, wall, torch, house, crafter, barracks), placement preview,
       territory outline and fill, wall painting, settlement inventory,
       spawn exclusion (demo 04-settlement).
-- [ ] **Collision response**: nothing blocks movement yet, so figures walk
-      through walls. Characters and units should slide along Collidable
-      boxes; walls then need a gate building.
+- [x] Isometric cube building art (`tools/gen_buildings.py`), torch (a
+      building with a `light`, drawn by `append_building_lights`), barracks,
+      day/night in demo 04-settlement.
+- [x] **Collision response**: figures slide along Collidable boxes one axis
+      at a time (`Surface::slide_`), and may walk out of a box they start in.
+- [ ] Gate building: walls now block, so the base needs a way in that
+      enemies can't use.
+- [ ] Buildings y-sort by their footprint center, so a figure beside the
+      back half of a 3x3 can be drawn in front of it. Footprint depth (see
+      Drawing) fixes it.
+- [ ] Barracks tick: train unit blocks from the settlement's stock.
 - [ ] **Crafter tick**: `Crafter : Building` overrides `tick()` and sets
       Tickable, reading recipes from config and drawing from and delivering
       to its settlement's inventory through World commands.
@@ -447,7 +456,7 @@ yields (`Items::Wood`). Decorative for now.
       resource with `EntitySearchFilter::resources(Resource::TYPE_ID)` (and
       the subtype it wants), mine it on an interval, add
       `OnEntityMined::amount` of `OnEntityMined::item` to its storage.
-- [ ] Collision response, so figures walk around trunks (trees are already
+- [x] Collision response, so figures walk around trunks (trees are already
       collidable, with a 0.8 tile box).
 - [ ] Figures hidden behind a canopy: AoE2 draws an outline of them on top.
       A silhouette pass (sprites drawn again, flat color, behind-depth only)

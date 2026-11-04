@@ -3,6 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/SettlementDrawer.hpp"
+#include "Nightmourn/Draw/BuildingDrawer.hpp"
 #include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/DrawUtils.hpp"
@@ -21,9 +22,9 @@ static constexpr glm::vec4 SPAWN_AREA_COLOR = { 1.0f, 0.35f, 0.30f, 0.9f };
 static constexpr float     DASH_TILES       = 1.0f; // dash and gap, tiles
 
 // A dashed outline of `box`, on the ground
-static void draw_dashed_outline(DrawContext& ctx, const Area2D& box, glm::vec4 color, float pixels) {
+static void draw_dashed_outline(DrawContext& ctx, const Area2D& box, glm::vec4 color, float pixels, std::uint8_t layer) {
     const float width = pixels * ctx.pixel_size;
-    const NR::DrawParams params = ctx.layer(DrawLayer::GroundOverlay);
+    const NR::DrawParams params = ctx.layer(layer);
     const std::array<glm::vec2, 4> c = {{
         box.min.to_vec2(), { box.max.x, box.min.y }, box.max.to_vec2(), { box.min.x, box.max.y },
     }};
@@ -44,15 +45,9 @@ static void draw_dashed_outline(DrawContext& ctx, const Area2D& box, glm::vec4 c
 
 void draw_build_area(DrawContext& ctx, const TileRect& area, const SettlementDrawStyle& style) {
     const Area2D box = area.bounds();
-    if (style.fill && ctx.proj.is_top_down()) {
-        ctx.renderer.draw_rectangle(
-            NR::Rectangle{
-                .pos_box = ctx.proj.box_to_view_bounds(box.to_vec4()),
-                .color   = { style.color.r, style.color.g, style.color.b, style.fill_alpha },
-            },
-            ctx.layer(DrawLayer::GroundOverlay));
-    }
-    draw_outline(ctx, box, style.color, style.outline_pixels, DrawLayer::GroundOverlay);
+    if (style.fill && style.filler)
+        style.filler->fill_ground(ctx, box, { style.color.r, style.color.g, style.color.b, style.fill_alpha }, style.layer);
+    draw_outline(ctx, box, style.color, style.outline_pixels, style.layer);
 }
 
 void draw_settlements(DrawContext& ctx, const Surface& surface, const SettlementDrawStyle& style) {
@@ -60,7 +55,7 @@ void draw_settlements(DrawContext& ctx, const Surface& surface, const Settlement
         if (s.surface() != surface.id()) return;
         draw_build_area(ctx, s.build_area(), style);
         if (style.show_spawn_area || ctx.show(DebugFlag::ShowSettlementAreas))
-            draw_dashed_outline(ctx, s.spawn_area().bounds(), SPAWN_AREA_COLOR, style.outline_pixels);
+            draw_dashed_outline(ctx, s.spawn_area().bounds(), SPAWN_AREA_COLOR, style.outline_pixels, style.layer);
     });
 }
 

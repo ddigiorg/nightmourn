@@ -132,6 +132,7 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/GUI/InventoryMenu.cpp
     src/Nightmourn/GUI/Theme.cpp
     src/Nightmourn/GUI/UISheet.cpp
+    src/Nightmourn/Lighting/BuildingLights.cpp
     src/Nightmourn/Lighting/DayNight.cpp
     src/Nightmourn/Lighting/GameLighting.cpp
     src/Nightmourn/Lighting/LightDrawer.cpp

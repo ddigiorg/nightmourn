@@ -200,6 +200,9 @@ private:
     void    mark_dirty_          (Chunk* chunk);
     void    link_neighbours_     (Chunk* chunk);
 
+    // Where `entity`, moving to `to`, ends up once Collidables stop it
+    Position2D slide_(const Entity& entity, Position2D to);
+
     // Who `p`, landing now, hits (null if nobody): see ProjectileConfig.hpp
     EntityHandle projectile_hit_(const Projectile& p) const;
 
@@ -224,6 +227,7 @@ private:
     std::unordered_map<SectorID, Sector*> sector_lookup_ = {};
 
     std::vector<Projectile>               projectiles_   = {};
+    std::vector<EntityHandle>             hits_          = {}; // slide_ scratch
 };
 
 // -----------------------------------------------------------------------------

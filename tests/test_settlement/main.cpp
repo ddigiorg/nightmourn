@@ -6,13 +6,15 @@
 // go only inside it, on free tiles, clear of trees; walls join up and come
 // apart; removing a building frees its tiles; a fallen banner disbands its
 // settlement and a new one adopts what's left; spawning is blocked in the
-// build area and its margin.
+// build area and its margin; figures stop at building footprints and slide
+// along them.
 // =============================================================================
 
 #include "Nezumi/Core/Clock.hpp"
 #include "Nezumi/Event/EventBus.hpp"
 #include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/World/World.hpp"
 #include <cstdio>  // printf
 #include <cstdlib> // EXIT_FAILURE, EXIT_SUCCESS
@@ -43,6 +45,8 @@ static const BuildingConfig CRAFTER = { .name = "crafter", .type = BuildingType:
 
 static const ResourceConfig TREE = { .name = "tree", .subtype = {}, .variety = {}, .item = {}, .max_amount = 5,
                                      .collision_bounds = { -0.4f, -0.4f, 0.4f, 0.4f } };
+
+static constexpr UnitConfig WALKER = { .name = "walker", .move_speed = 6.0f, .aggro_radius = 0.0f };
 
 static const EntityFactionsMask BLUE = faction_bit(0);
 static const EntityFactionsMask RED  = faction_bit(1);
@@ -190,12 +194,50 @@ static void test_spawn_area() {
     CHECK(!w.is_spawn_blocked(f.surface, Position2D(  0.0f, -12.1f)));
 }
 
+static void test_collision() {
+    std::printf("collision\n");
+    Fixture f;
+    World& w = f.world;
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+    for (int y = -1; y <= 1; y++) w.place_building(f.surface, WALL, { 3, y }, BLUE);
+
+    const auto run = [&](int ticks) {
+        for (int i = 0; i < ticks; i++) {
+            w.tick();
+            f.bus.flush(EventPhase::TickPost, w.get_tick());
+        }
+    };
+
+    // Walking diagonally into the wall (tiles x 3, y -1..1): x stops at the
+    // wall's face, y keeps going, so it slides up and around the end
+    const EntityHandle h = w.create_entity<Unit>(f.surface, Position2D(1.5f, 0.5f), WALKER, BLUE);
+    run(1);
+    w.get_entity_as<Unit>(h)->move_to({ 6.0f, 4.0f });
+    run(20);
+    const Unit* u = w.get_entity_as<Unit>(h);
+    CHECK(u && u->position.x <= 3.0f - 0.25f && u->position.y > 1.0f);
+    run(120);
+    u = w.get_entity_as<Unit>(h);
+    CHECK(u && u->position.x > 5.0f && u->position.y > 3.0f);
+
+    // A house placed on top of a figure lets it walk out
+    const EntityHandle g = w.create_entity<Unit>(f.surface, Position2D(-2.5f, 0.5f), WALKER, BLUE);
+    run(1);
+    CHECK(w.place_building(f.surface, HOUSE, { -3, 0 }, BLUE));
+    run(1);
+    w.get_entity_as<Unit>(g)->move_to({ -6.5f, 0.5f });
+    run(60);
+    const Unit* v = w.get_entity_as<Unit>(g);
+    CHECK(v && v->position.x < -5.0f);
+}
+
 int main() {
     test_founding();
     test_placement();
     test_walls();
     test_disband_and_adopt();
     test_spawn_area();
+    test_collision();
 
     if (g_failures) {
         std::printf("%d check(s) failed\n", g_failures);

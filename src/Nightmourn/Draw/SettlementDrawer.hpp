@@ -16,6 +16,7 @@
 #pragma once
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Geometry/TileRect.hpp"
+#include <cstdint>     // uint8_t
 #include <glm/glm.hpp> // vec4
 
 namespace Nightmourn {
@@ -23,7 +24,11 @@ namespace Nightmourn {
 class Settlement;
 class Surface;
 
+class BuildingDrawer;
+
 struct SettlementDrawStyle {
+    const BuildingDrawer* filler = nullptr; // fills the area (fill_ground); none: outline only
+    std::uint8_t          layer  = 1;       // DrawLayer::GroundOverlay; EntityOverlay draws over the night
     glm::vec4 color           = { 0.45f, 0.65f, 1.0f, 1.0f }; // owner color
     float     outline_pixels  = 2.0f;
     float     fill_alpha      = 0.12f; // while placing
