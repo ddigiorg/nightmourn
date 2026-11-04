@@ -100,19 +100,19 @@ def gen_cube(name, n, height, font_size):
     return c.image(), c.pivot()
 
 def gen_banner():
-    """A pole 2 tiles tall on a small plinth, and a flag facing the viewer,
+    """A pole about 2 cubes tall (160 px) on a small plinth, and a flag facing the viewer,
     centered on the pole: it hangs from a crossbar in the vertical plane
     through the pole that faces the camera (x + y = 1)."""
-    c = Canvas(1, 1, 270)
+    c = Canvas(1, 1, 172)
     c.box(0.3, 0.3, 0.7, 0.7, 10)                    # plinth
-    c.box(0.46, 0.46, 0.54, 0.54, 256)               # pole
-    top, bottom, half = 238, 118, 0.32
+    c.box(0.46, 0.46, 0.54, 0.54, 160)               # pole
+    top, bottom, half = 150, 66, 0.32
     at = lambda t, z: (0.5 + t, 0.5 - t, z)          # t: across the flag
     c.face([at(-half - 0.04, top + 7), at(half + 0.04, top + 7),
             at(half + 0.04, top), at(-half - 0.04, top)], LEFT)   # crossbar
     c.face([at(-half, top), at(half, top), at(half, bottom),
-            at(0, bottom + 24), at(-half, bottom)], TOP)          # swallowtail flag
-    c.label("banner", at(0, (top + bottom) / 2 + 14), 15)
+            at(0, bottom + 18), at(-half, bottom)], TOP)          # swallowtail flag
+    c.label("banner", at(0, (top + bottom) / 2 + 10), 14)
     return c.image(), c.pivot()
 
 def gen_torch():

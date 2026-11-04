@@ -10,8 +10,8 @@
         "picture": {
             "filename": "__base__/graphics/entity/building/banner_mask.png",
             "width": 140,
-            "height": 346,
-            "pivot": [70, 308]
+            "height": 248,
+            "pivot": [70, 210]
         }
     },
     {
