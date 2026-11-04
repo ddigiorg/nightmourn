@@ -19,7 +19,7 @@ std::string_view DebugFlags::name(DebugFlag flag) {
         case DebugFlag::ShowLightMap:            return "show-light-map";
         case DebugFlag::ShowBloom:               return "show-bloom";
         case DebugFlag::DisableLighting:         return "disable-lighting";
-        case DebugFlag::UseTopDownView:          return "use-top-down-view";
+        case DebugFlag::UseIsometricView:        return "use-isometric-view";
         case DebugFlag::Count:                   break;
     }
     return "unknown";

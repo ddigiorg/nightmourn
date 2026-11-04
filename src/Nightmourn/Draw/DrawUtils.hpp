@@ -44,11 +44,11 @@ inline constexpr float SPRITE_PIXELS_PER_TILE = 128.0f;
 std::uint32_t heading_index(glm::vec2 heading, std::uint32_t headings);
 
 // Pick boxes around an entity's feet (its position), in tiles of upright
-// size: the frame each sprite is painted in. A tree is 4x a figure's size
+// size: the frame each sprite is painted in. A tree is 6x a figure's size
 // each way (AoE2's trees tower over its villagers). The tallest one sets
 // DrawContext::VIEW_OVERHANG.
 inline constexpr glm::vec4 FIGURE_SPRITE_BOUNDS = { -0.25f, -0.25f, 0.25f, 0.75f };
-inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -1.00f, -1.00f, 1.00f, 3.00f };
+inline constexpr glm::vec4 TREE_SPRITE_BOUNDS   = { -1.50f, -1.50f, 1.50f, 4.50f };
 
 // Sprite bounds of a drawable entity (above), or nullptr for types without a
 // sprite. Picking (Input/Picking) asks here, so a click hits what is drawn.

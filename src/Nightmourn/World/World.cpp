@@ -193,10 +193,23 @@ PlacementResult World::check_placement(
         if (!s->is_free(footprint))               return PlacementResult::Occupied;
     }
 
-    // Trees, and buildings no settlement holds any more
+    // Buildings no settlement holds any more (solid ones by their box)
     std::vector<EntityHandle> hits;
     surface->find_colliding(inset_bounds(footprint), {}, hits);
     if (!hits.empty()) return PlacementResult::Blocked;
+
+    // Trees by their trunk (they have no collision box), and buildings that
+    // aren't solid (a torch) by their footprint
+    const Area2D inset   = inset_bounds(footprint);
+    bool         blocked = false;
+    surface->visit_entities_in(inset_bounds(footprint.grow(1)), [&](const Entity& e) {
+        if (e.is_resource() && inset.contains(e.position)) blocked = true;
+        if (e.is_type<Building>() && !e.is_collidable() &&
+            inset.overlaps(e.as_type<Building>()->footprint().bounds()))
+            blocked = true;
+        return !blocked;
+    });
+    if (blocked) return PlacementResult::Blocked;
 
     return PlacementResult::Ok;
 }

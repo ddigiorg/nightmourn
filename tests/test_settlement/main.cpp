@@ -54,6 +54,10 @@ static const ResourceConfig TREE = { .name = "tree", .subtype = {}, .variety = {
 
 static constexpr UnitConfig WALKER = { .name = "walker", .move_speed = 6.0f, .aggro_radius = 0.0f };
 
+static const ResourceConfig BARE_TREE = { .name = "bare-tree", .subtype = {}, .variety = {}, .item = {}, .max_amount = 5,
+                                          .collision_bounds = {} };
+static const BuildingConfig TORCH   = { .name = "torch",   .type = BuildingType::Torch,   .index = 5, .footprint = { 1, 1 }, .max_health = 20,  .item = {}, .connects = false, .solid = false, .settlement = nullptr };
+
 static const EntityFactionsMask BLUE = faction_bit(0);
 static const EntityFactionsMask RED  = faction_bit(1);
 
@@ -365,6 +369,34 @@ static void test_raids() {
     CHECK(raiders == 2);
 }
 
+static void test_not_solid() {
+    std::printf("not solid\n");
+    Fixture f;
+    World& w = f.world;
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+
+    // A tree with no collision box isn't collidable, but still keeps
+    // buildings off the tile its trunk stands on
+    const EntityHandle tree = w.create_entity<Resource>(f.surface, Position2D(4.5f, 0.5f), BARE_TREE);
+    run_ticks(f, 1);
+    CHECK(!w.get_entity(tree)->is_collidable());
+    CHECK(w.check_placement(f.surface, WALL, { 4, 0 }, BLUE) == PlacementResult::Blocked);
+    CHECK(w.check_placement(f.surface, WALL, { 4, 1 }, BLUE) == PlacementResult::Ok);
+
+    // A torch isn't solid either, but takes its tile
+    const EntityHandle torch = w.place_building(f.surface, TORCH, { 2, 0 }, BLUE);
+    run_ticks(f, 1);
+    CHECK(torch && !w.get_entity(torch)->is_collidable());
+    CHECK(w.check_placement(f.surface, WALL, { 2, 0 }, BLUE) == PlacementResult::Occupied);
+
+    // A figure walks straight through both
+    const EntityHandle u = w.create_entity<Unit>(f.surface, Position2D(0.5f, 0.5f), WALKER, RED);
+    run_ticks(f, 1);
+    w.get_entity_as<Unit>(u)->move_to({ 7.5f, 0.5f });
+    run_ticks(f, 90);
+    CHECK(w.get_entity_as<Unit>(u)->position.x > 7.0f);
+}
+
 int main() {
     test_founding();
     test_placement();
@@ -376,6 +408,7 @@ int main() {
     test_units_hit_walls();
     test_hero_attack();
     test_raids();
+    test_not_solid();
 
     if (g_failures) {
         std::printf("%d check(s) failed\n", g_failures);

@@ -8,10 +8,10 @@
 # in data/base/configs/entity/trees.json list the looks and the pivot,
 # and the game packs them when it starts).
 #
-# Each frame is 256x512 px, four times a unit frame (64x128) on each side,
-# and is drawn 2x4 tiles. The trunk's foot is the frame's pivot, 128 px above
+# Each frame is 384x768 px, six times a unit frame (64x128) on each side,
+# and is drawn 3x6 tiles. The trunk's foot is the frame's pivot, 192 px above
 # the bottom edge (a quarter of the height, the same as a unit's), which
-# leaves room below it for the shadow.
+# leaves room below it for the shadow. (Painted at 256x512 and scaled 1.5x.)
 #
 # Canopies are thousands of small leaves (oak) or needle strokes (pine)
 # scattered over a crown, painted back to front:
@@ -33,8 +33,10 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-W, H  = 256, 512   # frame size (px)
-FOOT  = (128, 384) # trunk foot, the sprite's pivot (px)
+W, H  = 256, 512   # drawing size (px): coordinates below are in these
+FOOT  = (128, 384) # trunk foot (px, drawing size)
+SCALE = 1.5        # the saved frame is this much bigger: 384x768, foot (192, 576)
+OW, OH = int(W * SCALE), int(H * SCALE)
 S     = 2          # supersampling
 LIGHT = np.array([-0.55, -0.65, 0.52])  # x right, y down, z toward the viewer
 LIGHT = LIGHT / np.linalg.norm(LIGHT)
@@ -117,15 +119,16 @@ def trunk(img, top_y, half_width, lean, flare):
 
 def finish(img):
     # Down to frame size; premultiplied, so transparent pixels don't darken edges
-    img = img.convert("RGBa").resize((W, H), Image.BOX).convert("RGBA")
+    img = img.convert("RGBa").resize((OW, OH), Image.LANCZOS).convert("RGBA")
     return bleed(fade_edges(img))
 
 def fade_edges(img, margin=4):
     """Fade alpha to 0 over the outer `margin` px, so linear filtering at a
     frame's edge never picks up the neighboring frame."""
     a = np.asarray(img).astype(np.float64)
-    wx = np.clip(np.minimum(np.arange(W), W - 1 - np.arange(W)) / margin, 0, 1)
-    wy = np.clip(np.minimum(np.arange(H), H - 1 - np.arange(H)) / margin, 0, 1)
+    w, h = img.size
+    wx = np.clip(np.minimum(np.arange(w), w - 1 - np.arange(w)) / margin, 0, 1)
+    wy = np.clip(np.minimum(np.arange(h), h - 1 - np.arange(h)) / margin, 0, 1)
     a[..., 3] *= wy[:, None] * wx[None, :]
     return Image.fromarray(a.round().astype(np.uint8), "RGBA")
 
@@ -293,9 +296,9 @@ args = parser.parse_args()
 
 frames = [make() for make in FRAMES]
 if args.out:
-    sheet = Image.new("RGBA", (W * len(frames), H), (0, 0, 0, 0))
+    sheet = Image.new("RGBA", (OW * len(frames), OH), (0, 0, 0, 0))
     for i, frame in enumerate(frames):
-        sheet.paste(frame, (i * W, 0))
+        sheet.paste(frame, (i * OW, 0))
     sheet.save(args.out)
 else:
     for (variety, look), frame in zip(NAMES, frames):

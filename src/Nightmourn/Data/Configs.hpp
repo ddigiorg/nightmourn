@@ -117,7 +117,8 @@
 //                image (tools/gen_buildings.py prints them). A connecting
 //                wall has 16 frames, one per set of connected sides (bits
 //                north 1, east 2, south 4, west 8). A banner names the
-//                "settlement" it founds
+//                "settlement" it founds. "solid": false lets figures walk
+//                through it (a torch)
 //
 //     { "type": "building", "name": "house", "kind": "house",
 //       "size": [2, 2], "max_health": 400, "item": "house",

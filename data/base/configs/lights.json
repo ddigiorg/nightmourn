@@ -21,7 +21,7 @@
         "core": 14.0,
         "softness": 0.0,
         "flicker": 0.8,
-        "glow_height": 0.55,
+        "glow_height": 0.6,
         "glow_radius": 0.12,
         "glow_intensity": 4.0
     },

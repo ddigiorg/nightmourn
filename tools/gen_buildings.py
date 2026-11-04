@@ -1,25 +1,26 @@
 # ==============================================================================
 # tools/gen_buildings.py
 #
-# Generates the placeholder building sprites for the 2:1 isometric view, in
-# the style of the unit figures (gen_units.py): masks whose white takes the
-# owner's color (Sprite::tint), shaded grays that keep the faces apart once
-# tinted, black outlines, and the building's name in black. Buildings are
-# boxes standing on their footprint, the way Age of Empires II's buildings
-# fill theirs:
+# Generates the placeholder building sprites for the top-down view, in the
+# style of the unit figures (gen_units.py): masks whose white takes the
+# owner's color (Sprite::tint), a bold black outline, and the building's
+# name in black, centered. Buildings are squares filling their footprint,
+# seen from above:
 #
 #   data/base/graphics/entity/building/<name>_mask.png
 #   data/base/graphics/gui/item/<name>.png              72 x 72 item icons
 #
-# Iso art is 128 px per tile diamond width (SPRITE_PIXELS_PER_TILE): a tile
-# is a 128 x 64 px diamond, and a 1 upright tile height is 128 px. Each
-# picture's pivot is its footprint's center, which is where the game draws
-# it; the pivots are printed for data/base/configs/entity/buildings.json.
+# Art is 128 px per tile (SPRITE_PIXELS_PER_TILE), so a house's 2 x 2 tile
+# footprint is 256 px square. Each picture's pivot is the footprint's
+# center (the middle of a square; the foot of the banner's and torch's
+# pole), which is where the game draws it; the pivots are printed for
+# data/base/configs/entity/buildings.json.
 #
-# The wall sheet has a frame per set of connected sides, the frame index
-# being the side bits (north/+y 1, east/+x 2, south/-y 4, west/-x 8, as
-# Building::connections): a post with an arm out to each connected side, so
-# a row of walls reads as one wall.
+# The wall and gate sheets have a frame per set of connected sides, the
+# frame index being the side bits (north 1, east 2, south 4, west 8, as
+# Building::connections): a post with an arm out to each connected side,
+# so a row of walls reads as one wall. A gate is the same with a planked
+# door across its middle.
 #
 #   python3 tools/gen_buildings.py                 # write into data/base/graphics
 #   python3 tools/gen_buildings.py --out somewhere # somewhere else, for a look
@@ -31,146 +32,111 @@ import argparse
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-TILE    = 128  # px per tile diamond width; the diamond is TILE x TILE / 2
-HALF    = TILE // 2
-SS      = 2    # supersampling
-OUTLINE = 4    # black edge, px
-PAD     = 6
-BLACK   = (0, 0, 0, 255)
-CLEAR   = (0, 0, 0, 0)
+TILE   = 128 # px per tile
+BORDER = 8   # black edge around the white fill, as the figures'
+BLACK  = (0, 0, 0, 255)
+WHITE  = (255, 255, 255, 255)
+CLEAR  = (0, 0, 0, 0)
 
-# Face shades: the tint multiplies them, so the faces stay apart in any color
-TOP, LEFT, RIGHT = 255, 214, 160
+def outlined_box(draw, box):
+    """A white box with a black BORDER inside its edge."""
+    x0, y0, x1, y1 = box
+    draw.rectangle([x0, y0, x1 - 1, y1 - 1], fill=BLACK)
+    draw.rectangle([x0 + BORDER, y0 + BORDER, x1 - 1 - BORDER, y1 - 1 - BORDER], fill=WHITE)
 
-class Canvas:
-    """An image of a footprint `n` x `m` tiles with room for `height` px
-    above it. World (x, y, z) in tiles (z in px) maps to image px with the
-    footprint's min corner at the bottom."""
-    def __init__(self, n, m, height):
-        self.w  = HALF * (n + m) + 2 * PAD
-        self.h  = HALF // 2 * (n + m) + height + 2 * PAD
-        self.ox = HALF * m + PAD
-        self.oy = self.h - PAD
-        self.n, self.m = n, m
-        self.img  = Image.new("RGBA", (self.w * SS, self.h * SS), CLEAR)
-        self.draw = ImageDraw.Draw(self.img)
-
-    def px(self, x, y, z=0.0):
-        return ((self.ox + HALF * (x - y)) * SS, (self.oy - HALF / 2 * (x + y) - z) * SS)
-
-    def pivot(self):
-        x, y = self.px(self.n / 2, self.m / 2)
-        return [round(x / SS), round(y / SS)]
-
-    def face(self, pts, shade):
-        poly = [self.px(*p) for p in pts]
-        self.draw.polygon(poly, fill=(shade, shade, shade, 255))
-        self.draw.line(poly + [poly[0]], fill=BLACK, width=OUTLINE * SS, joint="curve")
-
-    def box(self, x0, y0, x1, y1, h, z0=0):
-        """A box from (x0, y0) to (x1, y1), from `z0` up to `h` px: its two
-        front faces and its top."""
-        self.face([(x0, y0, z0), (x0, y1, z0), (x0, y1, h), (x0, y0, h)], LEFT)   # faces -x
-        self.face([(x0, y0, z0), (x1, y0, z0), (x1, y0, h), (x0, y0, h)], RIGHT)  # faces -y
-        self.face([(x0, y0, h), (x1, y0, h), (x1, y1, h), (x0, y1, h)], TOP)
-
-    def boxes(self, boxes):
-        """Several boxes, back to front."""
-        for b in sorted(boxes, key=lambda b: -(b[0] + b[1] + b[2] + b[3])):
-            self.box(*b)
-
-    def label(self, text, at, size):
-        font = ImageFont.load_default(size=size * SS)
-        x, y = self.px(*at)
-        self.draw.text((x, y), text, fill=BLACK, font=font, anchor="mm")
-
-    def image(self):
-        return self.img.resize((self.w, self.h), Image.LANCZOS)
+def label(draw, center, text, size):
+    font = ImageFont.load_default(size=size)
+    draw.text(center, text, fill=BLACK, font=font, anchor="mm")
 
 # ------------------------------------------------------------------------------
 # Buildings
 # ------------------------------------------------------------------------------
 
-def gen_cube(name, n, height, font_size):
-    """A box filling its n x n footprint, its name centered on the top."""
-    c = Canvas(n, n, height)
-    inset = 0.06
-    c.box(inset, inset, n - inset, n - inset, height)
-    c.label(name, (n / 2, n / 2, height), font_size)
-    return c.image(), c.pivot()
+def gen_box(name, tiles, font_size):
+    """A square filling an n x n footprint, its name in the middle."""
+    w = h = tiles * TILE
+    img = Image.new("RGBA", (w, h), CLEAR)
+    d = ImageDraw.Draw(img)
+    outlined_box(d, (0, 0, w, h))
+    # An inner line, a hint of a roof edge, so it doesn't read as a hole
+    inset = 24 * tiles // 2
+    d.rectangle([inset, inset, w - 1 - inset, h - 1 - inset], outline=BLACK, width=4)
+    label(d, (w / 2, h / 2), name, font_size)
+    return img, [w // 2, h // 2]
 
 def gen_banner():
-    """A pole about 2 cubes tall (160 px) on a small plinth, and a flag facing the viewer,
-    centered on the pole: it hangs from a crossbar in the vertical plane
-    through the pole that faces the camera (x + y = 1)."""
-    c = Canvas(1, 1, 172)
-    c.box(0.3, 0.3, 0.7, 0.7, 10)                    # plinth
-    c.box(0.46, 0.46, 0.54, 0.54, 160)               # pole
-    top, bottom, half = 150, 30, 0.32
-    at = lambda t, z: (0.5 + t, 0.5 - t, z)          # t: across the flag
-    c.face([at(-half - 0.04, top + 7), at(half + 0.04, top + 7),
-            at(half + 0.04, top), at(-half - 0.04, top)], LEFT)   # crossbar
-    c.face([at(-half, top), at(half, top), at(half, bottom),
-            at(0, bottom + 24), at(-half, bottom)], TOP)          # swallowtail flag
-    c.label("banner", at(0, (top + bottom) / 2 + 14), 15)
-    return c.image(), c.pivot()
+    """A short pole (1.5 tiles) with the full-size flag hanging from its
+    top: the pole's foot is the pivot."""
+    w, h = 64, 192
+    img = Image.new("RGBA", (w, h), CLEAR)
+    d = ImageDraw.Draw(img)
+    # Pole: white with a black edge, full height
+    d.rectangle([24, 0, 39, h - 1], fill=BLACK)
+    d.rectangle([28, 4, 35, h - 5], fill=WHITE)
+    # Flag hanging from the top, a swallowtail at its foot, the word down it
+    flag = [(0, 8), (w - 1, 8), (w - 1, 172), (w / 2, 148), (0, 172)]
+    d.polygon(flag, fill=BLACK)
+    inner = [(BORDER, 8 + BORDER), (w - 1 - BORDER, 8 + BORDER), (w - 1 - BORDER, 158),
+             (w / 2, 138), (BORDER, 158)]
+    d.polygon(inner, fill=WHITE)
+    font = ImageFont.load_default(size=20)
+    for i, ch in enumerate("BANNER"):
+        d.text((w / 2, 30 + i * 20), ch, fill=BLACK, font=font, anchor="mm")
+    return img, [w // 2, h - 6]
 
 def gen_torch():
-    """A short post with a lit head, all inside a 1 x 1 x 1 tile cube (78 px
-    tall at this projection): the "building-torch" light glows at the head
-    (glow_height 0.55 upright tiles, 70 px)."""
-    c = Canvas(1, 1, 80)
-    c.box(0.3, 0.3, 0.7, 0.7, 8)                     # plinth
-    c.box(0.45, 0.45, 0.55, 0.55, 60)                # post
-    c.box(0.37, 0.37, 0.63, 0.63, 78, 56)            # head, where the flame is
-    return c.image(), c.pivot()
+    """A post on a plinth with a square head, under a tile tall: the post's
+    foot is the pivot, and the "building-torch" light glows at the head
+    (glow_height 0.6 tiles, 76 px above the foot)."""
+    w, h = 64, 112
+    img = Image.new("RGBA", (w, h), CLEAR)
+    d = ImageDraw.Draw(img)
+    d.rectangle([24, 30, 39, h - 11], fill=BLACK)   # post, edged like the banner's pole
+    d.rectangle([28, 30, 35, h - 11], fill=WHITE)
+    outlined_box(d, (10, h - 26, w - 10, h))   # plinth
+    outlined_box(d, (12, 4, w - 12, 44))       # head, where the flame is
+    return img, [w // 2, h - 12]
 
-def gen_wall_frame(bits, height):
-    c = Canvas(1, 1, height)
-    a, b = 0.24, 0.76 # post and arm width
-    boxes = [(a, a, b, b, height)]
-    if bits & 1: boxes.append((a, b, b, 1.0, height))   # north, +y
-    if bits & 2: boxes.append((b, a, 1.0, b, height))   # east, +x
-    if bits & 4: boxes.append((a, 0.0, b, a, height))   # south, -y
-    if bits & 8: boxes.append((0.0, a, a, b, height))   # west, -x
-    c.boxes(boxes)
-    c.label("wall", (0.5, 0.5, height), 12)
-    return c.image(), c.pivot()
+def gen_connector_frame(bits, door):
+    """One wall tile: a post, with an arm to each side in `bits`. A gate
+    (`door`) gets planks across its middle."""
+    s = TILE
+    POST = 20 # inset of the post and arms from the tile edge
+    img = Image.new("RGBA", (s, s), CLEAR)
+    d = ImageDraw.Draw(img)
+    # Image y runs down, so north (+y in the world) is the top
+    boxes = [(POST, POST, s - POST, s - POST)]
+    if bits & 1: boxes.append((POST, 0, s - POST, s - POST))   # north
+    if bits & 2: boxes.append((POST, POST, s, s - POST))       # east
+    if bits & 4: boxes.append((POST, POST, s - POST, s))       # south
+    if bits & 8: boxes.append((0, POST, s - POST, s - POST))   # west
+    for b in boxes: d.rectangle([b[0], b[1], b[2] - 1, b[3] - 1], fill=BLACK)
+    for b in boxes:
+        # Shrink by the border, except where the box runs off the tile edge
+        x0 = b[0] + (BORDER if b[0] > 0 else 0)
+        y0 = b[1] + (BORDER if b[1] > 0 else 0)
+        x1 = b[2] - (BORDER if b[2] < s else 0)
+        y1 = b[3] - (BORDER if b[3] < s else 0)
+        d.rectangle([x0, y0, x1 - 1, y1 - 1], fill=WHITE)
+    if door:
+        # Planks across the way through: lines along the wall's run (east-
+        # west unless it only joins north or south)
+        along_y = bool(bits & 5) and not (bits & 10)
+        for i in range(1, 4):
+            t = POST + BORDER + i * (s - 2 * POST - 2 * BORDER) // 4
+            if along_y: d.line([(t, POST), (t, s - POST)], fill=BLACK, width=4)
+            else:       d.line([(POST, t), (s - POST, t)], fill=BLACK, width=4)
+        d.rectangle([POST, POST, s - POST - 1, s - POST - 1], outline=BLACK, width=BORDER)
+    font = ImageFont.load_default(size=22)
+    d.text((s / 2, s / 2), "gate" if door else "wall", fill=BLACK, font=font, anchor="mm",
+           stroke_width=3 if door else 0, stroke_fill=WHITE)
+    return img
 
-def gen_gate_frame(bits, height):
-    """A wall piece with a passage through it: two pillars and a lintel,
-    lined up with the walls it joins (east-west unless it only joins north
-    or south), the way through crossing the wall."""
-    c = Canvas(1, 1, height + 10)
-    a, b = 0.24, 0.76
-    along_y = bool(bits & 5) and not (bits & 10)
-    p, top = 0.2, height + 10                          # pillar depth, height
-    lintel = height - 6
-    if along_y:   # the wall runs north-south: pillars at its ends in y
-        boxes = [(a, 1 - p, b, 1.0, top), (a, 0.0, b, p, top),
-                 (a, p, b, 1 - p, top, lintel)]
-    else:         # east-west: pillars at its ends in x
-        boxes = [(1 - p, a, 1.0, b, top), (0.0, a, p, b, top),
-                 (p, a, 1 - p, b, top, lintel)]
-    c.boxes(boxes)
-    c.label("gate", (0.5, 0.5, top), 12)
-    return c.image(), c.pivot()
-
-def gen_connecting(frame, height):
-    frames = [frame(bits, height) for bits in range(16)]
-    w, h = frames[0][0].size
-    sheet = Image.new("RGBA", (w * 16, h), CLEAR)
-    for bits, (img, _) in enumerate(frames):
-        sheet.paste(img, (bits * w, 0))
-    return sheet, frames[0][1], (w, h)
-
-def gen_wall():
-    frames = [gen_wall_frame(bits, 56) for bits in range(16)]
-    w, h = frames[0][0].size
-    sheet = Image.new("RGBA", (w * 16, h), CLEAR)
-    for bits, (img, _) in enumerate(frames):
-        sheet.paste(img, (bits * w, 0))
-    return sheet, frames[0][1], (w, h)
+def gen_connector(door):
+    sheet = Image.new("RGBA", (TILE * 16, TILE), CLEAR)
+    for bits in range(16):
+        sheet.paste(gen_connector_frame(bits, door), (bits * TILE, 0))
+    return sheet, [TILE // 2, TILE // 2]
 
 # ------------------------------------------------------------------------------
 # Item icons: the building's mask, tinted the player's blue, on a dark tile
@@ -211,36 +177,29 @@ def main():
     ap.add_argument("--out", default=root, help="graphics folder to write entity/building and gui/item into")
     args = ap.parse_args()
 
-    wall, wall_pivot, wall_frame = gen_wall()
     pictures = {
         "banner":   gen_banner(),
+        "wall":     gen_connector(door=False),
+        "gate":     gen_connector(door=True),
         "torch":    gen_torch(),
-        "house":    gen_cube("house",    2, 110, 20),
-        "crafter":  gen_cube("crafter",  3, 120, 24),
-        "barracks": gen_cube("barracks", 3, 150, 24),
+        "house":    gen_box("house",    2, 44),
+        "crafter":  gen_box("crafter",  3, 56),
+        "barracks": gen_box("barracks", 3, 56),
     }
 
     bdir = os.path.join(args.out, "entity", "building")
     idir = os.path.join(args.out, "gui", "item")
     os.makedirs(bdir, exist_ok=True)
     os.makedirs(idir, exist_ok=True)
-
-    path = os.path.join(bdir, "wall_mask.png")
-    wall.save(path, optimize=True)
-    print(f"wrote {os.path.normpath(path)}  frame {wall_frame[0]} x {wall_frame[1]}  pivot {wall_pivot}")
-    gate, gate_pivot, gate_frame = gen_connecting(gen_gate_frame, 56)
-    path = os.path.join(bdir, "gate_mask.png")
-    gate.save(path, optimize=True)
-    print(f"wrote {os.path.normpath(path)}  frame {gate_frame[0]} x {gate_frame[1]}  pivot {gate_pivot}")
     for name, (img, pivot) in pictures.items():
         path = os.path.join(bdir, f"{name}_mask.png")
         img.save(path, optimize=True)
         print(f"wrote {os.path.normpath(path)}  {img.width} x {img.height}  pivot {pivot}")
 
-    # The wall's icon is a straight east-west piece
+    # Wall and gate icons are a straight east-west piece
     icons = {name: img for name, (img, _) in pictures.items()}
-    icons["wall"] = wall.crop((10 * wall_frame[0], 0, 11 * wall_frame[0], wall_frame[1]))
-    icons["gate"] = gate.crop((10 * gate_frame[0], 0, 11 * gate_frame[0], gate_frame[1]))
+    for name in ("wall", "gate"):
+        icons[name] = icons[name].crop((10 * TILE, 0, 11 * TILE, TILE))
     for name, img in icons.items():
         path = os.path.join(idir, f"{name}.png")
         gen_icon(img).save(path, optimize=True)

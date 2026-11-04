@@ -304,6 +304,7 @@ BuildingPrototype read_building(Fields& f, const std::string& name, const auto& 
     }
     f.get("max_health", c.max_health);
     f.get("connects",   c.connects);
+    f.get("solid",      c.solid);
     f.get("item",       p.item);
     f.get("settlement", p.settlement);
     f.get("light",      p.light);
