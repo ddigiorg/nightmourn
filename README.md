@@ -22,10 +22,10 @@ Demos are built next to the game:
 | Path | What lives there |
 | --- | --- |
 | `src/main.cpp` | The game executable |
-| `src/Nightmourn/` | Game code shared by the game and the demos, included as `<Nightmourn/...>`. The simulation (`World/`, `Surface/`, `Chunk/`, `Sector/`, `Entity/`, `Unit/`, `Resource/`, ...) builds as the headless `nightmourn_world` library; drawing, GUI, input and `Player` build as `nightmourn_game` on top |
+| `src/Nightmourn/` | Game code shared by the game and the demos, included as `<Nightmourn/...>`. The simulation (`World/`, `Surface/`, `Chunk/`, `Sector/`, `Entity/`, `Unit/`, `Resource/`, `Building/`, `Settlement/`, ...) builds as the headless `nightmourn_world` library; drawing, GUI, input and `Player` build as `nightmourn_game` on top |
 | `demos/` | One small prototype per feature, the game's version of Nezumi's `examples/` |
-| `data/` | Game data, Factorio style: `base/graphics/` (PNGs) and `base/configs/` (JSON naming them, see `src/Nightmourn/Data/Configs.hpp`). Copied next to each executable; sprite sheets are packed from it when the game starts. Units, groups, projectiles, the hero, trees, items, lights and terrain are all configs there, so adding or retuning one is a few lines of JSON (format them with `tools/format_json.py`) |
-| `tools/` | Generators for the art in `data/` (`gen_units.py`, `gen_trees.py`, `gen_meadow.py`, `gen_ui.py`) |
+| `data/` | Game data, Factorio style: `base/graphics/` (PNGs) and `base/configs/` (JSON naming them, see `src/Nightmourn/Data/Configs.hpp`). Copied next to each executable; sprite sheets are packed from it when the game starts. Units, groups, projectiles, the hero, trees, buildings, settlements, items, lights and terrain are all configs there, so adding or retuning one is a few lines of JSON (format them with `tools/format_json.py`) |
+| `tools/` | Generators for the art in `data/` (`gen_units.py`, `gen_trees.py`, `gen_buildings.py`, `gen_meadow.py`, `gen_ui.py`) |
 | `tests/` | Headless simulation tests (link `nightmourn_world` only); run with `ctest --test-dir .build/debug` |
 
 ## Engine Version

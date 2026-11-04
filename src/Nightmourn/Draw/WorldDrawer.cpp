@@ -3,6 +3,7 @@
 // =============================================================================
 
 #include "Nightmourn/Draw/WorldDrawer.hpp"
+#include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Chunk/Chunk.hpp"
 #include "Nightmourn/Chunk/ChunkSpan.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
@@ -23,6 +24,7 @@ WorldDrawer::WorldDrawer(const Config& config)
     , unit_groups_(config.unit_groups)
     , characters_ (config.characters)
     , resources_  (config.resources)
+    , buildings_  (config.buildings)
 {}
 
 // -----------------------------------------------------------------------------
@@ -57,6 +59,7 @@ void WorldDrawer::draw_entity_(DrawContext& ctx, const Entity& entity) const {
     if      (entity.is_type<Unit    >()) units_     .draw(ctx, *entity.as_type<Unit    >());
     else if (entity.is_type<Character       >()) characters_.draw(ctx, *entity.as_type<Character       >());
     else if (entity.is_type<Resource>()) resources_ .draw(ctx, *entity.as_type<Resource>());
+    else if (entity.is_type<Building>()) buildings_ .draw(ctx, *entity.as_type<Building>());
 }
 
 // Groups aren't drawable (no sprite), and one sits in its anchor's chunk

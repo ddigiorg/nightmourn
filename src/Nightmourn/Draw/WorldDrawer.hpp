@@ -20,6 +20,7 @@
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Draw/BuildingDrawer.hpp"
 #include "Nightmourn/Draw/CharacterDrawer.hpp"
 #include "Nightmourn/Draw/ChunkDrawer.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
@@ -46,6 +47,7 @@ public:
         UnitGroupDrawer::Config unit_groups = {};
         CharacterDrawer::Config characters  = {};
         ResourceDrawer::Config  resources   = {};
+        BuildingDrawer::Config  buildings   = {};
     };
 
     // -------------------------------------------------------------------------
@@ -69,6 +71,7 @@ public:
     const UnitGroupDrawer& unit_groups() const { return unit_groups_; }
     const CharacterDrawer& characters()  const { return characters_;  }
     const ResourceDrawer&  resources()   const { return resources_;   }
+    const BuildingDrawer&  buildings()   const { return buildings_;   }
     const ProjectileDrawer& projectiles() const { return projectiles_; }
 
 private:
@@ -92,6 +95,7 @@ private:
     UnitGroupDrawer unit_groups_;
     CharacterDrawer characters_;
     ResourceDrawer  resources_;
+    BuildingDrawer  buildings_;
     ProjectileDrawer projectiles_;
 };
 

@@ -22,5 +22,29 @@
         "name": "food",
         "icon": "__base__/graphics/gui/item/food.png",
         "stack_size": 20
+    },
+    {
+        "type": "item",
+        "name": "banner",
+        "icon": "__base__/graphics/gui/item/banner.png",
+        "stack_size": 1
+    },
+    {
+        "type": "item",
+        "name": "wall",
+        "icon": "__base__/graphics/gui/item/wall.png",
+        "stack_size": 100
+    },
+    {
+        "type": "item",
+        "name": "house",
+        "icon": "__base__/graphics/gui/item/house.png",
+        "stack_size": 10
+    },
+    {
+        "type": "item",
+        "name": "crafter",
+        "icon": "__base__/graphics/gui/item/crafter.png",
+        "stack_size": 10
     }
 ]

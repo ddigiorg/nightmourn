@@ -396,6 +396,35 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 - [ ] Settlements, buildings that produce unit blocks, and waypoint orders
       from the settlement (the core loop in `docs/nightmourn.md`).
 
+### Settlements and buildings
+
+A banner (`Building` of `BuildingType::Banner`) founds a `Settlement`, owned by
+`World`: a square build area of tiles around the banner (`build_radius`), an
+occupancy grid of it, and its own `Inventory`. Every other building goes
+through `World::place_building`, snapped to the tile grid and wholly inside
+the faction's build area; walls join up (`Building::connections`). Enemies
+may not spawn in `Settlement::spawn_area()` (`World::is_spawn_blocked`).
+Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
+(demo 04-settlement, test `test_settlement`).
+
+- [x] Building entity (banner, wall, house, crafter), placement preview,
+      territory outline and fill, wall painting, settlement inventory,
+      spawn exclusion (demo 04-settlement).
+- [ ] **Collision response**: nothing blocks movement yet, so figures walk
+      through walls. Characters and units should slide along Collidable
+      boxes; walls then need a gate building.
+- [ ] **Crafter tick**: `Crafter : Building` overrides `tick()` and sets
+      Tickable, reading recipes from config and drawing from and delivering
+      to its settlement's inventory through World commands.
+- [ ] Night raids: spawn enemies outside every settlement's spawn area
+      after dark (`DayNight::darkness()`), aimed at the banner.
+- [ ] Settlement stock as unlimited per-item counts (Colony Survival's
+      stockpile) instead of inventory slots, if slots feel wrong.
+- [ ] Growing the build area (banner upgrades or outpost banners), and
+      enemy settlements (same code, another faction).
+- [ ] Repair, and deconstruction in the game (the demo's X refunds the
+      item; the game might take time and a builder).
+
 ### Resources and trees
 
 Trees are `Nightmourn::Resource`s (an `EntityResource`: they never tick; mining

@@ -1,0 +1,58 @@
+[
+    {
+        "type": "building",
+        "name": "banner",
+        "kind": "banner",
+        "size": [1, 1],
+        "max_health": 500,
+        "item": "banner",
+        "settlement": "player",
+        "picture": {
+            "filename": "__base__/graphics/entity/building/banner_mask.png",
+            "width": 64,
+            "height": 256,
+            "pivot": [32, 240]
+        }
+    },
+    {
+        "type": "building",
+        "name": "wall",
+        "kind": "wall",
+        "size": [1, 1],
+        "max_health": 200,
+        "item": "wall",
+        "connects": true,
+        "picture": {
+            "filename": "__base__/graphics/entity/building/wall_mask.png",
+            "width": 128,
+            "height": 128,
+            "frame_count": 16
+        }
+    },
+    {
+        "type": "building",
+        "name": "house",
+        "kind": "house",
+        "size": [2, 2],
+        "max_health": 400,
+        "item": "house",
+        "picture": {
+            "filename": "__base__/graphics/entity/building/house_mask.png",
+            "width": 256,
+            "height": 256
+        }
+    },
+    {
+        "type": "building",
+        "name": "crafter",
+        "kind": "crafter",
+        "size": [3, 3],
+        "max_health": 800,
+        "item": "crafter",
+        "picture": {
+            "filename": "__base__/graphics/entity/building/crafter_mask.png",
+            "width": 384,
+            "height": 384
+        }
+    }
+]
