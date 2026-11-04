@@ -5,6 +5,7 @@
 #include "Nightmourn/Surface/Surface.hpp"
 #include "Nightmourn/Events/OnChunkCreated.hpp"
 #include "Nightmourn/World/World.hpp"
+#include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/World/WorldContext.hpp"
 #include <algorithm> // sort, unique, erase_if
 #include <cassert>   // assert
@@ -313,7 +314,9 @@ Position2D Surface::slide_(const Entity& entity, Position2D to) {
         find_colliding(box, entity.handle, hits_);
         std::erase_if(hits_, [&](EntityHandle h) {
             const Entity* e = world_.get_entity(h);
-            return !e || e->collision_box().overlaps(start); // already inside it: let it out
+            if (!e || e->collision_box().overlaps(start)) return true; // already inside it: let it out
+            return e->type_id == Building::TYPE_ID &&
+                   static_cast<const Building*>(e)->lets_through(entity); // a friendly gate
         });
     };
 

@@ -32,6 +32,22 @@
     },
     {
         "type": "building",
+        "name": "gate",
+        "kind": "gate",
+        "size": [1, 1],
+        "max_health": 300,
+        "item": "gate",
+        "connects": true,
+        "picture": {
+            "filename": "__base__/graphics/entity/building/gate_mask.png",
+            "width": 140,
+            "height": 142,
+            "frame_count": 16,
+            "pivot": [70, 104]
+        }
+    },
+    {
+        "type": "building",
         "name": "torch",
         "kind": "torch",
         "size": [1, 1],

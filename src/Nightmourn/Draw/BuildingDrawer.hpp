@@ -8,10 +8,10 @@
 // whose frame is its Building::connections. Pictures are masks, like the
 // unit figures: white takes the owner faction's color, black stays black.
 // The art is isometric (tools/gen_buildings.py: boxes standing on their
-// footprint), drawn with its pivot on the footprint's center and y-sorted
-// with the figures by it. With collision keeping figures off the footprint
-// that is right everywhere but right beside a big building's back half
-// (see "Footprint depth" in docs/todo.md).
+// footprint), drawn with its pivot on the footprint's center. A 1 x 1 is
+// y-sorted with the figures by that center; a bigger one is drawn in
+// vertical strips, each sorted by the footprint's front edge in its column,
+// so figures beside it are in front of or behind it as they should be.
 //
 // fill_ground() fills a world box on the ground (a diamond in iso) with a
 // color, for ghosts and the settlement's build area.
@@ -22,6 +22,7 @@
 // =============================================================================
 
 #pragma once
+#include "Nezumi/Render/2D/Sprite/SpriteID.hpp"
 #include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Entity/EntityFactionsMask.hpp"
@@ -105,6 +106,11 @@ private:
     };
 
     const Frames* frames_(const BuildingConfig& config) const;
+
+    // A multi-tile building's picture in strips, each sorted by its own
+    // footprint depth
+    void draw_sliced_(DrawContext& ctx, Nezumi::Render::SpriteID sprite, const TileRect& footprint,
+                      glm::vec4 color) const;
 
     const Nezumi::Render::SpriteSheet*  sheet_          = nullptr;
     std::vector<Frames>                 pictures_       = {};

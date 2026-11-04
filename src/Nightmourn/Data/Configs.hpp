@@ -22,8 +22,9 @@
 //         entity/projectiles.json   projectile   arrow
 //         entity/characters.json    character    hero
 //         entity/trees.json         tree         oak, pine
-//         entity/buildings.json     building     banner, wall, torch, house, crafter, barracks
+//         entity/buildings.json     building     banner, wall, gate, torch, house, crafter, barracks
 //         settlements.json          settlement   player
+//         raids.json                raid         night
 //         items.json                item         wood, stone, gold, food
 //         lights.json               light        torch, campfire, lantern, ...
 //         tiles.json                tile         grass
@@ -96,7 +97,8 @@
 //                (Character/CharacterConfig.hpp), and its "sprite"
 //
 //     { "type": "character", "name": "hero", "sprite": "figure",
-//       "max_health": 300, "move_speed": 5.0, "mine_interval": 30, ... }
+//       "max_health": 300, "move_speed": 5.0, "mine_interval": 30,
+//       "attack_damage": 25, ... }
 //
 //   tree         a tree variety: what mining it yields ("item", up to
 //                "max_amount" of it; Resource/ResourceConfig.hpp) and its
@@ -107,7 +109,7 @@
 //       "pictures": [ { "filename": "...", "pivot": [128, 384] }, ... ] }
 //
 //   building     a kind of building (Building/BuildingConfig.hpp): what it
-//                does ("kind": "banner", "wall", "torch", "house",
+//                does ("kind": "banner", "wall", "gate", "torch", "house",
 //                "crafter" or "barracks"), its footprint in tiles, the item
 //                placing it costs, the "light" it gives off (a light's name,
 //                optional), and its "picture": a sheet like a unit-sprite
@@ -126,6 +128,14 @@
 //
 //     { "type": "settlement", "name": "player", "build_radius": 16,
 //       "spawn_margin": 8, "min_gap": 4, "inventory_slots": 60 }
+//
+//   raid         night raids on settlements (Settlement/RaidConfig.hpp):
+//                which "unit" spawns, every "interval" seconds while
+//                darkness is at least "min_darkness", up to "max_alive"
+//
+//     { "type": "raid", "name": "night", "unit": "raider", "interval": 40,
+//       "max_alive": 2, "min_distance": 2, "max_distance": 8,
+//       "min_darkness": 0.5 }
 //
 //   item         something an inventory holds, its icon and how many fit
 //                in one slot
@@ -177,6 +187,7 @@
 #include "Nightmourn/Lighting/LightSource.hpp"
 #include "Nightmourn/Projectile/ProjectileConfig.hpp"
 #include "Nightmourn/Resource/ResourceConfig.hpp"
+#include "Nightmourn/Settlement/RaidConfig.hpp"
 #include "Nightmourn/Settlement/SettlementConfig.hpp"
 #include "Nightmourn/Unit/UnitConfig.hpp"
 #include "Nightmourn/Unit/UnitGroupConfig.hpp"
@@ -275,6 +286,13 @@ struct SettlementPrototype {
     SettlementConfig config;
 };
 
+// "raid"
+struct RaidPrototype {
+    std::string name;
+    std::string unit;   // a unit's name: what raids
+    RaidConfig  config; // unit: linked
+};
+
 // "item"
 struct ItemPrototype {
     std::string   name;
@@ -337,6 +355,7 @@ public:
     std::vector<TreeConfig>          trees;
     std::vector<BuildingPrototype>   buildings;
     std::vector<SettlementPrototype> settlements;
+    std::vector<RaidPrototype>       raids;
     std::vector<ItemPrototype>       items;
     std::vector<LightPrototype>      lights;
     std::vector<TileConfig>          tiles;
@@ -351,6 +370,7 @@ public:
     const TreeConfig*          find_tree       (std::string_view name) const;
     const BuildingPrototype*   find_building   (std::string_view name) const;
     const SettlementPrototype* find_settlement (std::string_view name) const;
+    const RaidPrototype*       find_raid       (std::string_view name) const;
     const ItemPrototype*       find_item       (std::string_view name) const;
     const LightPrototype*      find_light      (std::string_view name) const;
     const TileConfig*          find_tile       (std::string_view name) const;
@@ -364,6 +384,7 @@ public:
     const TreeConfig&          tree      (std::string_view name) const;
     const BuildingPrototype&   building  (std::string_view name) const;
     const LightPrototype&      light     (std::string_view name) const;
+    const RaidPrototype&       raid      (std::string_view name) const;
 
     // The building that `item` places, or null if it places none
     const BuildingPrototype* building_for_item(ItemID item) const;

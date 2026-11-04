@@ -7,13 +7,17 @@
 // apart; removing a building frees its tiles; a fallen banner disbands its
 // settlement and a new one adopts what's left; spawning is blocked in the
 // build area and its margin; figures stop at building footprints and slide
-// along them.
+// along them; a gate lets its own faction through; units hit walls; the
+// hero hits enemies; night raids spawn only after dark, outside the spawn
+// area, a few at a time.
 // =============================================================================
 
 #include "Nezumi/Core/Clock.hpp"
 #include "Nezumi/Event/EventBus.hpp"
 #include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Character/Character.hpp"
+#include "Nightmourn/Settlement/RaidSpawner.hpp"
 #include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/World/World.hpp"
 #include <cstdio>  // printf
@@ -42,6 +46,8 @@ static const BuildingConfig BANNER  = { .name = "banner",  .type = BuildingType:
 static const BuildingConfig WALL    = { .name = "wall",    .type = BuildingType::Wall,    .index = 1, .footprint = { 1, 1 }, .max_health = 50,  .item = {}, .connects = true,  .settlement = nullptr };
 static const BuildingConfig HOUSE   = { .name = "house",   .type = BuildingType::House,   .index = 2, .footprint = { 2, 2 }, .max_health = 80,  .item = {}, .connects = false, .settlement = nullptr };
 static const BuildingConfig CRAFTER = { .name = "crafter", .type = BuildingType::Crafter, .index = 3, .footprint = { 3, 3 }, .max_health = 90,  .item = {}, .connects = false, .settlement = nullptr };
+
+static const BuildingConfig GATE    = { .name = "gate",    .type = BuildingType::Gate,    .index = 4, .footprint = { 1, 1 }, .max_health = 60,  .item = {}, .connects = true,  .settlement = nullptr };
 
 static const ResourceConfig TREE = { .name = "tree", .subtype = {}, .variety = {}, .item = {}, .max_amount = 5,
                                      .collision_bounds = { -0.4f, -0.4f, 0.4f, 0.4f } };
@@ -231,6 +237,134 @@ static void test_collision() {
     CHECK(v && v->position.x < -5.0f);
 }
 
+static void run_ticks(Fixture& f, int ticks) {
+    for (int i = 0; i < ticks; i++) {
+        f.world.tick();
+        f.bus.flush(EventPhase::TickPost, f.world.get_tick());
+    }
+}
+
+static void test_gate() {
+    std::printf("gate\n");
+    Fixture f;
+    World& w = f.world;
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+    // A wall line along x = 3 with a gate in the middle
+    w.place_building(f.surface, WALL, { 3, -1 }, BLUE);
+    const EntityHandle gate = w.place_building(f.surface, GATE, { 3, 0 }, BLUE);
+    w.place_building(f.surface, WALL, { 3, 1 }, BLUE);
+    run_ticks(f, 1);
+    const Building* g = w.get_entity_as<Building>(gate);
+    CHECK(g && g->connections == (1 | 4)); // joins the walls north and south
+
+    // Blue walks through it, red stops at it
+    const EntityHandle blue = w.create_entity<Unit>(f.surface, Position2D(1.5f, 0.5f), WALKER, BLUE);
+    const EntityHandle red  = w.create_entity<Unit>(f.surface, Position2D(1.5f, 0.5f), WALKER, RED);
+    run_ticks(f, 1);
+    w.get_entity_as<Unit>(blue)->move_to({ 6.5f, 0.5f });
+    w.get_entity_as<Unit>(red)->move_to({ 6.5f, 0.5f });
+    run_ticks(f, 90);
+    CHECK(w.get_entity_as<Unit>(blue)->position.x > 6.0f);
+    CHECK(w.get_entity_as<Unit>(red)->position.x <= 3.0f - 0.25f);
+}
+
+static void test_units_hit_walls() {
+    std::printf("units hit walls\n");
+    Fixture f;
+    World& w = f.world;
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+    const EntityHandle wall = w.place_building(f.surface, WALL, { 3, 0 }, BLUE);
+    static constexpr UnitConfig BRUTE = { .name = "brute", .move_speed = 4.0f, .attack_damage = 10,
+                                          .attack_interval = 10, .attack_range = 0.75f, .aggro_radius = 0.0f };
+    const EntityHandle u = w.create_entity<Unit>(f.surface, Position2D(6.5f, 0.5f), BRUTE, RED);
+    run_ticks(f, 1);
+    w.get_entity_as<Unit>(u)->attack(wall); // its center is out of reach from outside the box
+    run_ticks(f, 120);
+    const Building* b = w.get_entity_as<Building>(wall);
+    CHECK(!b || b->health < WALL.max_health);
+
+    // Attack-moving on the banner, a raider walled off from it hits the wall
+    static constexpr UnitConfig RAIDER = { .name = "raider", .move_speed = 4.0f, .attack_damage = 10,
+                                           .attack_interval = 10, .attack_range = 0.75f, .aggro_radius = 3.0f };
+    const EntityHandle ring = w.place_building(f.surface, WALL, { 0, 3 }, BLUE);
+    for (int x = -1; x <= 1; x += 2) w.place_building(f.surface, WALL, { x, 3 }, BLUE);
+    const EntityHandle r = w.create_entity<Unit>(f.surface, Position2D(0.5f, 7.5f), RAIDER, RED);
+    run_ticks(f, 1);
+    w.get_entity_as<Unit>(r)->attack_move({ 0.5f, 0.5f });
+    run_ticks(f, 240);
+    const Building* rb = w.get_entity_as<Building>(ring);
+    CHECK(!rb || rb->health < WALL.max_health);
+}
+
+static void test_hero_attack() {
+    std::printf("hero attack\n");
+    Fixture f;
+    World& w = f.world;
+    static constexpr CharacterConfig HERO = { .name = "hero", .attack_interval = 10, .attack_damage = 25,
+                                              .attack_reach = 1.25f };
+    static constexpr UnitConfig DUMMY = { .name = "dummy", .max_health = 100, .move_speed = 0.0f, .aggro_radius = 0.0f };
+    const EntityHandle hero  = w.create_entity<Character>(f.surface, Position2D(0.0f, 0.0f), HERO, BLUE);
+    const EntityHandle enemy = w.create_entity<Unit>(f.surface, Position2D(1.0f, 0.0f), DUMMY, RED);
+    const EntityHandle ally  = w.create_entity<Unit>(f.surface, Position2D(-1.0f, 0.0f), DUMMY, BLUE);
+    const EntityHandle far   = w.create_entity<Unit>(f.surface, Position2D(0.0f, 5.0f), DUMMY, RED);
+    run_ticks(f, 1);
+
+    const auto hit = [&](EntityHandle target, int ticks) {
+        w.get_entity_as<Character>(hero)->issue(CharacterCommand{ .attack_target = target });
+        run_ticks(f, ticks);
+    };
+    hit(ally, 30);
+    hit(far, 30);
+    CHECK(w.get_entity_as<Unit>(ally)->health == 100);  // not an enemy
+    CHECK(w.get_entity_as<Unit>(far)->health == 100);   // out of reach
+    hit(enemy, 25);                                     // 3 blows: at 0, 10 and 20 ticks
+    const Unit* e = w.get_entity_as<Unit>(enemy);
+    CHECK(e && e->health == 25);
+    hit(enemy, 20);
+    CHECK(!w.get_entity_as<Unit>(enemy) || w.get_entity_as<Unit>(enemy)->is_pending_remove());
+}
+
+static void test_raids() {
+    std::printf("raids\n");
+    Fixture f;
+    World& w = f.world;
+    // Raiders only spawn on loaded chunks: load 4 x 4 around the banner
+    f.surface = w.create_surface(SurfaceConfig{ .name = "raids", .initial_chunks = ChunkSpan::span_from_box({ -64.0f, -64.0f, 64.0f, 64.0f }) });
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+    run_ticks(f, 1);
+
+    static constexpr UnitConfig RAIDER = { .name = "raider", .move_speed = 0.0f, .aggro_radius = 0.0f };
+    const RaidConfig raid = { .name = "night", .unit = &RAIDER, .interval = 1.0f, .max_alive = 2,
+                              .min_distance = 2.0f, .max_distance = 6.0f, .min_darkness = 0.5f };
+    RaidSpawner spawner(raid, RED, 3);
+    const float dt = 1.0f / 60.0f;
+
+    // Daylight: nothing
+    for (int i = 0; i < 300; i++) { spawner.update(w, f.surface, 0.2f, dt); run_ticks(f, 1); }
+    CHECK(spawner.alive() == 0);
+
+    // Dark: the first after half an interval, then one a second, two at most
+    for (int i = 0; i < 25; i++) { spawner.update(w, f.surface, 1.0f, dt); run_ticks(f, 1); }
+    CHECK(spawner.alive() == 0);
+    for (int i = 0; i < 10; i++) { spawner.update(w, f.surface, 1.0f, dt); run_ticks(f, 1); }
+    CHECK(spawner.alive() == 1);
+    for (int i = 0; i < 300; i++) { spawner.update(w, f.surface, 1.0f, dt); run_ticks(f, 1); }
+    CHECK(spawner.alive() == 2);
+
+    // All outside the spawn area, red, and attack-moving on the banner
+    const Settlement* s = w.settlement_of(BLUE);
+    std::size_t raiders = 0;
+    w.each_entity([&](const Entity& e) {
+        if (!e.is_type<Unit>()) return;
+        raiders++;
+        CHECK(!s->spawn_area().contains(TileCoord::from_position(e.position)));
+        CHECK(!w.is_spawn_blocked(f.surface, e.position));
+        CHECK(e.factions_mask == RED);
+        CHECK(static_cast<const Unit&>(e).command().type == UnitCommandType::AttackMove);
+    });
+    CHECK(raiders == 2);
+}
+
 int main() {
     test_founding();
     test_placement();
@@ -238,6 +372,10 @@ int main() {
     test_disband_and_adopt();
     test_spawn_area();
     test_collision();
+    test_gate();
+    test_units_hit_walls();
+    test_hero_attack();
+    test_raids();
 
     if (g_failures) {
         std::printf("%d check(s) failed\n", g_failures);

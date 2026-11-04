@@ -7,6 +7,7 @@
 #include "Nightmourn/Entity/EntitySearchFilter.hpp"
 #include "Nightmourn/World/World.hpp"
 #include "Nightmourn/World/WorldContext.hpp"
+#include <algorithm> // clamp
 #include <cassert> // assert
 #include <cmath>   // sqrt
 #include <cstdint> // UINT16_MAX
@@ -185,10 +186,19 @@ void Unit::hold_slot_(Position2D slot, Position2D slot_velocity, Position2D faci
     else                           facing_ = facing;
 }
 
-void Unit::engage_(WorldContext& ctx, const Entity& target) {
-    const float range = config_->attack_range;
+Position2D Unit::aim_point_(const Entity& target) const {
+    // A solid target (a building) is reached at its edge: its center may be
+    // further than attack_range from anywhere a unit can stand
+    if (!target.is_collidable()) return target.position;
+    const Area2D box = target.collision_box();
+    return { std::clamp(position.x, box.min.x, box.max.x), std::clamp(position.y, box.min.y, box.max.y) };
+}
 
-    if (!move_toward_(ctx, target.position, range)) {
+void Unit::engage_(WorldContext& ctx, const Entity& target) {
+    const float      range = config_->attack_range;
+    const Position2D aim   = aim_point_(target);
+
+    if (!move_toward_(ctx, aim, range)) {
         state_ = UnitState::Moving;
         return;
     }
@@ -230,8 +240,9 @@ void Unit::release_(WorldContext& ctx, const Entity& target) {
         return;
     }
 
-    const float reach = config_->attack_range + MELEE_SLACK;
-    if (distance2(target) > reach * reach) return; // stepped out of reach: whiff
+    const float      reach = config_->attack_range + MELEE_SLACK;
+    const Position2D gap   = aim_point_(target) - position;
+    if (gap.x * gap.x + gap.y * gap.y > reach * reach) return; // stepped out of reach: whiff
 
     ctx.world->damage_entity(target.handle, config_->attack_damage, handle);
 }

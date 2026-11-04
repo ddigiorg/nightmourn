@@ -416,17 +416,24 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
       day/night in demo 04-settlement.
 - [x] **Collision response**: figures slide along Collidable boxes one axis
       at a time (`Surface::slide_`), and may walk out of a box they start in.
-- [ ] Gate building: walls now block, so the base needs a way in that
-      enemies can't use.
-- [ ] Buildings y-sort by their footprint center, so a figure beside the
-      back half of a 3x3 can be drawn in front of it. Footprint depth (see
-      Drawing) fixes it.
+- [x] Gate building: a connecting wall its own faction walks through
+      (`Building::lets_through`).
+- [x] Footprint depth for big buildings, on the CPU: drawn in strips, each
+      sorted by the footprint's front edge in its column
+      (`BuildingDrawer::draw_sliced_`).
+- [x] Night raids (`RaidSpawner`, `raids.json`): a raider every 40 s per
+      settlement after dark, 2 at most, attack-moving on the banner and
+      breaking walls on the way. Units measure attack range to a
+      building's edge.
+- [x] The hero hits enemies (the mine button over one;
+      `CharacterConfig::attack_*`), and gets up at the banner after dying
+      (demo 04).
+- [ ] Friendly units (from the barracks), and raids that scale with the
+      settlement.
 - [ ] Barracks tick: train unit blocks from the settlement's stock.
 - [ ] **Crafter tick**: `Crafter : Building` overrides `tick()` and sets
       Tickable, reading recipes from config and drawing from and delivering
       to its settlement's inventory through World commands.
-- [ ] Night raids: spawn enemies outside every settlement's spawn area
-      after dark (`DayNight::darkness()`), aimed at the banner.
 - [ ] Storage buildings that add slots to the settlement inventory
       (decided: the stock stays as inventory slots, and one settlement per
       faction for now).

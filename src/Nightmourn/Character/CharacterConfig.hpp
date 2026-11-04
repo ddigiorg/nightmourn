@@ -32,6 +32,13 @@ struct CharacterConfig {
     uint16_t mine_amount   = 1;
     float    mine_reach    = 2.0f;
 
+    // Attacking: a blow every `attack_interval` ticks at most, dealing
+    // `attack_damage` to an enemy whose collision box (or feet, for a
+    // figure) is within `attack_reach` tiles. Lands at once, like mining.
+    uint16_t attack_interval = 40; // 0.67 s at 60 UPS
+    uint16_t attack_damage   = 25;
+    float    attack_reach    = 1.25f;
+
     // Collision box, relative to the character's position (its feet)
     Area2D collision_bounds = { -0.25f, -0.25f, 0.25f, 0.25f };
 

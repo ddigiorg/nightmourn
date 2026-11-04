@@ -58,5 +58,11 @@
         "name": "barracks",
         "icon": "__base__/graphics/gui/item/barracks.png",
         "stack_size": 10
+    },
+    {
+        "type": "item",
+        "name": "gate",
+        "icon": "__base__/graphics/gui/item/gate.png",
+        "stack_size": 20
     }
 ]

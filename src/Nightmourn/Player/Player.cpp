@@ -43,16 +43,27 @@ void Player::update(World& world, const Nezumi::InputMap& input,
     glm::vec2 dir = proj.dir_to_world(screen_dir);
     if (dir != glm::vec2(0.0f)) dir = glm::normalize(dir);
 
-    // A click between ticks counts too, so a quick tap still swings
-    EntityHandle mine_target = {};
+    // A click between ticks counts too, so a quick tap still swings. The
+    // same button hits an enemy (anything damageable of another faction)
+    // and mines a resource.
+    EntityHandle mine_target   = {};
+    EntityHandle attack_target = {};
     if (input.is_held(Action::Mine) || input.was_pressed(Action::Mine)) {
         const Entity* e = world.get_entity(hovered);
         if (e && e->is_alive() && e->is_resource() &&
             inventory_.can_add(static_cast<const EntityResource*>(e)->item))
             mine_target = hovered;
+        else if (e && e->is_alive() && is_enemy(*c, *e))
+            attack_target = hovered;
     }
 
-    c->issue(CharacterCommand{ .move_dir = { dir.x, dir.y }, .mine_target = mine_target });
+    c->issue(CharacterCommand{ .move_dir = { dir.x, dir.y }, .mine_target = mine_target,
+                               .attack_target = attack_target });
+}
+
+bool Player::is_enemy(const Entity& self, const Entity& other) {
+    return other.is_damageable() && other.factions_mask != EntityFactionsMask::None &&
+           !has_any(other.factions_mask, self.factions_mask);
 }
 
 // -----------------------------------------------------------------------------

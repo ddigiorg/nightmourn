@@ -92,6 +92,12 @@ public:
     BuildingType          type  () const { return config_->type; }
     bool is(BuildingType t) const { return config_->type == t; }
 
+    // True if `mover` may walk through it: a gate lets its own faction
+    // through (Surface's collision response asks)
+    bool lets_through(const Entity& mover) const {
+        return is(BuildingType::Gate) && has_any(mover.factions_mask, factions_mask);
+    }
+
     // Tiles it covers
     TileRect footprint() const { return TileRect::from_size(origin_, config_->footprint); }
 

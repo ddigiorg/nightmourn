@@ -35,6 +35,7 @@ enum class BuildingType : std::uint16_t {
     Crafter, // (later) turns settlement items into other items each tick
     Torch,   // lights the ground around it (its config's "light")
     Barracks,// (later) trains units from the settlement's stock
+    Gate,    // a wall its own faction walks through (Building::lets_through)
 };
 
 constexpr EntitySubtypeID to_subtype(BuildingType type) {

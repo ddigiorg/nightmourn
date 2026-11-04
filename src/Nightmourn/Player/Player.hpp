@@ -25,6 +25,8 @@
 // world direction; the command itself is in world space like the rest of the
 // sim.
 //
+// Attacking: the mine action held over an enemy (is_enemy) hits it instead.
+//
 // Mining: pass update() the entity under the cursor. While the mine action
 // is held (or was clicked) over a resource, the character swings at it (see
 // Character), unless the inventory has no room for what it yields. Credit
@@ -57,6 +59,7 @@ namespace Nezumi {
 namespace Nightmourn {
 
 class World;
+class Entity;
 struct OnEntityMined;
 
 class Character;
@@ -97,6 +100,10 @@ public:
     void update(World& world, const Nezumi::InputMap& input,
                 const Projection&         proj,
                 EntityHandle hovered = {});
+
+    // True if `other` is something `self` may attack: damageable, of some
+    // faction, and of none of self's
+    static bool is_enemy(const Entity& self, const Entity& other);
 
     // -------------------------------------------------------------------------
     // Inventory

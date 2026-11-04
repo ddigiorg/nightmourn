@@ -137,6 +137,33 @@ def gen_wall_frame(bits, height):
     c.label("wall", (0.5, 0.5, height), 12)
     return c.image(), c.pivot()
 
+def gen_gate_frame(bits, height):
+    """A wall piece with a passage through it: two pillars and a lintel,
+    lined up with the walls it joins (east-west unless it only joins north
+    or south), the way through crossing the wall."""
+    c = Canvas(1, 1, height + 10)
+    a, b = 0.24, 0.76
+    along_y = bool(bits & 5) and not (bits & 10)
+    p, top = 0.2, height + 10                          # pillar depth, height
+    lintel = height - 6
+    if along_y:   # the wall runs north-south: pillars at its ends in y
+        boxes = [(a, 1 - p, b, 1.0, top), (a, 0.0, b, p, top),
+                 (a, p, b, 1 - p, top, lintel)]
+    else:         # east-west: pillars at its ends in x
+        boxes = [(1 - p, a, 1.0, b, top), (0.0, a, p, b, top),
+                 (p, a, 1 - p, b, top, lintel)]
+    c.boxes(boxes)
+    c.label("gate", (0.5, 0.5, top), 12)
+    return c.image(), c.pivot()
+
+def gen_connecting(frame, height):
+    frames = [frame(bits, height) for bits in range(16)]
+    w, h = frames[0][0].size
+    sheet = Image.new("RGBA", (w * 16, h), CLEAR)
+    for bits, (img, _) in enumerate(frames):
+        sheet.paste(img, (bits * w, 0))
+    return sheet, frames[0][1], (w, h)
+
 def gen_wall():
     frames = [gen_wall_frame(bits, 56) for bits in range(16)]
     w, h = frames[0][0].size
@@ -201,6 +228,10 @@ def main():
     path = os.path.join(bdir, "wall_mask.png")
     wall.save(path, optimize=True)
     print(f"wrote {os.path.normpath(path)}  frame {wall_frame[0]} x {wall_frame[1]}  pivot {wall_pivot}")
+    gate, gate_pivot, gate_frame = gen_connecting(gen_gate_frame, 56)
+    path = os.path.join(bdir, "gate_mask.png")
+    gate.save(path, optimize=True)
+    print(f"wrote {os.path.normpath(path)}  frame {gate_frame[0]} x {gate_frame[1]}  pivot {gate_pivot}")
     for name, (img, pivot) in pictures.items():
         path = os.path.join(bdir, f"{name}_mask.png")
         img.save(path, optimize=True)
@@ -209,6 +240,7 @@ def main():
     # The wall's icon is a straight east-west piece
     icons = {name: img for name, (img, _) in pictures.items()}
     icons["wall"] = wall.crop((10 * wall_frame[0], 0, 11 * wall_frame[0], wall_frame[1]))
+    icons["gate"] = gate.crop((10 * gate_frame[0], 0, 11 * gate_frame[0], gate_frame[1]))
     for name, img in icons.items():
         path = os.path.join(idir, f"{name}.png")
         gen_icon(img).save(path, optimize=True)
