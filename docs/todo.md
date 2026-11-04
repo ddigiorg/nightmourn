@@ -427,8 +427,9 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
       to its settlement's inventory through World commands.
 - [ ] Night raids: spawn enemies outside every settlement's spawn area
       after dark (`DayNight::darkness()`), aimed at the banner.
-- [ ] Settlement stock as unlimited per-item counts (Colony Survival's
-      stockpile) instead of inventory slots, if slots feel wrong.
+- [ ] Storage buildings that add slots to the settlement inventory
+      (decided: the stock stays as inventory slots, and one settlement per
+      faction for now).
 - [ ] Growing the build area (banner upgrades or outpost banners), and
       enemy settlements (same code, another faction).
 - [ ] Repair, and deconstruction in the game (the demo's X refunds the
