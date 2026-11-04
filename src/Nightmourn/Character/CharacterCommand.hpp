@@ -21,7 +21,12 @@ struct CharacterCommand {
     // don't mine. A Player sets it while the mine button is held over one.
     EntityHandle mine_target = {};
 
-    // TODO: attack, use item, cast, interact
+    // Enemy to hit (a unit, or an enemy building): hit whenever the blow is
+    // off cooldown and the target is within CharacterConfig::attack_reach.
+    // Null: don't attack. Takes priority over mine_target.
+    EntityHandle attack_target = {};
+
+    // TODO: use item, cast, interact
 };
 
 } // namespace Nightmourn

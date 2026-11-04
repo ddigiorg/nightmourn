@@ -87,6 +87,7 @@ add_library(nightmourn_world STATIC
     src/Nightmourn/Item/Inventory.cpp
     src/Nightmourn/Item/Items.cpp
     src/Nightmourn/Sector/Sector.cpp
+    src/Nightmourn/Settlement/RaidSpawner.cpp
     src/Nightmourn/Surface/Surface.cpp
     src/Nightmourn/Unit/Unit.cpp
     src/Nightmourn/Unit/UnitGroup.cpp
@@ -132,6 +133,7 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/GUI/InventoryMenu.cpp
     src/Nightmourn/GUI/Theme.cpp
     src/Nightmourn/GUI/UISheet.cpp
+    src/Nightmourn/Lighting/BuildingLights.cpp
     src/Nightmourn/Lighting/DayNight.cpp
     src/Nightmourn/Lighting/GameLighting.cpp
     src/Nightmourn/Lighting/LightDrawer.cpp

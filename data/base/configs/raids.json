@@ -1,0 +1,12 @@
+[
+    {
+        "type": "raid",
+        "name": "night",
+        "unit": "raider",
+        "interval": 40.0,
+        "max_alive": 2,
+        "min_distance": 2.0,
+        "max_distance": 8.0,
+        "min_darkness": 0.5
+    }
+]

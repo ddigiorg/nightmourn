@@ -46,5 +46,23 @@
         "name": "crafter",
         "icon": "__base__/graphics/gui/item/crafter.png",
         "stack_size": 10
+    },
+    {
+        "type": "item",
+        "name": "torch",
+        "icon": "__base__/graphics/gui/item/torch.png",
+        "stack_size": 50
+    },
+    {
+        "type": "item",
+        "name": "barracks",
+        "icon": "__base__/graphics/gui/item/barracks.png",
+        "stack_size": 10
+    },
+    {
+        "type": "item",
+        "name": "gate",
+        "icon": "__base__/graphics/gui/item/gate.png",
+        "stack_size": 20
     }
 ]

@@ -9,6 +9,11 @@
 // CharacterCommand between ticks, the same rule Units follow, and the
 // character turns that into velocity while ticking.
 //
+// Attacking: while the command names an enemy in attack_reach, the character
+// faces it and hits it every CharacterConfig::attack_interval ticks, each a
+// World::damage_entity() of attack_damage. It shares the swing (and its
+// cooldown) with mining.
+//
 // Mining: while the command names a resource in reach, the character faces
 // it and swings at it every CharacterConfig::mine_interval ticks, each swing
 // a World::mine_entity() of mine_amount. The hit is immediate for now (no
@@ -78,6 +83,10 @@ public:
     // Ticks until the next swing may land (0: ready)
     uint16_t mine_cooldown() const { return mine_cooldown_; }
 
+    // True if `target` is close enough to hit: its collision box (or its
+    // feet, for a figure) within attack_reach
+    bool can_hit(const Entity& target) const;
+
     // Tick the last swing landed on, and whether there has been one. Drawing
     // uses it to animate the swing.
     Nezumi::Tick last_swing_tick() const { return last_swing_tick_; }
@@ -97,7 +106,12 @@ private:
     Nezumi::Tick last_swing_tick_ = 0;
     bool         has_swung_       = false;
 
-    void mine_(WorldContext& ctx);
+    void mine_  (WorldContext& ctx);
+    bool attack_(WorldContext& ctx); // true if it is attacking this tick
+
+    // Distance from the feet to the nearest point of `e`'s collision box
+    // (its feet, if it has none), squared
+    float gap2_(const Entity& e) const;
 };
 
 } // namespace Nightmourn

@@ -25,5 +25,18 @@
         "aggro_radius": 16.0,
         "projectile": "arrow",
         "collision_box": [[-0.25, -0.25], [0.25, 0.25]]
+    },
+    {
+        "type": "unit",
+        "name": "raider",
+        "sprite": "figure",
+        "max_health": 60,
+        "move_speed": 2.0,
+        "attack_damage": 8,
+        "attack_interval": 75,
+        "attack_windup": 30,
+        "attack_range": 0.75,
+        "aggro_radius": 6.0,
+        "collision_box": [[-0.25, -0.25], [0.25, 0.25]]
     }
 ]

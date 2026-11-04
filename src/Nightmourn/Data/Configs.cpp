@@ -274,20 +274,26 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
     f.get("mine_interval", c.mine_interval);
     f.get("mine_amount",   c.mine_amount);
     f.get("mine_reach",    c.mine_reach);
+    f.get("attack_interval", c.attack_interval);
+    f.get("attack_damage",   c.attack_damage);
+    f.get("attack_reach",    c.attack_reach);
     f.get_box("collision_box", c.collision_bounds);
     return p;
 }
 
 BuildingPrototype read_building(Fields& f, const std::string& name, const auto& file_of) {
-    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .config = {}, .picture = {} };
+    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .light = {}, .config = {}, .picture = {} };
     BuildingConfig& c = p.config;
 
     const std::string kind = f.get<std::string>("kind");
-    if      (kind == "banner")  c.type = BuildingType::Banner;
-    else if (kind == "wall")    c.type = BuildingType::Wall;
-    else if (kind == "house")   c.type = BuildingType::House;
-    else if (kind == "crafter") c.type = BuildingType::Crafter;
-    else fail(f.source(), "'kind' must be \"banner\", \"wall\", \"house\" or \"crafter\"");
+    if      (kind == "banner")   c.type = BuildingType::Banner;
+    else if (kind == "wall")     c.type = BuildingType::Wall;
+    else if (kind == "house")    c.type = BuildingType::House;
+    else if (kind == "crafter")  c.type = BuildingType::Crafter;
+    else if (kind == "torch")    c.type = BuildingType::Torch;
+    else if (kind == "barracks") c.type = BuildingType::Barracks;
+    else if (kind == "gate")     c.type = BuildingType::Gate;
+    else fail(f.source(), "'kind' must be \"banner\", \"wall\", \"torch\", \"house\", \"crafter\" or \"barracks\"");
 
     if (const Json* v = f.find("size")) {
         const glm::vec2 size = as_vec<2>(f.source(), "size", *v, "[x, y]");
@@ -300,6 +306,7 @@ BuildingPrototype read_building(Fields& f, const std::string& name, const auto& 
     f.get("connects",   c.connects);
     f.get("item",       p.item);
     f.get("settlement", p.settlement);
+    f.get("light",      p.light);
 
     Fields pf({ f.source().file, f.source().what + ": picture" }, f.need("picture"));
     p.picture = read_animation(pf, file_of);
@@ -325,6 +332,21 @@ SettlementPrototype read_settlement(Fields& f, const std::string& name) {
     if (c.build_radius < 1 || c.build_radius > 256) fail(f.source(), "'build_radius' must be from 1 to 256");
     if (c.spawn_margin < 0) fail(f.source(), "'spawn_margin' must be 0 or more");
     if (c.min_gap < 0)      fail(f.source(), "'min_gap' must be 0 or more");
+    return p;
+}
+
+RaidPrototype read_raid(Fields& f, const std::string& name) {
+    RaidPrototype p{ .name = name, .unit = f.get<std::string>("unit"), .config = {} };
+    RaidConfig& c = p.config;
+    f.get("interval",     c.interval);
+    f.get("max_alive",    c.max_alive);
+    f.get("min_distance", c.min_distance);
+    f.get("max_distance", c.max_distance);
+    f.get("min_darkness", c.min_darkness);
+    if (c.interval <= 0.0f) fail(f.source(), "'interval' must be more than 0");
+    if (c.min_distance < 0.0f || c.max_distance < c.min_distance)
+        fail(f.source(), "'min_distance' must be 0 or more, and 'max_distance' at least 'min_distance'");
+    if (c.min_darkness < 0.0f || c.min_darkness > 1.0f) fail(f.source(), "'min_darkness' must be from 0 to 1");
     return p;
 }
 
@@ -447,6 +469,8 @@ Configs Configs::load(std::string_view data_dir) {
                         put(out.buildings, read_building(f, name, file_of));
                     } else if (type == "settlement") {
                         put(out.settlements, read_settlement(f, name));
+                    } else if (type == "raid") {
+                        put(out.raids, read_raid(f, name));
                     } else if (type == "item") {
                         ItemPrototype p{ .name = name, .id = {}, .icon = {}, .stack_size = 1 };
                         if (f.find("icon")) p.icon = resolve(src, mods, f.get<std::string>("icon"));
@@ -542,6 +566,13 @@ Configs Configs::load(std::string_view data_dir) {
 
     for (SettlementPrototype& p : out.settlements) p.config.name = p.name;
 
+    for (RaidPrototype& p : out.raids) {
+        p.config.name = p.name;
+        const UnitPrototype* unit = out.find_unit(p.unit);
+        if (!unit) fail(where("raid", p.name), "'unit' names no unit '" + p.unit + "'");
+        p.config.unit = &unit->config;
+    }
+
     for (std::size_t i = 0; i < out.buildings.size(); i++) {
         BuildingPrototype& p = out.buildings[i];
         p.config.name  = p.name;
@@ -556,6 +587,8 @@ Configs Configs::load(std::string_view data_dir) {
             if (!s) fail(where("building", p.name), "'settlement' names no settlement '" + p.settlement + "'");
             p.config.settlement = &s->config;
         }
+        if (!p.light.empty() && !out.find_light(p.light))
+            fail(where("building", p.name), "'light' names no light '" + p.light + "'");
     }
 
     // What inventories go by
@@ -578,6 +611,7 @@ const CharacterPrototype*  Configs::find_character  (std::string_view n) const {
 const TreeConfig*          Configs::find_tree       (std::string_view n) const { return find(trees,        n); }
 const BuildingPrototype*   Configs::find_building   (std::string_view n) const { return find(buildings,    n); }
 const SettlementPrototype* Configs::find_settlement (std::string_view n) const { return find(settlements,  n); }
+const RaidPrototype*       Configs::find_raid       (std::string_view n) const { return find(raids,        n); }
 const ItemPrototype*       Configs::find_item       (std::string_view n) const { return find(items,        n); }
 const LightPrototype*      Configs::find_light      (std::string_view n) const { return find(lights,       n); }
 const TileConfig*          Configs::find_tile       (std::string_view n) const { return find(tiles,        n); }
@@ -589,6 +623,7 @@ const CharacterPrototype& Configs::character (std::string_view n) const { return
 const TreeConfig&         Configs::tree      (std::string_view n) const { return need(trees,       "tree",       n); }
 const BuildingPrototype&  Configs::building  (std::string_view n) const { return need(buildings,   "building",   n); }
 const LightPrototype&     Configs::light     (std::string_view n) const { return need(lights,      "light",      n); }
+const RaidPrototype&      Configs::raid      (std::string_view n) const { return need(raids,       "raid",       n); }
 
 const BuildingPrototype* Configs::building_for_item(ItemID item) const {
     if (!item) return nullptr;

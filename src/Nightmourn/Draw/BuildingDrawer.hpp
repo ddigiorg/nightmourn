@@ -7,9 +7,14 @@
 // "building/<name>" (WorldSheets): one frame, or 16 for a connecting wall,
 // whose frame is its Building::connections. Pictures are masks, like the
 // unit figures: white takes the owner faction's color, black stays black.
-// A picture is drawn with its pivot (bottom-center by default) on the
-// footprint's bottom-center, y-sorted with the figures by that edge, so a
-// figure south of a house stands in front of it and one north of it behind.
+// The art is isometric (tools/gen_buildings.py: boxes standing on their
+// footprint), drawn with its pivot on the footprint's center. A 1 x 1 is
+// y-sorted with the figures by that center; a bigger one is drawn in
+// vertical strips, each sorted by the footprint's front edge in its column,
+// so figures beside it are in front of or behind it as they should be.
+//
+// fill_ground() fills a world box on the ground (a diamond in iso) with a
+// color, for ghosts and the settlement's build area.
 //
 // Damaged buildings get a healthbar over their picture. Debug overlay:
 //
@@ -17,6 +22,7 @@
 // =============================================================================
 
 #pragma once
+#include "Nezumi/Render/2D/Sprite/SpriteID.hpp"
 #include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
 #include "Nightmourn/Entity/EntityFactionsMask.hpp"
@@ -55,6 +61,9 @@ public:
         // Tint of each faction's buildings (the mask's white); a faction
         // left at zero alpha draws white
         std::array<glm::vec4, MAX_FACTIONS> faction_colors = {};
+
+        // A plain white sprite in the sheet, for fill_ground (none: no fills)
+        std::string fill_sprite = {};
     };
 
     // -------------------------------------------------------------------------
@@ -77,6 +86,10 @@ public:
     void draw_ghost(DrawContext& ctx, const BuildingConfig& config, TileCoord origin,
                     glm::vec4 tint, std::uint8_t connections = 0) const;
 
+    // Fills world box `box` on the ground with `color`: a rectangle top-down,
+    // a diamond in iso
+    void fill_ground(DrawContext& ctx, const Area2D& box, glm::vec4 color, std::uint8_t layer) const;
+
     // The owner color of `factions`' buildings
     glm::vec4 faction_color(EntityFactionsMask factions) const;
 
@@ -94,9 +107,17 @@ private:
 
     const Frames* frames_(const BuildingConfig& config) const;
 
+    // A multi-tile building's picture in strips, each sorted by its own
+    // footprint depth
+    void draw_sliced_(DrawContext& ctx, Nezumi::Render::SpriteID sprite, const TileRect& footprint,
+                      glm::vec4 color) const;
+
     const Nezumi::Render::SpriteSheet*  sheet_          = nullptr;
     std::vector<Frames>                 pictures_       = {};
     std::array<glm::vec4, MAX_FACTIONS> faction_colors_ = {};
+    bool                                has_fill_       = false;
+    glm::vec4                           fill_tex_       = {};
+    std::uint32_t                       fill_layer_     = 0;
 };
 
 } // namespace Nightmourn

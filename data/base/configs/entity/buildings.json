@@ -9,9 +9,9 @@
         "settlement": "player",
         "picture": {
             "filename": "__base__/graphics/entity/building/banner_mask.png",
-            "width": 64,
-            "height": 256,
-            "pivot": [32, 240]
+            "width": 140,
+            "height": 248,
+            "pivot": [70, 210]
         }
     },
     {
@@ -24,9 +24,41 @@
         "connects": true,
         "picture": {
             "filename": "__base__/graphics/entity/building/wall_mask.png",
-            "width": 128,
-            "height": 128,
-            "frame_count": 16
+            "width": 140,
+            "height": 132,
+            "frame_count": 16,
+            "pivot": [70, 94]
+        }
+    },
+    {
+        "type": "building",
+        "name": "gate",
+        "kind": "gate",
+        "size": [1, 1],
+        "max_health": 300,
+        "item": "gate",
+        "connects": true,
+        "picture": {
+            "filename": "__base__/graphics/entity/building/gate_mask.png",
+            "width": 140,
+            "height": 142,
+            "frame_count": 16,
+            "pivot": [70, 104]
+        }
+    },
+    {
+        "type": "building",
+        "name": "torch",
+        "kind": "torch",
+        "size": [1, 1],
+        "max_health": 50,
+        "item": "torch",
+        "light": "building-torch",
+        "picture": {
+            "filename": "__base__/graphics/entity/building/torch_mask.png",
+            "width": 140,
+            "height": 156,
+            "pivot": [70, 118]
         }
     },
     {
@@ -38,8 +70,9 @@
         "item": "house",
         "picture": {
             "filename": "__base__/graphics/entity/building/house_mask.png",
-            "width": 256,
-            "height": 256
+            "width": 268,
+            "height": 250,
+            "pivot": [134, 180]
         }
     },
     {
@@ -51,8 +84,23 @@
         "item": "crafter",
         "picture": {
             "filename": "__base__/graphics/entity/building/crafter_mask.png",
-            "width": 384,
-            "height": 384
+            "width": 396,
+            "height": 324,
+            "pivot": [198, 222]
+        }
+    },
+    {
+        "type": "building",
+        "name": "barracks",
+        "kind": "barracks",
+        "size": [3, 3],
+        "max_health": 1200,
+        "item": "barracks",
+        "picture": {
+            "filename": "__base__/graphics/entity/building/barracks_mask.png",
+            "width": 396,
+            "height": 354,
+            "pivot": [198, 252]
         }
     }
 ]

@@ -295,7 +295,8 @@ From the first pass (`GUI/ActionBar`, `UI::Context::slot_grid`).
 
 ### World: entities and combat
 
-- [ ] **Unit separation / collision response.** Units stack when they
+- [ ] **Unit separation.** (Figures already stop at Collidable boxes,
+      `Surface::slide_`.) Units stack when they
       fight and overlap when converging on a group's engage position. A
       push-apart steer in phase 6 using `find_colliding` (needs
       `set_collidable()` on units; ROADMAP §8).
@@ -407,19 +408,35 @@ may not spawn in `Settlement::spawn_area()` (`World::is_spawn_blocked`).
 Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
 (demo 04-settlement, test `test_settlement`).
 
-- [x] Building entity (banner, wall, house, crafter), placement preview,
+- [x] Building entity (banner, wall, torch, house, crafter, barracks), placement preview,
       territory outline and fill, wall painting, settlement inventory,
       spawn exclusion (demo 04-settlement).
-- [ ] **Collision response**: nothing blocks movement yet, so figures walk
-      through walls. Characters and units should slide along Collidable
-      boxes; walls then need a gate building.
+- [x] Isometric cube building art (`tools/gen_buildings.py`), torch (a
+      building with a `light`, drawn by `append_building_lights`), barracks,
+      day/night in demo 04-settlement.
+- [x] **Collision response**: figures slide along Collidable boxes one axis
+      at a time (`Surface::slide_`), and may walk out of a box they start in.
+- [x] Gate building: a connecting wall its own faction walks through
+      (`Building::lets_through`).
+- [x] Footprint depth for big buildings, on the CPU: drawn in strips, each
+      sorted by the footprint's front edge in its column
+      (`BuildingDrawer::draw_sliced_`).
+- [x] Night raids (`RaidSpawner`, `raids.json`): a raider every 40 s per
+      settlement after dark, 2 at most, attack-moving on the banner and
+      breaking walls on the way. Units measure attack range to a
+      building's edge.
+- [x] The hero hits enemies (the mine button over one;
+      `CharacterConfig::attack_*`), and gets up at the banner after dying
+      (demo 04).
+- [ ] Friendly units (from the barracks), and raids that scale with the
+      settlement.
+- [ ] Barracks tick: train unit blocks from the settlement's stock.
 - [ ] **Crafter tick**: `Crafter : Building` overrides `tick()` and sets
       Tickable, reading recipes from config and drawing from and delivering
       to its settlement's inventory through World commands.
-- [ ] Night raids: spawn enemies outside every settlement's spawn area
-      after dark (`DayNight::darkness()`), aimed at the banner.
-- [ ] Settlement stock as unlimited per-item counts (Colony Survival's
-      stockpile) instead of inventory slots, if slots feel wrong.
+- [ ] Storage buildings that add slots to the settlement inventory
+      (decided: the stock stays as inventory slots, and one settlement per
+      faction for now).
 - [ ] Growing the build area (banner upgrades or outpost banners), and
       enemy settlements (same code, another faction).
 - [ ] Repair, and deconstruction in the game (the demo's X refunds the
@@ -447,7 +464,7 @@ yields (`Items::Wood`). Decorative for now.
       resource with `EntitySearchFilter::resources(Resource::TYPE_ID)` (and
       the subtype it wants), mine it on an interval, add
       `OnEntityMined::amount` of `OnEntityMined::item` to its storage.
-- [ ] Collision response, so figures walk around trunks (trees are already
+- [x] Collision response, so figures walk around trunks (trees are already
       collidable, with a 0.8 tile box).
 - [ ] Figures hidden behind a canopy: AoE2 draws an outline of them on top.
       A silhouette pass (sprites drawn again, flat color, behind-depth only)

@@ -8,11 +8,14 @@
 #include "Nezumi/Render/2D/Renderer2D.hpp"
 #include "Nezumi/Render/2D/Sprite/SpritePacker.hpp"
 #include "Nezumi/Render/Core/Image/Image.hpp"
+#include <algorithm> // fill
 #include <stdexcept> // runtime_error
 
 namespace Nightmourn {
 
 namespace NR = Nezumi::Render;
+
+static constexpr const char* FILL_SPRITE = "fill";
 
 const WorldSheets::GroundTexture& WorldSheets::ground_texture(std::string_view tile) const {
     for (const auto& [name, texture] : ground_textures) {
@@ -28,7 +31,7 @@ WorldDrawer::Config WorldSheets::drawer_config() const {
         .units      = { .sheet = sprites },
         .characters = { .sheet = sprites },
         .resources  = { .sheet = sprites, .trees = tree_animations },
-        .buildings  = { .sheet = sprites, .pictures = building_pictures, .faction_colors = {} },
+        .buildings  = { .sheet = sprites, .pictures = building_pictures, .faction_colors = {}, .fill_sprite = FILL_SPRITE },
     };
 }
 
@@ -81,6 +84,13 @@ WorldSheets WorldSheets::load(NR::Renderer2D& renderer, const Configs& configs) 
         });
         const float pivot_y = a.pivot ? a.pivot->y : static_cast<float>(a.height);
         sheets.building_pictures.push_back({ "building/" + b.name, pivot_y / SPRITE_PIXELS_PER_TILE });
+    }
+
+    // Plain white, for filling ground shapes (BuildingDrawer::fill_ground)
+    {
+        NR::Image white = NR::Image::blank(16, 16);
+        std::fill(white.pixels.begin(), white.pixels.end(), std::uint8_t{ 255 });
+        packer.add_sprite(FILL_SPRITE, white, { .trim = false });
     }
 
     // Mips for zooming out: 4 levels, so the packer leaves an 8 px grid and

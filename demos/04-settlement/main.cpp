@@ -1,11 +1,13 @@
 // =============================================================================
 // demos/04-settlement/main.cpp
 //
-// The player founds a settlement and lays out a base, drawn top-down.
+// The player founds a settlement and lays out a base, in isometric view,
+// through the day and into the night.
 //
 // - 7 x 7 chunks of meadow, forests around the edges and a few trees near
-//   the hero, who starts at 0, 0 with a banner, 50 walls, 5 houses and 2
-//   crafters (the action bar's slots 1-4).
+//   the hero, who starts at 0, 0 with a banner, 100 walls, 10
+//   gates, 10 torches, 5 houses, 2 crafters and 2 barracks (the action
+//   bar's slots 1-7).
 // - Pick a building with its slot (key or click) and its ghost follows the
 //   cursor, snapped to the tile grid: green where it fits, red where it
 //   doesn't, with the reason by the cursor. Left click places it and spends
@@ -15,7 +17,17 @@
 //   place_building) and its build area, a square of tiles around it outlined
 //   in the player's blue; while placing anything else the area is filled, and
 //   every other building has to fit inside it. Walls join up with the walls
-//   next to them.
+//   next to them, and gates join walls too. Buildings are solid: the hero
+//   (and any figure) slides along their footprints and around tree trunks
+//   instead of walking through, except a gate, which lets its own side
+//   through.
+// - Night raids: after dark a red raider comes every 40 s (2 at most) from
+//   outside the no-spawn area, attack-moving on the banner and breaking
+//   walls in its way (data/base/configs/raids.json). Left click one to hit
+//   it; the hero gets up at the banner 5 s after falling.
+// - The day lasts 12 minutes and starts late in the afternoon; T speeds it
+//   up (1x, 20x, paused), N jumps to midnight and M to noon. Torches light
+//   the base at night, and the hero carries a small lantern.
 // - The settlement has its own inventory: F, inside the build area, hands it
 //   everything you've chopped (left click a tree, as in 02-mining).
 // - Enemies can't spawn in the build area or spawn_margin tiles around it.
@@ -27,12 +39,13 @@
 //   50, to see buildings take damage and fall.
 //
 // Tuning is data: data/base/configs/entity/buildings.json (footprints,
-// health, pictures) and data/base/configs/settlements.json (build radius,
-// spawn margin, inventory size).
+// health, lights, pictures) and data/base/configs/settlements.json (build
+// radius, spawn margin, inventory size).
 //
 // Controls: W/A/S/D move, mouse wheel zooms, 1-0 slots, left click place /
 // chop, right click stop placing, F deposit, X deconstruct, H hit, P spawn
-// points, B inventory, tilde (~) debug menu, Escape main menu.
+// points, T time speed, N midnight, M noon, B inventory, tilde (~) debug
+// menu, Escape main menu.
 // =============================================================================
 
 #include "Nezumi/Control/CameraController.hpp"
@@ -61,9 +74,16 @@
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
 #include "Nightmourn/Item/Items.hpp"
+#include "Nightmourn/Lighting/BuildingLights.hpp"
+#include "Nightmourn/Lighting/DayNight.hpp"
+#include "Nightmourn/Lighting/GameLighting.hpp"
+#include "Nightmourn/Lighting/LightDrawer.hpp"
+#include "Nightmourn/Lighting/LightSource.hpp"
 #include "Nightmourn/Player/BuildPlacer.hpp"
 #include "Nightmourn/Player/Player.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
+#include "Nightmourn/Settlement/RaidSpawner.hpp"
+#include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/World/World.hpp"
 #include <array>       // array
 #include <cmath>       // hypot
@@ -93,6 +113,9 @@ namespace DemoAction {
     inline constexpr ActionID Deconstruct  = 1002;
     inline constexpr ActionID HitBuilding  = 1003;
     inline constexpr ActionID SpawnPoints  = 1004;
+    inline constexpr ActionID TimeSpeed    = 1005;
+    inline constexpr ActionID Midnight     = 1006;
+    inline constexpr ActionID Noon         = 1007;
 }
 
 // -----------------------------------------------------------------------------
@@ -111,11 +134,27 @@ static constexpr Position2D HERO_SPAWN = { 0.0f, 0.0f };
 static constexpr FactionIndex PLAYER_FACTION = 0;
 static constexpr glm::vec4    PLAYER_COLOR   = { 0.42f, 0.62f, 1.00f, 1.0f };
 
+// Night raiders: faction 1, drawn red
+static constexpr FactionIndex RAID_FACTION = 1;
+static constexpr glm::vec4    RAID_COLOR   = { 0.90f, 0.22f, 0.18f, 1.0f };
+
+// A fallen hero gets up again at the banner (or the spawn) after this long
+static constexpr float RESPAWN_SECONDS = 5.0f;
+
 // What the hero starts with, in action bar order
 struct StartItem { const char* item; std::uint32_t count; };
-static constexpr std::array<StartItem, 4> START_ITEMS = {{
-    { "banner", 1 }, { "wall", 50 }, { "house", 5 }, { "crafter", 2 },
+static constexpr std::array<StartItem, 7> START_ITEMS = {{
+    { "banner", 1 }, { "wall", 100 }, { "gate", 10 }, { "torch", 10 }, { "house", 5 }, { "crafter", 2 },
+    { "barracks", 2 },
 }};
+
+// Time speeds T cycles through, and the time of day it starts at (0
+// midnight, 0.5 noon): late afternoon, so night falls a few minutes in
+static constexpr std::array<float, 3> TIME_SPEEDS = { 1.0f, 20.0f, 0.0f };
+static constexpr float                START_TIME  = 0.68f;
+
+// The hero's lantern: a "lantern" light this wide (tiles)
+static constexpr float LANTERN_RADIUS = 3.5f;
 
 // Trees: a clear meadow of this radius around the spawn with a few trees
 // to chop, then forest thickening toward the map's edge
@@ -130,6 +169,9 @@ static constexpr glm::vec4 HOVER_COLOR   = { 1.0f, 1.0f, 1.0f, 1.0f  };
 static constexpr glm::vec4 HOVER_TOO_FAR = { 1.0f, 1.0f, 1.0f, 0.35f };
 static constexpr float     HOVER_PIXELS  = 2.0f;
 static constexpr glm::vec4 TREE_HOVER_BOUNDS = { -0.80f, -0.35f, 0.80f, 2.85f };
+static constexpr glm::vec4 FIGURE_HOVER_BOUNDS = { -0.45f, -0.20f, 0.45f, 1.30f };
+static constexpr glm::vec4 ENEMY_HOVER       = { 1.0f, 0.35f, 0.30f, 1.0f  };
+static constexpr glm::vec4 ENEMY_TOO_FAR     = { 1.0f, 0.35f, 0.30f, 0.35f };
 
 // H hits for this much
 static constexpr std::uint16_t HIT_DAMAGE = 50;
@@ -171,9 +213,9 @@ public:
         input.bind(DemoAction::Deconstruct, ScanCode::X);
         input.bind(DemoAction::HitBuilding, ScanCode::H);
         input.bind(DemoAction::SpawnPoints, ScanCode::P);
-
-        // Cartesian: the settlement is laid out top-down
-        debug_flags_.set(DebugFlag::UseTopDownView, true);
+        input.bind(DemoAction::TimeSpeed,   ScanCode::T);
+        input.bind(DemoAction::Midnight,    ScanCode::N);
+        input.bind(DemoAction::Noon,        ScanCode::M);
 
         world_camera_  = renderer->get_view_camera(Render::View::World );
         screen_camera_ = renderer->get_view_camera(Render::View::Screen);
@@ -186,7 +228,7 @@ public:
             /*.camera   = */renderer->get_view(Render::View::World),
             CameraControllerConfig{
                 .enable_drag_pan = false,
-                .zoom_init       = 0.75f,
+                .zoom_init       = 0.6f,
                 .zoom_min        = 0.2f,
                 .zoom_max        = 4.0f,
                 .follow_rate     = 0.0f,
@@ -198,6 +240,10 @@ public:
 
         WorldDrawer::Config draw_config = sheets_.drawer_config();
         draw_config.buildings.faction_colors[PLAYER_FACTION] = PLAYER_COLOR;
+        draw_config.buildings.faction_colors[RAID_FACTION]   = RAID_COLOR;
+        const UnitPrototype& raider = configs_.unit(configs_.raid("night").unit);
+        draw_config.units.looks[RAID_FACTION][raider.config.subtype.value()] = { raider.sprite.c_str(), RAID_COLOR };
+        raids_ = std::make_unique<RaidSpawner>(configs_.raid("night").config, faction_bit(RAID_FACTION), 11);
         world_drawer_ = std::make_unique<WorldDrawer>(draw_config);
 
         listeners_.push_back(engine.event_bus().subscribe<OnMouseMotion>(
@@ -217,7 +263,11 @@ public:
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory());
 
-        // The kit, on slots 1-4, and wood on 5
+        // Lighting replaces the engine's single pass
+        lighting_ = std::make_unique<GameLighting>(*engine.render(), *renderer);
+        day_night_.set_time(START_TIME);
+
+        // The kit, on slots 1-7, and wood after it
         for (std::size_t i = 0; i < START_ITEMS.size(); i++) {
             const ItemPrototype* item = configs_.find_item(START_ITEMS[i].item);
             if (!item) continue;
@@ -229,12 +279,11 @@ public:
         surface_id_ = world.create_surface(SurfaceConfig{ .name = "frontier", .initial_chunks = ChunkSpan::span_from_box(MAP_AREA) });
 
         spawn_trees_(world);
-        player_.possess(world.create_entity<Character>(
-            surface_id_, HERO_SPAWN, configs_.character("hero").config, faction_bit(PLAYER_FACTION)));
+        spawn_hero_(world, HERO_SPAWN);
         snap_camera_ = true;
 
         engine.logger().info("Settlement Demo");
-        engine.logger().info("1: banner, 2: wall, 3: house, 4: crafter. Left click: place (hold for walls). "
+        engine.logger().info("1-7: banner, wall, gate, torch, house, crafter, barracks. Left click: place (hold for walls), or hit a raider. "
                              "Right click: stop. F: deposit. X: deconstruct. H: hit. P: spawn points.");
     }
 
@@ -261,8 +310,19 @@ public:
         const std::optional<glm::vec2> cursor = cursor_world_(engine);
         placer_.update(world, surface_id_, player_.inventory(), faction_bit(PLAYER_FACTION), cursor, input);
 
-        // Chopping only while not placing, so the place click doesn't swing
-        player_.update(world, input, projection_(), placer_.active() ? EntityHandle{} : hovered_tree_(engine));
+        // Chopping and fighting only while not placing, so the place click
+        // doesn't swing
+        player_.update(world, input, projection_(), placer_.active() ? EntityHandle{} : hovered_target_(engine));
+
+        // A fallen hero gets up at the banner after a while
+        if (!player_.character(world)) {
+            respawn_in_ -= engine.clock().get_fixed_dt();
+            if (respawn_in_ <= 0.0f) {
+                const Settlement* s = world.settlement_of(faction_bit(PLAYER_FACTION));
+                const Entity*     b = s ? world.get_entity(s->banner()) : nullptr;
+                spawn_hero_(world, b ? b->position + Position2D(0.0f, -1.0f) : HERO_SPAWN);
+            }
+        }
 
         if (input.was_pressed(DemoAction::Deposit))     deposit_(world);
         if (input.was_pressed(DemoAction::Deconstruct)) deconstruct_(world, engine);
@@ -270,6 +330,15 @@ public:
             if (const Building* b = hovered_building_(engine)) world.damage_entity(b->handle, HIT_DAMAGE);
         }
         if (input.was_pressed(DemoAction::SpawnPoints)) sample_spawns_(world);
+
+        if (input.was_pressed(DemoAction::TimeSpeed)) {
+            speed_index_ = (speed_index_ + 1) % TIME_SPEEDS.size();
+            day_night_.set_speed(TIME_SPEEDS[speed_index_]);
+        }
+        if (input.was_pressed(DemoAction::Midnight)) day_night_.set_time(0.0f);
+        if (input.was_pressed(DemoAction::Noon))     day_night_.set_time(0.5f);
+        day_night_.tick();
+        raids_->update(world, surface_id_, day_night_.darkness(), engine.clock().get_fixed_dt());
 
         world.tick();
     }
@@ -292,14 +361,22 @@ public:
             snap_camera_ = false;
         }
         camera_controller_->update(engine.clock().get_real_dt());
+        seconds_ += engine.clock().get_real_dt();
+
+        lighting_->update(day_night_.ambient(), debug_flags_);
 
         if (const Nightmourn::Surface* surface = world.get_surface(surface_id_)) {
             DrawContext ctx = DrawContext::make(*r, world, *world_camera_, proj, debug_flags_);
+            ctx.overlay_view = GameLighting::OVERLAY_VIEW;
 
-            // Territory under everything; filled while placing into it
+            // Territory on the ground; while placing, filled and drawn over
+            // the dark so it's clear where things can go
+            const bool placing = placer_.active() && placer_.building()->type != BuildingType::Banner;
             SettlementDrawStyle style;
-            style.color = PLAYER_COLOR;
-            style.fill  = placer_.active() && placer_.building()->type != BuildingType::Banner;
+            style.filler = &world_drawer_->buildings();
+            style.layer  = placing ? DrawLayer::EntityOverlay : DrawLayer::GroundOverlay;
+            style.color  = PLAYER_COLOR;
+            style.fill   = placing;
             style.show_spawn_area = !spawn_points_.empty() && ctx.tick - spawn_shown_at_ <= SPAWN_SHOW_TICKS;
             draw_settlements(ctx, *surface, style);
 
@@ -307,6 +384,17 @@ public:
             placer_.draw(ctx, world_drawer_->buildings(), surface_id_);
             if (!placer_.active()) draw_hover_(ctx, engine);
             draw_spawn_points_(ctx);
+
+            // Torches, and the hero's lantern
+            lights_.clear();
+            append_building_lights(*surface, ctx.world_view, configs_, lights_);
+            if (const Character* hero = player_.character(world)) {
+                LightSource lantern = configs_.light("lantern").light;
+                lantern.position = hero->position.to_vec2();
+                lantern.radius   = LANTERN_RADIUS;
+                lights_.push_back(lantern);
+            }
+            light_drawer_.draw(ctx, lights_, seconds_, day_night_.light_strength());
         }
 
         info_overlay_.update(engine);
@@ -331,6 +419,8 @@ public:
         for (EventListenerID id : listeners_) engine.event_bus().unsubscribe(id);
         camera_controller_.reset();
         world_drawer_.reset();
+        lighting_.reset();
+        raids_.reset();
         action_bar_.reset();
         inventory_menu_.reset();
         engine.logger().info("Goodbye!");
@@ -364,6 +454,12 @@ private:
             const bool pine = random.get<int>(0, 2) == 0;
             world.create_entity<Resource>(surface_id_, Position2D(x, y), configs_.tree(pine ? "pine" : "oak").resource);
         }
+    }
+
+    void spawn_hero_(Nightmourn::World& world, Position2D at) {
+        player_.possess(world.create_entity<Character>(
+            surface_id_, at, configs_.character("hero").config, faction_bit(PLAYER_FACTION)));
+        respawn_in_ = RESPAWN_SECONDS;
     }
 
     // F: hand the settlement everything chopped, if the hero is in its area
@@ -443,12 +539,16 @@ private:
         return b && b->is_alive() ? b : nullptr;
     }
 
-    EntityHandle hovered_tree_(Nezumi::Engine& engine) const {
+    // The tree to chop or the enemy figure to hit under the cursor
+    EntityHandle hovered_target_(Nezumi::Engine& engine) const {
         if (!has_cursor_ || engine.input().is_mouse_captured()) return {};
         const Nightmourn::Surface* surface = world_->get_surface(surface_id_);
         if (!surface) return {};
         return Nightmourn::pick_entity(*surface, *world_camera_, projection_(), cursor_,
-                                       [](const Nightmourn::Entity& e) { return e.is_resource(); });
+                                       [](const Nightmourn::Entity& e) {
+                                           return e.is_resource() || (e.is_type<Unit>() &&
+                                                  has_any(e.factions_mask, faction_bit(RAID_FACTION)));
+                                       });
     }
 
     void draw_hover_(DrawContext& ctx, Nezumi::Engine& engine) const {
@@ -456,12 +556,18 @@ private:
             draw_outline(ctx, b->footprint().bounds(), HOVER_COLOR, HOVER_PIXELS, DrawLayer::EntityOverlay);
             return;
         }
-        const Nightmourn::Entity* tree = ctx.world.get_entity(hovered_tree_(engine));
-        if (!tree || !tree->is_alive()) return;
-        const Character* hero  = player_.character(ctx.world);
-        const bool       reach = hero && hero->can_reach(*tree);
-        const glm::vec4  box   = sprite_view_box(ctx.proj, tree->position.to_vec2(), TREE_HOVER_BOUNDS);
-        draw_view_outline(ctx, box, reach ? HOVER_COLOR : HOVER_TOO_FAR, HOVER_PIXELS, DrawLayer::EntityOverlay);
+        const Nightmourn::Entity* e = ctx.world.get_entity(hovered_target_(engine));
+        if (!e || !e->is_alive()) return;
+        const Character* hero = player_.character(ctx.world);
+        if (e->is_resource()) {
+            const bool      reach = hero && hero->can_reach(*e);
+            const glm::vec4 box   = sprite_view_box(ctx.proj, e->position.to_vec2(), TREE_HOVER_BOUNDS);
+            draw_view_outline(ctx, box, reach ? HOVER_COLOR : HOVER_TOO_FAR, HOVER_PIXELS, DrawLayer::EntityOverlay);
+        } else {
+            const bool      reach = hero && hero->can_hit(*e);
+            const glm::vec4 box   = sprite_view_box(ctx.proj, e->position.to_vec2(), FIGURE_HOVER_BOUNDS);
+            draw_view_outline(ctx, box, reach ? ENEMY_HOVER : ENEMY_TOO_FAR, HOVER_PIXELS, DrawLayer::EntityOverlay);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -519,7 +625,19 @@ private:
             text += line;
         }
 
-        text += "\n1-4: pick a building  click: place (hold: wall)  right click: stop  F: deposit  P: spawn points\n";
+        char clock[16];
+        day_night_.format_clock(clock, sizeof clock);
+        std::snprintf(line, sizeof line, "%s  %s  x%.0f   raiders %zu\n", clock,
+                      day_night_.is_night() ? "night" : "day", day_night_.get_speed(), raids_->alive());
+        text += line;
+
+        if (!player_.character(world)) {
+            std::snprintf(line, sizeof line, "you fell: back up at the banner in %.0f s\n", std::ceil(respawn_in_));
+            text += line;
+        }
+
+        text += "\n1-7: pick a building  click: place (hold: wall)  right click: stop  F: deposit  P: spawn points\n"
+                "click an enemy: attack   T: time speed  N: midnight  M: noon\n";
 
         r->draw_text(
             text, { HUD_MARGIN, top }, *font_,
@@ -572,6 +690,9 @@ private:
     std::unique_ptr<Nightmourn::InventoryMenu> inventory_menu_    = nullptr;
     InfoOverlay                                info_overlay_      = {};
 
+    std::unique_ptr<RaidSpawner> raids_      = nullptr;
+    float                        respawn_in_ = RESPAWN_SECONDS;
+
     std::vector<EventListenerID> listeners_       = {};
     glm::vec2                    cursor_          = {}; // window pixels
     bool                         has_cursor_      = false;
@@ -579,6 +700,13 @@ private:
 
     Player      player_      = {};
     BuildPlacer placer_      { BuildPlacer::Config{ .place = Action::Mine, .cancel = DemoAction::CancelBuild } };
+
+    std::unique_ptr<GameLighting> lighting_    = nullptr;
+    LightDrawer                   light_drawer_ = {};
+    std::vector<LightSource>      lights_       = {};
+    DayNight                      day_night_;
+    std::size_t                   speed_index_  = 0;
+    float                         seconds_      = 0.0f;
     bool        snap_camera_ = false;
 
     SurfaceID surface_id_ = {};

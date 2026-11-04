@@ -185,6 +185,10 @@ private:
     // it. Returns true (and zero velocity) once there.
     bool move_toward_(WorldContext& ctx, Position2D destination, float stop_distance);
 
+    // Where attack_range is measured to: the target's position, or the
+    // nearest point of its collision box if it is Collidable (a building)
+    Position2D aim_point_(const Entity& target) const;
+
     void face_(Position2D delta, float distance);
 
     // -------------------------------------------------------------------------

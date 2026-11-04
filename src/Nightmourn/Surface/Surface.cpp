@@ -5,6 +5,7 @@
 #include "Nightmourn/Surface/Surface.hpp"
 #include "Nightmourn/Events/OnChunkCreated.hpp"
 #include "Nightmourn/World/World.hpp"
+#include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/World/WorldContext.hpp"
 #include <algorithm> // sort, unique, erase_if
 #include <cassert>   // assert
@@ -284,11 +285,68 @@ void Surface::integrate_movement_(float dt, std::vector<Entity*>& moved) {
             if (entity.is_pending_remove()) return true;
             if (entity.velocity.is_zero())  return true;
 
-            entity.position += entity.velocity * dt;
+            entity.position = slide_(entity, entity.position + entity.velocity * dt);
             moved.push_back(&entity);
             return true;
         });
     }
+}
+
+// Collision response: a mover's box stops at the collision boxes of
+// Collidable entities (buildings, tree trunks), one axis at a time, so it
+// slides along a wall instead of sticking to it. Only movers that aren't
+// Collidable themselves (figures) and have a collision box are stopped;
+// Collidables don't move, so the result never depends on tick order. A box
+// that starts inside one (a building placed on top of a figure) may walk
+// out of it.
+Position2D Surface::slide_(const Entity& entity, Position2D to) {
+    const Area2D& bounds = entity.collision_bounds;
+    if (entity.is_collidable() || bounds.min == bounds.max) return to;
+
+    // Gap kept from what it stops at, so the next tick's box doesn't touch
+    constexpr float SKIN = 0.001f;
+
+    const Area2D start = bounds + entity.position;
+    Position2D   at    = entity.position;
+
+    const auto blockers = [&](const Area2D& box) {
+        hits_.clear();
+        find_colliding(box, entity.handle, hits_);
+        std::erase_if(hits_, [&](EntityHandle h) {
+            const Entity* e = world_.get_entity(h);
+            if (!e || e->collision_box().overlaps(start)) return true; // already inside it: let it out
+            return e->type_id == Building::TYPE_ID &&
+                   static_cast<const Building*>(e)->lets_through(entity); // a friendly gate
+        });
+    };
+
+    for (int axis = 0; axis < 2; axis++) {
+        Position2D next = at;
+        (axis == 0 ? next.x : next.y) = (axis == 0 ? to.x : to.y);
+        if (next == at) continue;
+
+        blockers(bounds + next);
+        for (EntityHandle h : hits_) {
+            const Area2D other = world_.get_entity(h)->collision_box();
+            // Strictly overlapping on the other axis, or it only touches
+            if (axis == 0) {
+                const Area2D box = bounds + next;
+                if (box.max.y <= other.min.y || box.min.y >= other.max.y) continue;
+                if (next.x > at.x) next.x = std::min(next.x, other.min.x - bounds.max.x - SKIN);
+                else               next.x = std::max(next.x, other.max.x - bounds.min.x + SKIN);
+            } else {
+                const Area2D box = bounds + next;
+                if (box.max.x <= other.min.x || box.min.x >= other.max.x) continue;
+                if (next.y > at.y) next.y = std::min(next.y, other.min.y - bounds.max.y - SKIN);
+                else               next.y = std::max(next.y, other.max.y - bounds.min.y + SKIN);
+            }
+        }
+        // Never pushed back past where it started this tick
+        if (axis == 0) next.x = (to.x > at.x) ? std::max(next.x, at.x) : std::min(next.x, at.x);
+        else           next.y = (to.y > at.y) ? std::max(next.y, at.y) : std::min(next.y, at.y);
+        at = next;
+    }
+    return at;
 }
 
 void Surface::update_chunk_activation_() {

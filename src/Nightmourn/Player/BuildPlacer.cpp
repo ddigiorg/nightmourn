@@ -7,6 +7,7 @@
 #include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Draw/BuildingDrawer.hpp"
 #include "Nightmourn/Draw/DrawContext.hpp"
+#include "Nightmourn/Draw/DrawLayers.hpp"
 #include "Nightmourn/Draw/SettlementDrawer.hpp"
 #include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/World/World.hpp"
@@ -94,8 +95,10 @@ void BuildPlacer::draw(DrawContext& ctx, const BuildingDrawer& drawer, SurfaceID
     // A banner shows the base it would found
     if (building_->type == BuildingType::Banner && building_->settlement) {
         SettlementDrawStyle style;
-        style.color = { tint.r, tint.g, tint.b, 0.9f };
-        style.fill  = true;
+        style.filler = &drawer;
+        style.layer  = DrawLayer::EntityOverlay;
+        style.color  = { tint.r, tint.g, tint.b, 0.9f };
+        style.fill   = true;
         draw_build_area(ctx, TileRect::around(origin_, building_->settlement->build_radius), style);
     }
 
