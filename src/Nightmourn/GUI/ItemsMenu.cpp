@@ -6,7 +6,7 @@
 #include "Nightmourn/Data/Configs.hpp"
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/GUI/InventoryMenu.hpp"
-#include "Nightmourn/Item/Inventory.hpp"
+#include "Nightmourn/Item/Inventory.hpp" // can_add, pay, shortfall
 #include "Nightmourn/Item/Items.hpp"
 #include "Nezumi/UI/Context.hpp"
 #include <algorithm> // sort
@@ -33,7 +33,6 @@ ItemsMenu::ItemsMenu(const UISheet& sheet, const Configs& configs, Inventory& pl
     std::sort(sorted_.begin(), sorted_.end(),
               [](const ItemPrototype* a, const ItemPrototype* b) { return a->name < b->name; });
     slots_.resize(sorted_.size());
-    counts_.resize(sorted_.size());
 }
 
 // -----------------------------------------------------------------------------
@@ -74,7 +73,7 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
     };
     if (!ui.begin_panel("Items", &open, config)) return;
 
-    // Each item with how many you have; a recipe you can't pay for dimmed
+    // Each kind of item; a recipe you can't pay for dimmed
     Inventory* const have[] = { settlement_, player_ };
     for (std::size_t i = 0; i < sorted_.size(); i++) {
         const ItemPrototype& item = *sorted_[i];
@@ -82,11 +81,6 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
         s = {};
         s.icon  = sheet_->item_icon(item.id);
         s.value = item.id.value();
-        const unsigned n = Nightmourn::count(have, item.id);
-        if (n > 0) {
-            std::snprintf(counts_[i].data(), counts_[i].size(), "%u", n);
-            s.count = counts_[i].data();
-        }
         s.disabled = !item.recipe.empty() && shortfall(item.recipe, have).has_value();
     }
 
@@ -110,25 +104,18 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
 // "House
 //  Crafted from 4 wood
 //  Builds a house, 2 x 2
-//  You have 3 (2 carried, 1 in the settlement)
+//  Stacks to 20
 //  Click: craft 1   Right click: craft 5   Shift + click: action bar"
 void ItemsMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item) {
     char line[128];
     tip_ = capitalized(item.name);
 
-    Inventory* const have[] = { settlement_, player_ };
     if (!item.recipe.empty()) {
         tip_ += "\nCrafted from";
         for (std::size_t k = 0; k < item.recipe.size(); k++) {
             const std::string_view n = item_name(item.recipe[k].item);
             std::snprintf(line, sizeof line, "%s %u %.*s", k == 0 ? "" : ",",
                           static_cast<unsigned>(item.recipe[k].count), static_cast<int>(n.size()), n.data());
-            tip_ += line;
-        }
-        if (const auto need = shortfall(item.recipe, have)) {
-            const std::string_view n = item_name(need->item);
-            std::snprintf(line, sizeof line, "  (%u more %.*s needed)", static_cast<unsigned>(need->count),
-                          static_cast<int>(n.size()), n.data());
             tip_ += line;
         }
     } else {
@@ -146,11 +133,6 @@ void ItemsMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item) {
     std::snprintf(line, sizeof line, "\nStacks to %u", static_cast<unsigned>(item.stack_size));
     tip_ += line;
 
-    const unsigned carried = player_->count(item.id);
-    if (settlement_) std::snprintf(line, sizeof line, "\nYou have %u carried, %u in the settlement",
-                                   carried, static_cast<unsigned>(settlement_->count(item.id)));
-    else             std::snprintf(line, sizeof line, "\nYou carry %u", carried);
-    tip_ += line;
 
     tip_ += item.recipe.empty() ? "\nShift + click: action bar"
                                 : "\nClick: craft 1   Right click: craft 5   Shift + click: action bar";
