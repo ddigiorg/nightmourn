@@ -27,7 +27,7 @@ namespace Action {
     // Menus (see GUI/GameMenus.hpp)
     inline constexpr Nezumi::ActionID ToggleDebugMenu     = 4;
     inline constexpr Nezumi::ActionID ToggleCharacterMenu = 5; // skills and equipment
-    // 6: free (was the equipment menu, now part of the character menu)
+    inline constexpr Nezumi::ActionID ToggleCraftingMenu  = 6; // the settlement's crafting rules
     inline constexpr Nezumi::ActionID ToggleInventoryMenu = 7;
     inline constexpr Nezumi::ActionID ToggleItemsMenu     = 8;
     inline constexpr Nezumi::ActionID ToggleOptionsMenu   = 9;
@@ -44,6 +44,10 @@ namespace Action {
     inline constexpr Nezumi::ActionID InventoryMoveMod     = 13;
     inline constexpr Nezumi::ActionID InventoryShortcutMod = 14;
 
+    // Held: every crafting building shows its icon, idle ones too
+    // (CraftOverlay; working and blocked ones always do)
+    inline constexpr Nezumi::ActionID ShowCraftIcons = 15;
+
     // Action bar slots: one action per slot, contiguous from UseSlotFirst, so
     // a bar that grows (MAX_ACTION_SLOTS) needs no new ids
     inline constexpr std::size_t      MAX_ACTION_SLOTS = 48;
@@ -58,7 +62,8 @@ namespace Action {
 // mouse button for mining, 1-9 and 0 for
 // the first ten action bar slots, C / B / I / O for the character,
 // inventory, items and options menus, V for the settlement's inventory,
-// Shift and Ctrl (either side) as the inventory click modifiers, Escape for
+// K for its crafting rules, Shift and Ctrl (either side) as the inventory
+// click modifiers, Alt (held) for every crafting building's icon, Escape for
 // the Main Menu,
 // and the tilde key (the one left of 1, whatever the layout prints on it)
 // for the debug menu

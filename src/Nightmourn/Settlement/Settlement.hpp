@@ -23,11 +23,14 @@
 //
 // Crafting: unlocked_categories() is what its buildings let the player
 // craft while they stand in it (a workshop: "crafter"), kept up to date as
-// buildings join and leave, so asking costs nothing.
+// buildings join and leave, so asking costs nothing. Its crafting buildings
+// are also its machines (`crafting`, a CraftSite): they make what its rules
+// ask for out of its inventory, ticked by World in its crafting phase.
 // =============================================================================
 
 #pragma once
 #include "Nightmourn/Building/BuildingConfig.hpp"
+#include "Nightmourn/Crafting/CraftSite.hpp"
 #include "Nightmourn/Crafting/Recipe.hpp"
 #include "Nightmourn/Entity/EntityFactionsMask.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
@@ -113,18 +116,24 @@ public:
     // Changed outside the tick for now (the game deposits into it).
     Inventory inventory;
 
+    // Its machines and the player's rules for them. World adds and removes
+    // the machines; the rules are the player's to set.
+    CraftSite crafting;
+
 private:
     friend class World;
 
     // World only: a building joins or leaves it
-    void add_building_(const BuildingConfig& config) {
+    void add_building_(EntityHandle building, const BuildingConfig& config) {
         building_count_++;
+        crafting.add_machine(building, config);
         for_each_bit_(config.player_categories(), [&](std::size_t i) {
             if (unlock_counts_[i]++ == 0) unlocked_ |= CraftCategoryMask{ 1 } << i;
         });
     }
-    void remove_building_(const BuildingConfig& config) {
+    void remove_building_(EntityHandle building, const BuildingConfig& config) {
         building_count_--;
+        crafting.remove_machine(building);
         for_each_bit_(config.player_categories(), [&](std::size_t i) {
             if (--unlock_counts_[i] == 0) unlocked_ &= ~(CraftCategoryMask{ 1 } << i);
         });

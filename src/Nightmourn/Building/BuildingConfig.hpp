@@ -67,8 +67,9 @@ struct BuildingConfig {
     const SettlementConfig* settlement = nullptr;
 
     // Crafting ("crafting" in its config): the recipe categories it makes
-    // (as a settlement machine, later), how fast (a time multiplier), and
-    // whether standing in its settlement lets the player craft them too
+    // (as one of its settlement's machines, Crafting/CraftSite), how fast (a
+    // time multiplier), and whether standing in its settlement lets the
+    // player craft them too
     CraftCategoryMask crafting_categories = 0;
     float             crafting_speed      = 1.0f;
     bool              unlocks_for_player  = false;

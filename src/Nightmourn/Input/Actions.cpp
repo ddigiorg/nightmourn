@@ -24,8 +24,10 @@ void bind_default_actions(Nezumi::InputMap& input) {
     input.bind(Action::ToggleItemsMenu,     ScanCode::I);
     input.bind(Action::ToggleOptionsMenu,   ScanCode::O);
     input.bind(Action::ToggleSettlementMenu, ScanCode::V);
+    input.bind(Action::ToggleCraftingMenu,   ScanCode::K);
     input.bind(Action::InventoryMoveMod,     { ScanCode::LShift, ScanCode::RShift });
     input.bind(Action::InventoryShortcutMod, { ScanCode::LCtrl,  ScanCode::RCtrl  });
+    input.bind(Action::ShowCraftIcons,       { ScanCode::LAlt,   ScanCode::RAlt   });
     input.bind(Action::ToggleMainMenu,      ScanCode::Escape);
 
     // 1, 2, ... 9, 0: the number row, in its order on the keyboard

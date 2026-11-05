@@ -58,13 +58,19 @@ void World::tick() {
     tick_entities_    (ctx);    // 3. Entity tick
     update_projectiles_();      // 4. Projectiles
     apply_interactions_();      // 5. Interaction
-    integrate_movement_(ctx.dt);// 6. Movement + spatial update
-    update_activation_();       // 7. Activation
-    deposit_pheromones_();      // 8. Pheromones
-    sweep_sectors_    ();       // 9. Sector sweep
+    tick_crafting_    ();       // 6. Crafting
+    integrate_movement_(ctx.dt);// 7. Movement + spatial update
+    update_activation_();       // 8. Activation
+    deposit_pheromones_();      // 9. Pheromones
+    sweep_sectors_    ();       // 10. Sector sweep
 
     tick_++;
     in_tick_ = false;
+}
+
+void World::tick_crafting_() {
+    for (const auto& s : settlements_)
+        if (s && s->crafting.machine_count() > 0) s->crafting.tick(tick_, s->inventory);
 }
 
 WorldContext World::make_context_() {
@@ -244,19 +250,19 @@ EntityHandle World::place_building(
             settlement->set_occupant_(b.footprint(), b.handle);
             if (!b.settlement_id && b.is_friend(factions) && settlement->build_area().contains(b.footprint())) {
                 b.settlement_id = id;
-                settlement->add_building_(b.config());
+                settlement->add_building_(b.handle, b.config());
             }
             return true;
         });
         settlement->set_occupant_(footprint, banner);
-        settlement->add_building_(config);
+        settlement->add_building_(banner, config);
         return banner;
     }
 
     Settlement* settlement = settlement_of(factions);
     const EntityHandle handle = create_entity<Building>(surface_id, center, config, origin, factions, settlement->id());
     settlement->set_occupant_(footprint, handle);
-    settlement->add_building_(config);
+    settlement->add_building_(handle, config);
 
     // Join up with the walls next to it
     if (config.connects && config.footprint == TileCoord{ 1, 1 }) {
@@ -285,7 +291,7 @@ void World::on_building_removed_(Building& building) {
 
     Settlement* settlement = get_settlement(building.settlement_id);
     if (!settlement) return;
-    settlement->remove_building_(building.config());
+    settlement->remove_building_(building.handle, building.config());
 
     // Its neighbours lose their connection to it
     if (building.connections) {

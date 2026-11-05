@@ -10,6 +10,7 @@
 // =============================================================================
 
 #include "Nightmourn/Crafting/CraftQueue.hpp"
+#include "Nightmourn/Crafting/CraftSite.hpp"
 #include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/Item/Items.hpp"
 #include <array>   // array
@@ -231,6 +232,215 @@ static void test_merge_after_cancel() {
     CHECK(q.entries().size() == 1 && q.entries()[0].count == 3);
 }
 
+
+// -----------------------------------------------------------------------------
+// CraftSite
+// -----------------------------------------------------------------------------
+
+namespace {
+
+// A workshop: makes hand and crafter recipes (planks, swords), at speed 1
+BuildingConfig workshop(float speed = 1.0f) {
+    BuildingConfig c;
+    c.name                = "workshop";
+    c.type                = BuildingType::Crafter;
+    c.crafting_categories = HAND | CRAFTER;
+    c.crafting_speed      = speed;
+    return c;
+}
+
+const EntityHandle A{ 1, 1 };
+const EntityHandle B{ 2, 1 };
+
+// Ticks the site from `from` to `to` inclusive, summing its reports
+CraftSite::Report run(CraftSite& site, Inventory& stock, Nezumi::Tick from, Nezumi::Tick to) {
+    CraftSite::Report sum;
+    for (Nezumi::Tick t = from; t <= to; t++) {
+        const CraftSite::Report r = site.tick(t, stock);
+        sum.started += r.started;
+        sum.made    += r.made;
+    }
+    return sum;
+}
+
+} // namespace
+
+static void test_site_target() {
+    std::printf("site: makes up to its target\n");
+    Inventory stock(4);
+    stock.add(Items::Wood, 10);
+    CraftSite site;
+    const BuildingConfig ws = workshop();
+    site.add_machine(A, ws);
+    CHECK(site.machine_count() == 1 && site.categories() == (HAND | CRAFTER));
+
+    // No rules: nothing
+    CHECK(site.tick(0, stock).started == 0);
+
+    site.set_target(SWORDS, SWORD, 2);
+    CHECK(site.tick(0, stock).started == 1);
+    CHECK(stock.count(Items::Wood) == 7 && site.in_progress(SWORD) == 1);
+    CHECK(site.machine(A)->state == MachineState::Working && site.machine(A)->progress(10) == 0.5f);
+
+    // 20 ticks a sword; the second starts as the first lands
+    CHECK(run(site, stock, 1, 19).made == 0);
+    const CraftSite::Report r = site.tick(20, stock);
+    CHECK(r.made == 1 && r.started == 1 && stock.count(SWORD) == 1);
+
+    // Two in store: it stops
+    const CraftSite::Report rest = run(site, stock, 21, 100);
+    CHECK(rest.made == 1 && rest.started == 0 && stock.count(SWORD) == 2 && stock.count(Items::Wood) == 4);
+    CHECK(site.machine(A)->state == MachineState::Idle && site.in_progress(SWORD) == 0);
+
+    // Using one up: it makes another
+    stock.remove(SWORD, 1);
+    CHECK(site.tick(101, stock).started == 1);
+
+    // Target 0 drops the rule; the job under way still finishes
+    site.set_target(SWORDS, SWORD, 0);
+    CHECK(site.rules().empty() && site.target(SWORD) == 0);
+    CHECK(run(site, stock, 102, 200).made == 1 && stock.count(SWORD) == 2);
+}
+
+static void test_site_floor() {
+    std::printf("site: keeps ingredients above their floors\n");
+    Inventory stock(4);
+    stock.add(Items::Wood, 7);
+    CraftSite site;
+    const BuildingConfig ws = workshop();
+    site.add_machine(A, ws);
+    site.set_floor(Items::Wood, 5);
+    site.set_target(SWORDS, SWORD, 10);
+    CHECK(site.floor(Items::Wood) == 5);
+
+    // 7 - 3 would leave 4, under 5
+    CHECK(site.tick(0, stock).started == 0 && stock.count(Items::Wood) == 7);
+
+    // 8 - 3 leaves 5: one, then no more
+    stock.add(Items::Wood, 1);
+    CHECK(site.tick(1, stock).started == 1 && stock.count(Items::Wood) == 5);
+    CHECK(run(site, stock, 2, 100).started == 0 && stock.count(SWORD) == 1);
+
+    // Floor 0: it uses the rest
+    site.set_floor(Items::Wood, 0);
+    CHECK(run(site, stock, 101, 200).made == 1 && stock.count(Items::Wood) == 2);
+}
+
+static void test_site_machines_share() {
+    std::printf("site: machines don't pile on\n");
+    Inventory stock(4);
+    stock.add(Items::Wood, 20);
+    CraftSite site;
+    const BuildingConfig ws = workshop();
+    site.add_machine(A, ws);
+    site.add_machine(B, ws);
+
+    // One sword wanted: one machine makes it
+    site.set_target(SWORDS, SWORD, 1);
+    CHECK(site.tick(0, stock).started == 1 && stock.count(Items::Wood) == 17);
+
+    // Two more: both work, in parallel
+    site.set_target(SWORDS, SWORD, 3);
+    CHECK(site.tick(1, stock).started == 1);
+    CHECK(site.machine(A)->state == MachineState::Working && site.machine(B)->state == MachineState::Working);
+    CHECK(site.in_progress(SWORD) == 2);
+    run(site, stock, 2, 21);
+    CHECK(stock.count(SWORD) == 2 && site.in_progress(SWORD) == 1); // A's done, and started the third
+}
+
+static void test_site_round_robin() {
+    std::printf("site: rules take turns\n");
+    Inventory stock(8);
+    stock.add(Items::Wood, 50);
+    CraftSite site;
+    const BuildingConfig ws = workshop(2.0f); // planks 5 ticks, swords 10
+    site.add_machine(A, ws);
+    site.set_target(PLANKS, PLANK, 100);
+    site.set_target(SWORDS, SWORD, 100);
+
+    site.tick(0, stock);
+    CHECK(site.machine(A)->recipe == &PLANKS && site.machine(A)->finish == 5);
+    run(site, stock, 1, 5);
+    CHECK(site.machine(A)->recipe == &SWORDS && site.machine(A)->finish == 15);
+    run(site, stock, 6, 15);
+    CHECK(site.machine(A)->recipe == &PLANKS && stock.count(PLANK) == 4 && stock.count(SWORD) == 1);
+
+    // A machine only takes rules it offers
+    CraftSite hands;
+    BuildingConfig bench = workshop();
+    bench.crafting_categories = HAND;
+    hands.add_machine(A, bench);
+    hands.set_target(SWORDS, SWORD, 5);
+    CHECK(hands.tick(0, stock).started == 0);
+}
+
+static void test_site_sleeps() {
+    std::printf("site: sleeps until the storage changes\n");
+    Inventory stock(4);
+    CraftSite site;
+    const BuildingConfig ws = workshop();
+    site.add_machine(A, ws);
+    site.set_target(SWORDS, SWORD, 1);
+    CHECK(site.tick(0, stock).started == 0);
+    CHECK(run(site, stock, 1, 50).started == 0);
+
+    // Wood arrives: it wakes and starts
+    stock.add(Items::Wood, 3);
+    CHECK(site.tick(51, stock).started == 1 && stock.count(Items::Wood) == 0);
+}
+
+static void test_site_output_full() {
+    std::printf("site: waits for room\n");
+    Inventory stock(2);
+    stock.add(Items::Wood, 10);
+    stock.add(Items::Stone, 10); // both slots taken
+    CraftSite site;
+    const BuildingConfig ws = workshop();
+    site.add_machine(A, ws);
+    site.set_target(SWORDS, SWORD, 1);
+    CHECK(site.tick(0, stock).started == 1);
+
+    CHECK(run(site, stock, 1, 30).made == 0);
+    CHECK(site.machine(A)->state == MachineState::OutputFull && site.machine(A)->progress(30) == 1.0f);
+
+    // Room: delivered on the next tick
+    stock.remove(Items::Stone, 10);
+    CHECK(site.tick(31, stock).made == 1 && stock.count(SWORD) == 1);
+    CHECK(site.machine(A)->state == MachineState::Idle);
+}
+
+static void test_site_machine_leaves() {
+    std::printf("site: a machine that goes loses or refunds its job\n");
+    Inventory stock(4);
+    stock.add(Items::Wood, 10);
+    CraftSite site;
+    const BuildingConfig ws = workshop();
+    site.add_machine(A, ws);
+    site.set_target(SWORDS, SWORD, 5);
+    site.tick(0, stock);
+    CHECK(stock.count(Items::Wood) == 7);
+
+    // Deconstructed: the wood comes back, and it starts over (a new job)
+    CHECK(site.refund_job(A, stock) && stock.count(Items::Wood) == 10 && site.in_progress(SWORD) == 0);
+    CHECK(site.tick(5, stock).started == 1 && site.machine(A)->finish == 25);
+    CHECK(run(site, stock, 6, 24).made == 0); // the first job's heap entry is stale
+    CHECK(site.tick(25, stock).made == 1);
+
+    // Destroyed: the job's lost, the slot freed and reused
+    site.remove_machine(A);
+    CHECK(site.machine_count() == 0 && !site.machine(A) && site.in_progress(SWORD) == 0);
+    CHECK(stock.count(Items::Wood) == 4);
+    CHECK(run(site, stock, 26, 100).made == 0);
+    site.add_machine(B, ws);
+    CHECK(site.machines().size() == 1 && site.tick(101, stock).started == 1);
+
+    // A refund that doesn't fit keeps the job
+    Inventory full(1);
+    full.add(Items::Stone, 10);
+    CHECK(!site.refund_job(B, full) && site.machine(B)->state == MachineState::Working);
+    CHECK(site.refund_job(EntityHandle{ 9, 1 }, full)); // no such machine: nothing to refund
+}
+
 int main() {
     set_test_items();
     test_enqueue_pays();
@@ -240,6 +450,13 @@ int main() {
     test_cancel();
     test_leaving();
     test_merge_after_cancel();
+    test_site_target();
+    test_site_floor();
+    test_site_machines_share();
+    test_site_round_robin();
+    test_site_sleeps();
+    test_site_output_full();
+    test_site_machine_leaves();
 
     if (g_failures) {
         std::printf("%d check(s) failed\n", g_failures);

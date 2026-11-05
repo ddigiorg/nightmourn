@@ -233,10 +233,12 @@ private:
     // 4. Projectiles  land the ones due this tick (queueing their damage),
     //                 steer tracking ones, then add this tick's launches
     // 5. Interaction  apply damage, then mine commands, each in issue order
-    // 6. Movement     integrate velocity, then update chunk/sector membership
-    // 7. Activation   update chunk active/inactive state again
-    // 8. Pheromones   active emitters deposit into their chunk (staggered)
-    // 9. Sweep        drop empty sectors every `sector_sweep_interval` ticks
+    // 6. Crafting     each settlement's machines, in SettlementID order:
+    //                 deliver the jobs due, start new ones (CraftSite)
+    // 7. Movement     integrate velocity, then update chunk/sector membership
+    // 8. Activation   update chunk active/inactive state again
+    // 9. Pheromones   active emitters deposit into their chunk (staggered)
+    // 10. Sweep       drop empty sectors every `sector_sweep_interval` ticks
     // -------------------------------------------------------------------------
 
     WorldContext make_context_();
@@ -248,6 +250,7 @@ private:
     void apply_interactions_ ();
     void apply_damage_       ();
     void apply_mining_       ();
+    void tick_crafting_      ();
     void integrate_movement_ (float dt);
     void deposit_pheromones_ ();
     void sweep_sectors_      ();

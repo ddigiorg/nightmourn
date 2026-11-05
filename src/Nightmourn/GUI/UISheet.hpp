@@ -38,11 +38,12 @@ enum class Menu : std::uint8_t {
     Inventory,
     Settlement, // the settlement's inventory
     Items,     // codex of every item type discovered, with recipes
+    Crafting,  // the settlement's crafting rules
     Options,
     Debug,
     Main,
 };
-inline constexpr std::size_t MENU_COUNT = 7;
+inline constexpr std::size_t MENU_COUNT = 8;
 
 struct UISheet {
     static constexpr float DENSITY = 2.0f; // sheet pixels per UI point
@@ -51,7 +52,7 @@ struct UISheet {
     // item configs' "icon" instead.
     static constexpr std::array<const char*, MENU_COUNT> MENU_ICON_NAMES = {
         "menu/character", "menu/inventory", "menu/settlement", "menu/items",
-        "menu/options", "menu/debug", "menu/main",
+        "menu/crafting", "menu/options", "menu/debug", "menu/main",
     };
 
     Nezumi::UI::Image     eagle   = {}; // crouched, faces right
