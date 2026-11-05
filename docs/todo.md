@@ -448,17 +448,12 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
       (`Crafting/CraftSite.hpp`). Rules menu (K, `GUI/CraftRulesMenu`),
       job icons over workshops (`GUI/CraftOverlay`, Alt for all), and
       deconstructing refunds the job (demo 04).
-- [ ] Rules menu: change a target with the mouse wheel over its slot
-      (needs the wheel from nezumi's UI), drag rules to reorder their
-      priority, and a hover tooltip on the job icons.
-- [ ] Text fields drop or reorder keys typed within one frame (seen with
-      xdotool: Backspace then digits). Look at how nezumi's text field
-      applies `typed_` against editing keys.
+- [ ] Rules menu: drag rules to reorder their priority, and a hover
+      tooltip on the job icons.
 - [ ] Discovery: the Items menu shows only discovered items, empty slots
-      a placeholder emblem (nezumi `SlotStyle::placeholder`).
-- [ ] Live tooltips: nezumi restarts a tooltip's delay when its text
-      changes, so the crafting queue's tooltip can't count down. Key the
-      tooltip by widget instead.
+      a placeholder emblem (nezumi `SlotStyle::placeholder`, now in).
+- [x] Live tooltips: nezumi times a tooltip per widget, so the crafting
+      queue's tooltip counts down while hovered.
 - [ ] Storage buildings that add slots to the settlement inventory
       (decided: the stock stays as inventory slots, and one settlement per
       faction for now).

@@ -150,6 +150,16 @@ void CraftRulesMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryMo
         tab_ == Tab::Make ? "make" : "reserves", slots_, static_cast<int>(COLUMNS),
         sheet_->item_slot_style(InventoryMenu::SLOT_SIZE, InventoryMenu::SLOT_GAP));
     if (r.clicked >= 0) selected_ = shown_[static_cast<std::size_t>(r.clicked)]->id;
+
+    // The wheel over a slot steps its number (up: more), and picks it
+    if (editable_ && r.hovered >= 0 && r.wheel != 0.0f) {
+        const ItemID        item  = shown_[static_cast<std::size_t>(r.hovered)]->id;
+        const std::uint32_t step  = mods.move ? BIG_STEP : STEP;
+        const std::uint32_t value = value_(item);
+        selected_ = item;
+        change_(item, r.wheel > 0.0f ? std::min<std::uint32_t>(value + step, 1'000'000)
+                                     : (value > step ? value - step : 0));
+    }
     if (r.hovered >= 0) tooltip_(ui, *shown_[static_cast<std::size_t>(r.hovered)]);
 
     draw_editor_(ui, mods);
@@ -247,10 +257,10 @@ void CraftRulesMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item
             tip_ += line;
         }
         tip_ += "\nTop right: how many to keep. Bottom right: in store.";
-        tip_ += editable_ ? "\nClick to set how many to keep" : "";
+        tip_ += editable_ ? "\nWheel: +/- 10 (Shift: 100)   Click: type a number" : "";
     } else {
         tip_ += "\nTop right: never used below it. Bottom right: in store.";
-        tip_ += editable_ ? "\nClick to set how much to keep back" : "";
+        tip_ += editable_ ? "\nWheel: +/- 10 (Shift: 100)   Click: type a number" : "";
     }
     ui.tooltip(tip_);
 }
