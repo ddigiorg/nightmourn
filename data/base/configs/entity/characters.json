@@ -8,6 +8,7 @@
         "mine_interval": 30,
         "mine_amount": 1,
         "mine_reach": 2.0,
+        "build_reach": 10.0,
         "attack_interval": 40,
         "attack_damage": 25,
         "attack_reach": 1.25,

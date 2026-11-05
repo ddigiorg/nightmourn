@@ -203,7 +203,8 @@ public:
         // Action bar and inventory, both over the player's inventory
         ui_sheet_       = Nightmourn::UISheet::load(*renderer, configs_);
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
-        inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory());
+        inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(
+            ui_sheet_, player_.inventory(), Nightmourn::InventoryMenu::Config{ .title = "Player Inventory" });
 
         // Something besides wood to drag around
         player_.inventory().add(Nightmourn::Items::Stone, 37);

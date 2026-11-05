@@ -108,8 +108,19 @@ static void test_shipped_data() {
         CHECK(p.tree("oak").resource.collision_bounds.min == p.tree("oak").resource.collision_bounds.max);
         CHECK(p.raid("night").config.unit == &p.unit("raider").config && p.raid("night").config.max_alive >= 1);
         CHECK(p.character("hero").config.attack_damage > 0);
+        CHECK(p.character("hero").config.build_reach == 10.0f);
         CHECK(p.building("barracks").config.footprint == TileCoord({ 3, 3 }));
         CHECK(p.building_for_item(p.find_item("barracks")->id) == p.find_building("barracks"));
+
+        // What they cost in wood; a banner is free
+        const auto wood = [&](const char* name) {
+            const auto& cost = p.building(name).config.cost;
+            return cost.size() == 1 && cost[0].item == Items::Wood ? cost[0].count : 0u;
+        };
+        CHECK(p.building("banner").config.cost.empty());
+        CHECK(wood("wall") == 1 && wood("torch") == 1 && wood("barracks") == 1);
+        CHECK(wood("house") == 4 && wood("crafter") == 9 && wood("gate") == 2);
+        CHECK(p.find_settlement("player") && p.find_settlement("player")->config.inventory_slots == 40);
     }
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
     for (const char* sprite : { "eagle", "plate", "slot", "rim", "button", "divider", "fill",
@@ -215,6 +226,14 @@ static void test_errors() {
               .find("'item' names no item 'gem'") != std::string::npos);
     CHECK(broken(R"([ { "type": "sprite", "name": "s", "filename": "__base__/s.png", "pivot": [1] } ])")
               .find("'pivot' must be [x, y]") != std::string::npos);
+
+    const auto building = [](const std::string& cost) {
+        return R"([ { "type": "building", "name": "b", "kind": "house", "cost": )" + cost +
+               R"(, "picture": { "filename": "__base__/b.png", "width": 64, "height": 64 } } ])";
+    };
+    CHECK(broken(building(R"({ "gem": 2 })")).find("building 'b': 'cost' names no item 'gem'") != std::string::npos);
+    CHECK(broken(building(R"({ "wood": 0 })")).find("'cost' counts must be whole numbers") != std::string::npos);
+    CHECK(broken(building(R"([ "wood" ])")).find("'cost' must be an object") != std::string::npos);
     fs::remove_all(dir);
 }
 

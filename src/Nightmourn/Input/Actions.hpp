@@ -36,6 +36,14 @@ namespace Action {
     // Swing at the resource under the cursor (held: keep swinging)
     inline constexpr Nezumi::ActionID Mine = 11;
 
+    // The settlement's inventory (GameMenus: only inside its build area)
+    inline constexpr Nezumi::ActionID ToggleSettlementMenu = 12;
+
+    // Held while clicking an inventory stack: Ctrl sends it to the other
+    // inventory open beside it, Shift puts it on the action bar
+    inline constexpr Nezumi::ActionID InventoryMoveMod     = 13;
+    inline constexpr Nezumi::ActionID InventoryShortcutMod = 14;
+
     // Action bar slots: one action per slot, contiguous from UseSlotFirst, so
     // a bar that grows (MAX_ACTION_SLOTS) needs no new ids
     inline constexpr std::size_t      MAX_ACTION_SLOTS = 48;
@@ -49,7 +57,9 @@ namespace Action {
 // Bind every action to its default keys: W/A/S/D for movement, the left
 // mouse button for mining, 1-9 and 0 for
 // the first ten action bar slots, K / C / B / I / O for the skill,
-// equipment, inventory, items and options menus, Escape for the main menu,
+// equipment, inventory, items and options menus, V for the settlement's
+// inventory, Ctrl and Shift (either side) as the inventory click modifiers,
+// Escape for the main menu,
 // and the tilde key (the one left of 1, whatever the layout prints on it)
 // for the debug menu
 void bind_default_actions(Nezumi::InputMap& input);

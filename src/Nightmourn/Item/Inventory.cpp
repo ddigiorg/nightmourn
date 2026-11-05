@@ -69,10 +69,11 @@ std::uint32_t Inventory::remove(ItemID item, std::uint32_t amount) {
 // Rearranging
 // -----------------------------------------------------------------------------
 
-void Inventory::move(std::size_t from, std::size_t to) {
-    if (from == to || from >= slots_.size() || to >= slots_.size()) return;
-    auto& src = slots_[from];
-    auto& dst = slots_[to];
+void Inventory::move(Inventory& from, std::size_t from_slot, Inventory& to, std::size_t to_slot) {
+    if (&from == &to && from_slot == to_slot) return;
+    if (from_slot >= from.slots_.size() || to_slot >= to.slots_.size()) return;
+    auto& src = from.slots_[from_slot];
+    auto& dst = to.slots_[to_slot];
     if (!src) return;
 
     if (dst && dst->item == src->item) {
@@ -84,6 +85,68 @@ void Inventory::move(std::size_t from, std::size_t to) {
         return;
     }
     std::swap(src, dst);
+}
+
+std::uint32_t Inventory::transfer(Inventory& from, std::size_t slot, Inventory& to, std::uint32_t amount) {
+    if (&from == &to || slot >= from.slots_.size()) return 0;
+    auto& src = from.slots_[slot];
+    if (!src) return 0;
+
+    const std::uint32_t moved = to.add(src->item, std::min<std::uint32_t>(amount, src->count));
+    src->count = static_cast<std::uint16_t>(src->count - moved);
+    if (src->count == 0) src.reset();
+    return moved;
+}
+
+// -----------------------------------------------------------------------------
+// Several inventories at once
+// -----------------------------------------------------------------------------
+
+std::uint32_t count(std::span<Inventory* const> from, ItemID item) {
+    std::uint32_t total = 0;
+    for (const Inventory* inv : from)
+        if (inv) total += inv->count(item);
+    return total;
+}
+
+std::optional<ItemAmount> shortfall(std::span<const ItemAmount> cost, std::span<Inventory* const> from) {
+    for (const ItemAmount& c : cost) {
+        // The same item could be listed twice; count it once in total
+        std::uint32_t need = 0;
+        for (const ItemAmount& d : cost)
+            if (d.item == c.item) need += d.count;
+        const std::uint32_t have = count(from, c.item);
+        if (have < need) return ItemAmount{ c.item, need - have };
+    }
+    return std::nullopt;
+}
+
+bool pay(std::span<const ItemAmount> cost, std::span<Inventory* const> from) {
+    if (shortfall(cost, from)) return false;
+    for (const ItemAmount& c : cost) {
+        std::uint32_t left = c.count;
+        for (Inventory* inv : from)
+            if (inv && left > 0) left -= inv->remove(c.item, left);
+    }
+    return true;
+}
+
+bool give(std::span<const ItemAmount> items, std::span<Inventory* const> to) {
+    // Try it on copies first (a few dozen slots each), so it's all or nothing
+    // however the items share out the free slots
+    std::vector<Inventory> trial;
+    trial.reserve(to.size());
+    for (const Inventory* inv : to) trial.push_back(inv ? *inv : Inventory(0));
+
+    for (const ItemAmount& it : items) {
+        std::uint32_t left = it.count;
+        for (std::size_t i = 0; i < trial.size() && left > 0; i++)
+            if (to[i]) left -= trial[i].add(it.item, left);
+        if (left > 0) return false;
+    }
+    for (std::size_t i = 0; i < to.size(); i++)
+        if (to[i]) *to[i] = std::move(trial[i]);
+    return true;
 }
 
 } // namespace Nightmourn

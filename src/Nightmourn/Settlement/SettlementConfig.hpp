@@ -27,7 +27,7 @@ struct SettlementConfig {
     std::int32_t min_gap = 4;
 
     // Slots in the settlement's inventory
-    std::uint16_t inventory_slots = 60;
+    std::uint16_t inventory_slots = 40; // 10 x 4, as the player's
 };
 
 } // namespace Nightmourn

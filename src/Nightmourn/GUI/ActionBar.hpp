@@ -15,8 +15,9 @@
 // by dragging its icon off the bar. The menu buttons toggle GameMenus.
 //
 // A slot is a shortcut to an item, not the item itself (Factorio's
-// quickbar): dragging a stack from the inventory onto a slot points the slot
-// at that item, and the stack stays in the inventory. Given the inventory,
+// quickbar): dragging a stack from the player's inventory onto a slot points
+// the slot at that item, and the stack stays in the inventory. Stacks from
+// any other inventory (a settlement's) aren't taken (NOT_A_SHORTCUT). Given the inventory,
 // each slot shows how many of its item the player carries, and dims when
 // there are none left.
 //
@@ -34,7 +35,7 @@
 #include "Nightmourn/Item/ItemID.hpp"
 #include <array>    // array
 #include <cstddef>  // size_t
-#include <cstdint>  // uint8_t, uint32_t
+#include <cstdint>  // uint8_t, uint32_t, uint64_t
 #include <optional> // optional
 #include <span>     // span
 #include <vector>   // vector
@@ -66,6 +67,11 @@ public:
     // inventory menu drags with it too, so its items drop onto slots.
     static constexpr std::uint32_t DRAG_TYPE = 1;
 
+    // Set in a dragged item's DragPayload::value when it can't become a
+    // shortcut: the settlement's stock drags between inventories like the
+    // player's, but the bar only points at what the player carries
+    static constexpr std::uint64_t NOT_A_SHORTCUT = std::uint64_t{ 1 } << 63;
+
     // -------------------------------------------------------------------------
     // Construction
     //
@@ -80,6 +86,10 @@ public:
 
     std::optional<ItemID> slot(std::size_t i) const { return slots_[i]; }
     void set_slot(std::size_t i, std::optional<ItemID> item) { slots_[i] = item; }
+
+    // Puts `item` in the first empty slot, unless a slot already has it.
+    // False if it's on the bar nowhere afterwards (no empty slot).
+    bool add_shortcut(ItemID item);
 
     // -------------------------------------------------------------------------
     // Tick
