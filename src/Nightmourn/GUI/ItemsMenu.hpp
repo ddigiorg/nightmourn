@@ -2,8 +2,8 @@
 // GUI/ItemsMenu.hpp
 //
 // The Items menu (I): every item in the game in one grid, A to Z, and where
-// items are crafted. Hover an item for what it is, what it's made from and
-// how many you have; click one that has a recipe to craft it (right click:
+// items are crafted, like a recipe book. Hover an item for what it is and
+// what it's made from; click one that has a recipe to craft it (right click:
 // five), Shift + click to put it on the action bar.
 //
 //   [banner][barracks][crafter][food][gate][gold][house][stone][torch][wall]
@@ -25,7 +25,6 @@
 #pragma once
 #include "Nightmourn/GUI/UISheet.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
-#include <array>       // array
 #include <cstddef>     // size_t
 #include <cstdint>     // uint32_t
 #include <glm/glm.hpp> // vec2
@@ -94,9 +93,8 @@ private:
     std::vector<const ItemPrototype*> sorted_ = {}; // A to Z
 
     // Rebuilt every frame, kept to allocate nothing after the first
-    std::vector<Nezumi::UI::Slot>    slots_  = {};
-    std::vector<std::array<char, 8>> counts_ = {};
-    std::string                      tip_    = {};
+    std::vector<Nezumi::UI::Slot> slots_ = {};
+    std::string                   tip_   = {};
 };
 
 } // namespace Nightmourn
