@@ -18,11 +18,9 @@
 #pragma once
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/TileCoord.hpp"
-#include "Nightmourn/Item/ItemAmount.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include <cstdint>     // uint8_t, uint16_t
 #include <string_view> // string_view
-#include <vector>      // vector
 
 namespace Nightmourn {
 
@@ -57,11 +55,6 @@ struct BuildingConfig {
     // The item placing it uses up, and deconstructing it gives back (none:
     // it can't be placed from an inventory)
     ItemID item = {};
-
-    // What putting it up costs on top of its item ("cost": { "wood": 4 }),
-    // paid by the game (Player/BuildPlacer) out of the settlement's stock
-    // first, then the player's. Taking it down gives it back.
-    std::vector<ItemAmount> cost = {};
 
     // Walls: joins up with the buildings next to it that also connect
     bool connects = false;

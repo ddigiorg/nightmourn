@@ -293,7 +293,7 @@ public:
 
         const Nightmourn::Inventory& inventory = player_.inventory();
         action_bar_->draw(*engine.ui(), engine.input(), menus_, player_.character(world), &inventory);
-        menus_.draw(*engine.ui(), debug_flags_, inventory_menu_.get());
+        menus_.draw(*engine.ui(), debug_flags_, { .inventory = inventory_menu_.get() });
     }
 
     // -------------------------------------------------------------------------

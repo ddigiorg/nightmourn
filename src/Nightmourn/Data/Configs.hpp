@@ -118,11 +118,10 @@
 //                wall has 16 frames, one per set of connected sides (bits
 //                north 1, east 2, south 4, west 8). A banner names the
 //                "settlement" it founds. "solid": false lets figures walk
-//                through it (a torch). "cost" is what putting it up takes
-//                on top of its item, by item name (optional)
+//                through it (a torch). What it costs is its item's "recipe"
 //
 //     { "type": "building", "name": "house", "kind": "house",
-//       "size": [2, 2], "max_health": 400, "item": "house", "cost": { "wood": 4 },
+//       "size": [2, 2], "max_health": 400, "item": "house",
 //       "picture": { "filename": "__base__/graphics/entity/building/house_mask.png",
 //                    "width": 268, "height": 250, "pivot": [134, 180] } }
 //
@@ -140,10 +139,14 @@
 //       "min_darkness": 0.5 }
 //
 //   item         something an inventory holds, its icon and how many fit
-//                in one slot
+//                in one slot. "recipe" (optional) is what crafting one
+//                takes, by item name: a building's item is crafted from wood
+//                in the Items menu, and the building is then free to place
 //
 //     { "type": "item", "name": "wood",
 //       "icon": "__base__/graphics/gui/item/wood.png", "stack_size": 100 }
+//     { "type": "item", "name": "house", "icon": "...", "stack_size": 10,
+//       "recipe": { "wood": 4 } }
 //
 //   light        a light's look (Lighting/LightSource.hpp); the game places
 //                it. "color" is linear RGB
@@ -185,6 +188,7 @@
 #pragma once
 #include "Nightmourn/Building/BuildingConfig.hpp"
 #include "Nightmourn/Character/CharacterConfig.hpp"
+#include "Nightmourn/Item/ItemAmount.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include "Nightmourn/Lighting/LightSource.hpp"
 #include "Nightmourn/Projectile/ProjectileConfig.hpp"
@@ -278,8 +282,7 @@ struct BuildingPrototype {
     std::string     item;       // an item's name, or empty for none
     std::string     settlement; // banners: a settlement's name
     std::string     light;      // a light's name, or empty for none
-    std::vector<std::pair<std::string, std::uint32_t>> cost; // item names and counts
-    BuildingConfig  config;     // index: place among the buildings; cost: linked
+    BuildingConfig  config;     // index: place among the buildings
     AnimationConfig picture;    // frames: 1, or 16 for a connecting wall
 };
 
@@ -302,6 +305,10 @@ struct ItemPrototype {
     ItemID        id         = {}; // place among the items
     std::string   icon;            // resolved file name, or empty
     std::uint16_t stack_size = 1;
+
+    // What crafting one takes (empty: it can't be crafted), linked at load
+    std::vector<ItemAmount> recipe = {};
+    std::vector<std::pair<std::string, std::uint32_t>> recipe_names = {}; // as read
 };
 
 // "light": `light.position` and `light.seed` are the game's to set

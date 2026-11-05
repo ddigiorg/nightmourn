@@ -5,23 +5,24 @@
 // through the day and into the night.
 //
 // - 7 x 7 chunks of meadow, forests around the edges and a few trees near
-//   the hero, who starts at 0, 0 with a banner, 100 walls, 10
-//   gates, 10 torches, 5 houses, 2 crafters and 2 barracks (the action
-//   bar's slots 1-7), and no wood: chop the trees for it (left click one,
-//   as in 02-mining).
-// - Pick a building with its slot (key or click) and its ghost follows the
+//   the hero, who starts at 0, 0 with only a banner (the action bar's slot
+//   1). Chop trees for wood (left click one, as in 02-mining), and craft
+//   buildings from it in the Items menu (I): click an item to craft one,
+//   right click for five, taking its "recipe" (items.json: a wall, torch or
+//   barracks 1 wood, a gate 2, a house 4, a crafter 9) from the
+//   settlement's inventory first while in reach, then the hero's.
+// - Pick a building to place with its action bar slot (key or click), or by
+//   clicking its stack in either inventory, and its ghost follows the
 //   cursor, snapped to the tile grid: green where it fits, red where it
-//   doesn't, with the reason by the cursor. Left click places it and spends
-//   one of its item and its wood (buildings.json "cost": a wall or torch 1,
-//   a gate 2, a house 4, a crafter 9, a barracks 1), from the settlement's
-//   inventory first, then the hero's; hold left click to paint a wall. Q
-//   (or the slot again) stops, Factorio's clearing the cursor: the item
-//   never left the inventory. Only the banner can go down with the hero
-//   outside the build area, and nothing further than the hero's
+//   doesn't, with the reason by the cursor. Left click places it, free,
+//   spending one of its item (the hero's first); hold left click to paint
+//   a wall. Q (or the slot again) stops, Factorio's clearing the cursor:
+//   the item never left the inventory. Only the banner can go down with the
+//   hero outside the build area, and nothing further than the hero's
 //   build_reach (10 tiles, characters.json) from the hero.
-// - Right click a building within reach to take it down: its item and wood
-//   come back (the item to the hero, the wood to the settlement first), if
-//   there's room. A banner only goes once it stands alone.
+// - Right click a building within reach to take it down and get its item
+//   back (to the hero, or the settlement if the hero's full). A banner only
+//   goes once it stands alone.
 // - Only a banner goes down first. It founds the settlement (World::
 //   place_building) and its build area, a square of tiles around it outlined
 //   in the player's blue; while placing anything else the area is filled, and
@@ -38,10 +39,11 @@
 //   up (1x, 20x, paused), N jumps to midnight and M to noon. Torches light
 //   the base at night, and the hero carries a small lantern.
 // - Two inventories, the same InventoryMenu: the Player Inventory (B) and
-//   the Settlement Inventory (V, or left click the banner), 10 x 4 each and
-//   scrolling once they grow. The settlement's only opens while the hero is
-//   in its build area; walking out closes it, and walking back in opens it
-//   again if it was open. With both open, drag stacks between them, Ctrl +
+//   the Settlement Inventory (V, or left click the banner), each with an
+//   action bar button, 10 x 4 and scrolling once they grow. The
+//   settlement's opens and closes when the player says; while the hero is
+//   outside the build area it says its stores are out of reach. With both
+//   open and in reach, drag stacks between them, Ctrl +
 //   click one to send the whole stack across, or Ctrl + right click to send
 //   half. Shift + click a stack of yours to put it on the action bar (only
 //   the player's items go there). Rows past the fourth scroll, a row at a
@@ -54,7 +56,7 @@
 //   buildings take damage and fall.
 //
 // Tuning is data: data/base/configs/entity/buildings.json (footprints,
-// health, costs, lights, pictures) and data/base/configs/settlements.json
+// health, lights, pictures), data/base/configs/items.json (recipes) and data/base/configs/settlements.json
 // (build radius, spawn margin, inventory size).
 //
 // Controls: W/A/S/D move, mouse wheel zooms, 1-0 slots, left click place /
@@ -84,6 +86,7 @@
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nightmourn/GUI/InventoryMenu.hpp"
+#include "Nightmourn/GUI/ItemsMenu.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
 #include "Nightmourn/GUI/UISheet.hpp"
 #include "Nightmourn/Input/Actions.hpp"
@@ -158,9 +161,8 @@ static constexpr float RESPAWN_SECONDS = 5.0f;
 
 // What the hero starts with, in action bar order
 struct StartItem { const char* item; std::uint32_t count; };
-static constexpr std::array<StartItem, 7> START_ITEMS = {{
-    { "banner", 1 }, { "wall", 100 }, { "gate", 10 }, { "torch", 10 }, { "house", 5 }, { "crafter", 2 },
-    { "barracks", 2 },
+static constexpr std::array<StartItem, 1> START_ITEMS = {{
+    { "banner", 1 },
 }};
 
 // Time speeds T cycles through, and the time of day it starts at (0
@@ -282,19 +284,20 @@ public:
         settlement_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, nullptr,
             InventoryMenu::Config{ .title = "Settlement Inventory", .anchor = { 0.495f, 0.66f }, .pivot = { 1.0f, 0.5f },
                                    .shortcuts = false });
+        items_menu_ = std::make_unique<Nightmourn::ItemsMenu>(ui_sheet_, configs_, player_.inventory());
+        items_menu_->set_action_bar(action_bar_.get());
 
         // Lighting replaces the engine's single pass
         lighting_ = std::make_unique<GameLighting>(*engine.render(), *renderer);
         day_night_.set_time(START_TIME);
 
-        // The kit, on slots 1-7, and wood after it
+        // The kit, from slot 1 on
         for (std::size_t i = 0; i < START_ITEMS.size(); i++) {
             const ItemPrototype* item = configs_.find_item(START_ITEMS[i].item);
             if (!item) continue;
             player_.inventory().add(item->id, START_ITEMS[i].count);
             action_bar_->set_slot(i, item->id);
         }
-        action_bar_->set_slot(START_ITEMS.size(), Nightmourn::Items::Wood);
 
         surface_id_ = world.create_surface(SurfaceConfig{ .name = "frontier", .initial_chunks = ChunkSpan::span_from_box(MAP_AREA) });
 
@@ -305,7 +308,7 @@ public:
         player_menu_->set_action_bar(action_bar_.get());
 
         engine.logger().info("Settlement Demo");
-        engine.logger().info("1-7: banner, wall, gate, torch, house, crafter, barracks. Left click: place (hold for walls), chop, or hit a raider. "
+        engine.logger().info("1: banner. I: items (click to craft). Left click: place (hold for walls), chop, or hit a raider. "
                              "Q: stop placing. Right click: take a building down. B / V: player / settlement inventory. "
                              "F: deposit. H: hit. P: spawn points.");
     }
@@ -318,10 +321,7 @@ public:
         Nightmourn::World& world = *world_;
         const InputMap&    input = engine.input();
 
-        // The settlement's inventory only while the hero stands in its area
-        Settlement* stock = settlement_in_reach_(world);
-        menus_.set_settlement_available(stock != nullptr);
-        settlement_menu_->set_inventory(stock ? &stock->inventory : nullptr);
+        Settlement* stock = sync_stock_(world);
 
         menus_.handle_input(engine.input());
         if (menus_.quit_requested()) engine.event_bus().dispatch(OnGameExited{});
@@ -331,21 +331,20 @@ public:
         for (std::size_t slot : action_bar_->take_used()) {
             const auto item = action_bar_->slot(slot);
             if (!item) continue;
-            const BuildingPrototype* b = configs_.building_for_item(*item);
-            if (b && player_.inventory().count(*item) > 0) placer_.toggle(&b->config);
+            pick_building_(*item, world);
         }
 
-        // Buildings are paid for out of the settlement's stock first
-        Inventory* const pay_from[] = { stock ? &stock->inventory : nullptr, &player_.inventory() };
+        // A building's item comes from the hero first, then the settlement
+        Inventory* const items_from[] = { &player_.inventory(), stock ? &stock->inventory : nullptr };
         const std::optional<glm::vec2> cursor = cursor_world_(engine);
         const std::optional<BuildPlacer::Builder> builder = builder_(world);
-        placer_.update(world, surface_id_, player_.inventory(), pay_from, builder ? &*builder : nullptr,
+        placer_.update(world, surface_id_, items_from, builder ? &*builder : nullptr,
                        faction_bit(PLAYER_FACTION), cursor, input);
 
         // Clicking the banner opens the settlement's inventory
         if (!placer_.active() && input.was_pressed(Action::Mine)) {
             const Building* b = hovered_building_(engine);
-            if (b && b->is(BuildingType::Banner) && stock && b->settlement_id == stock->id()) menus_.toggle_settlement();
+            if (b && b->is(BuildingType::Banner) && stock && b->settlement_id == stock->id()) menus_.toggle(Menu::Settlement);
         }
 
         // Chopping and fighting only while not placing, so the place click
@@ -445,13 +444,16 @@ public:
         draw_placement_reason_(r);
 
         // The settlement may have fallen since the tick
-        Settlement* stock = settlement_in_reach_(*world_);
-        menus_.set_settlement_available(stock != nullptr);
-        settlement_menu_->set_inventory(stock ? &stock->inventory : nullptr);
+        sync_stock_(*world_);
 
         const Nightmourn::Inventory& inventory = player_.inventory();
         action_bar_->draw(*engine.ui(), engine.input(), menus_, player_.character(world), &inventory);
-        menus_.draw(*engine.ui(), debug_flags_, player_menu_.get(), settlement_menu_.get());
+        menus_.draw(*engine.ui(), debug_flags_,
+                    { .inventory = player_menu_.get(), .settlement = settlement_menu_.get(), .items = items_menu_.get() });
+
+        // A building's stack clicked in either inventory picks it to place
+        for (InventoryMenu* m : { player_menu_.get(), settlement_menu_.get() })
+            if (const auto item = m->take_picked()) pick_building_(*item, *world_);
     }
 
     // -------------------------------------------------------------------------
@@ -466,6 +468,7 @@ public:
         raids_.reset();
         action_bar_.reset();
         player_menu_.reset();
+        items_menu_.reset();
         settlement_menu_.reset();
         engine.logger().info("Goodbye!");
     }
@@ -515,6 +518,28 @@ private:
         return s;
     }
 
+    // Hands the menus the settlement's stock while it's in reach (else a
+    // note saying why it's not), and returns it
+    Settlement* sync_stock_(Nightmourn::World& world) {
+        Settlement* stock = settlement_in_reach_(world);
+        settlement_menu_->set_inventory(stock ? &stock->inventory : nullptr);
+        settlement_menu_->set_note(world.settlement_of(faction_bit(PLAYER_FACTION))
+            ? "You're outside the settlement.\nStep back inside its borders\nto reach its stores."
+            : "You have no settlement yet.\nPlace your banner to found one.");
+        items_menu_->set_settlement(stock ? &stock->inventory : nullptr);
+        return stock;
+    }
+
+    // Starts placing the building `item` puts up, if there's one to place
+    // (stops, if it's already being placed)
+    void pick_building_(ItemID item, Nightmourn::World& world) {
+        const BuildingPrototype* b = configs_.building_for_item(item);
+        if (!b) return;
+        Settlement* stock = settlement_in_reach_(world);
+        Inventory* const from[] = { &player_.inventory(), stock ? &stock->inventory : nullptr };
+        if (count(from, item) > 0) placer_.toggle(&b->config);
+    }
+
     // The hero as the one building: where they stand, how far they reach,
     // and whether they're in the settlement's area. None while they're down.
     std::optional<BuildPlacer::Builder> builder_(Nightmourn::World& world) const {
@@ -559,20 +584,11 @@ private:
             }
         }
 
-        Settlement* stock      = settlement_in_reach_(world);
-        Inventory*  stock_inv  = stock ? &stock->inventory : nullptr;
-        Inventory&  carried    = player_.inventory();
-        Inventory* const item_to[] = { &carried, stock_inv };
-        Inventory* const cost_to[] = { stock_inv, &carried };
-
-        // Tried on copies, so a refund that doesn't all fit changes nothing
-        Inventory carried_before = carried;
-        std::optional<Inventory> stock_before = stock_inv ? std::optional(*stock_inv) : std::nullopt;
-        const bool item_ok = !b->config().item ||
-                             give(std::array{ ItemAmount{ b->config().item, 1 } }, item_to);
-        if (!item_ok || !give(b->config().cost, cost_to)) {
-            carried = std::move(carried_before);
-            if (stock_inv) *stock_inv = std::move(*stock_before);
+        // Its item back, to the hero or (full) the settlement; with no room
+        // anywhere it stays up
+        Settlement* stock = settlement_in_reach_(world);
+        Inventory* const item_to[] = { &player_.inventory(), stock ? &stock->inventory : nullptr };
+        if (b->config().item && !give(std::array{ ItemAmount{ b->config().item, 1 } }, item_to)) {
             engine.logger().info("No room to take it down.");
             return;
         }
@@ -699,21 +715,16 @@ private:
 
         std::snprintf(line, sizeof line, "carrying %u wood%s\n",
                       static_cast<unsigned>(player_.inventory().count(Items::Wood)),
-                      menus_.settlement_available() ? "   (in the settlement: V opens its inventory)" : "");
+                      settlement_in_reach_(*world_) ? "   (in the settlement: V opens its inventory)" : "");
         text += line;
 
         if (placer_.active()) {
             const BuildingConfig&  c = *placer_.building();
-            std::snprintf(line, sizeof line, "placing %.*s (%u left)", static_cast<int>(c.name.size()), c.name.data(),
-                          static_cast<unsigned>(player_.inventory().count(c.item)));
+            Settlement*      stock  = settlement_in_reach_(*world_);
+            Inventory* const from[] = { &player_.inventory(), stock ? &stock->inventory : nullptr };
+            std::snprintf(line, sizeof line, "placing %.*s (%u left)  (Q: stop)\n", static_cast<int>(c.name.size()),
+                          c.name.data(), static_cast<unsigned>(count(from, c.item)));
             text += line;
-            for (const ItemAmount& cost : c.cost) {
-                const std::string_view item = item_name(cost.item);
-                std::snprintf(line, sizeof line, "  costs %u %.*s", static_cast<unsigned>(cost.count),
-                              static_cast<int>(item.size()), item.data());
-                text += line;
-            }
-            text += "  (Q: stop)\n";
         } else if (const Building* b = hovered_building_(engine)) {
             const std::string_view n = b->config().name;
             std::snprintf(line, sizeof line, "%.*s  %u / %u hp  (right click: take down, H: hit)\n",
@@ -733,8 +744,8 @@ private:
             text += line;
         }
 
-        text += "\n1-7: pick a building  click: place (hold: wall)  Q: stop  right click: take down  P: spawn points\n"
-                "click a tree: chop  click an enemy: attack  B / V: inventories  F: deposit  T: time speed  N: midnight  M: noon\n";
+        text += "\nI: items (click: craft)  slot or stack: pick a building  click: place (hold: wall)  Q: stop  right click: take down\n"
+                "click a tree: chop  click an enemy: attack  B / V: inventories  F: deposit  P: spawn points  T: time  N: midnight  M: noon\n";
 
         r->draw_text(
             text, { HUD_MARGIN, top }, *font_,
@@ -763,15 +774,6 @@ private:
                 case BuildPlacer::Blocker::NoBuilder:       why = "no one to build it"; break;
                 case BuildPlacer::Blocker::OutOfReach:      why = "out of reach"; break;
                 case BuildPlacer::Blocker::NotInSettlement: why = "stand in the settlement to build"; break;
-                case BuildPlacer::Blocker::Cost: {
-                    const ItemAmount       need = *placer_.shortfall();
-                    const std::string_view item = item_name(need.item);
-                    char line[64];
-                    std::snprintf(line, sizeof line, "needs %u more %.*s", static_cast<unsigned>(need.count),
-                                  static_cast<int>(item.size()), item.data());
-                    why = line;
-                    break;
-                }
             }
         }
         r->draw_text(
@@ -805,6 +807,7 @@ private:
     std::unique_ptr<Nightmourn::ActionBar>     action_bar_        = nullptr;
     std::unique_ptr<Nightmourn::InventoryMenu> player_menu_       = nullptr;
     std::unique_ptr<Nightmourn::InventoryMenu> settlement_menu_   = nullptr;
+    std::unique_ptr<Nightmourn::ItemsMenu>     items_menu_        = nullptr;
     InfoOverlay                                info_overlay_      = {};
 
     std::unique_ptr<RaidSpawner> raids_      = nullptr;

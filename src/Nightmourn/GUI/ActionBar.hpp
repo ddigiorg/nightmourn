@@ -6,7 +6,7 @@
 // thin hp bar, a row of item slots, and the menu buttons.
 //
 //   [eagle] [ hp bar ...................................... ] [eagle]
-//           [ 1 ][ 2 ][ 3 ] ... [ 0 ]  |  [sk][eq][in][it][op][db][mm]
+//           [ 1 ][ 2 ][ 3 ] ... [ 0 ]  |  [sk][eq][in][st][it][mm]
 //
 // Slots hold items (ItemID, empty for none). Each slot is an input
 // action (Action::use_slot), shown by its key in the slot's corner, so
@@ -62,6 +62,12 @@ public:
     // -------------------------------------------------------------------------
 
     static constexpr std::size_t SLOT_COUNT = 10;
+
+    // The menus with a button, left to right: options open from the main
+    // menu, and the debug menu from its key only
+    static constexpr std::array<Menu, 6> BUTTONS = {
+        Menu::Skills, Menu::Equipment, Menu::Inventory, Menu::Settlement, Menu::Items, Menu::Main,
+    };
 
     // UI drag type of anything that can go on the bar (items for now). The
     // inventory menu drags with it too, so its items drop onto slots.

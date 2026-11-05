@@ -57,13 +57,14 @@ namespace {
 
     // Rectangular menu buttons, like WoW's micro menu
     constexpr float DIVIDER_W     = 8.0f;
-    constexpr vec2  BUTTON        = { 22.0f, 32.0f };
-    constexpr float BUTTON_GAP    = 3.0f;
+    constexpr vec2  BUTTON        = { 27.0f, 32.0f };
+    constexpr float BUTTON_GAP    = 2.0f;
+    constexpr float BUTTON_COUNT  = static_cast<float>(ActionBar::BUTTONS.size());
     constexpr float BUTTONS_X     = CONTENT_X + SLOTS_W + DIVIDER_W;
     constexpr float BUTTONS_Y     = SLOTS_Y + (SLOT_SIZE.y - BUTTON.y) * 0.5f;
     constexpr float ICON_SIZE     = 18.0f;
 
-    static_assert(SLOTS_W + DIVIDER_W + MENU_COUNT * BUTTON.x + (MENU_COUNT - 1) * BUTTON_GAP == CONTENT_W,
+    static_assert(SLOTS_W + DIVIDER_W + BUTTON_COUNT * BUTTON.x + (BUTTON_COUNT - 1) * BUTTON_GAP == CONTENT_W,
                   "slots, divider and buttons fill the slab");
     static_assert(SLOTS_Y + SLOT_SIZE.y + 3.0f == EAGLE_SIZE.y, "3 points under the slots");
 
@@ -253,8 +254,8 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
 void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& input, GameMenus& menus) {
     const vec2 origin = ui.content_rect().min;
 
-    for (std::size_t i = 0; i < MENU_COUNT; i++) {
-        const Menu menu = static_cast<Menu>(i);
+    for (std::size_t i = 0; i < BUTTONS.size(); i++) {
+        const Menu menu = BUTTONS[i];
         const Rect r = Rect::from_size(
             origin + vec2(BUTTONS_X + static_cast<float>(i) * (BUTTON.x + BUTTON_GAP), BUTTONS_Y),
             BUTTON);

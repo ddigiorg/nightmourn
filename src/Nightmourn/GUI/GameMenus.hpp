@@ -2,24 +2,27 @@
 // GUI/GameMenus.hpp
 //
 // The player's top-level menus, opened from the action bar's buttons or
-// their hotkeys: skills, equipment, the player's inventory, items (a codex
-// of every item type discovered, with its recipes), options, debug and the
-// main menu. The debug menu, the main menu and (given an InventoryMenu) the
-// inventory do something; the others open an empty panel saying what they
+// their hotkeys: skills, equipment, the player's inventory, the
+// settlement's inventory, items (every item in the game, and crafting),
+// options, debug and the main menu. Options and debug have no action bar
+// button: the main menu opens options, and the tilde key the debug menu.
+// The debug menu, the main menu and (given their panels) the inventories
+// and items do something; the others open an empty panel saying what they
 // will hold.
 //
-// The settlement's inventory (V, Action::ToggleSettlementMenu) is one more,
-// with no action bar button: it can only be open while the game says it's
-// available (the hero stands in the settlement's build area). Walking out
-// hides it, and walking back in shows it again if it was open; closing it
-// (its X, V or Escape) forgets that.
+// The player opens and closes the settlement's inventory like any other.
+// While its stock is out of reach (the hero is outside the build area, or
+// there's no settlement) it stays open and says so instead (InventoryMenu's
+// note).
 //
-//   on_tick:  menus_.set_settlement_available(hero_in_build_area);
-//             menus_.handle_input(engine.input());
+//   on_tick:  menus_.handle_input(engine.input());
 //             if (menus_.quit_requested()) ...quit...
-//   on_draw:  menus_.draw(*engine.ui(), debug_flags_, &player_menu_, &settlement_menu_);
+//   on_draw:  menus_.draw(*engine.ui(), debug_flags_,
+//                         { .inventory = &player_menu_, .settlement = &settlement_menu_,
+//                           .items = &items_menu_ });
 //
-// While both inventories are open, stacks move between them (InventoryMenu).
+// While both inventories are open and in reach, stacks move between them
+// (InventoryMenu).
 //
 // Escape closes every open menu, or opens the main menu when none is open,
 // like most games.
@@ -48,6 +51,15 @@ std::string_view menu_title (Menu menu);
 Nezumi::ActionID menu_action(Menu menu);
 
 class InventoryMenu;
+class ItemsMenu;
+
+// The panels GameMenus draws for the menus that do something. Any left
+// null shows a placeholder.
+struct GameMenuPanels {
+    InventoryMenu* inventory  = nullptr; // Menu::Inventory
+    InventoryMenu* settlement = nullptr; // Menu::Settlement
+    ItemsMenu*     items      = nullptr; // Menu::Items
+};
 
 class GameMenus {
 public:
@@ -66,21 +78,6 @@ public:
     void back();
 
     // -------------------------------------------------------------------------
-    // Settlement Inventory
-    // -------------------------------------------------------------------------
-
-    // Whether it can be shown now; set every tick, before handle_input
-    void set_settlement_available(bool available) { settlement_available_ = available; }
-    bool settlement_available() const { return settlement_available_; }
-
-    // Shown: the player opened it, and it's available
-    bool settlement_open() const { return settlement_wanted_ && settlement_available_; }
-
-    // Opens it (only while available) or closes it
-    void set_settlement_open(bool open);
-    void toggle_settlement() { set_settlement_open(!settlement_open()); }
-
-    // -------------------------------------------------------------------------
     // Tick
     //
     // Call from on_tick: the menu hotkeys and Escape.
@@ -94,13 +91,10 @@ public:
     // -------------------------------------------------------------------------
     // Draw
     //
-    // Call from on_draw. Draws the open menus. Without an `inventory`, the
-    // player's inventory menu is a placeholder; without a `settlement`, the
-    // settlement's never shows.
+    // Call from on_draw. Draws the open menus.
     // -------------------------------------------------------------------------
 
-    void draw(Nezumi::UI::Context& ui, DebugFlags& flags, InventoryMenu* inventory = nullptr,
-              InventoryMenu* settlement = nullptr);
+    void draw(Nezumi::UI::Context& ui, DebugFlags& flags, const GameMenuPanels& panels = {});
 
 private:
     void draw_stub_(Nezumi::UI::Context& ui, Menu menu, std::string_view about);
@@ -111,9 +105,6 @@ private:
     bool                         quit_  = false;
     bool                         move_mod_     = false; // Ctrl held (InventoryMenu)
     bool                         shortcut_mod_ = false; // Shift held
-
-    bool settlement_wanted_    = false; // opened by the player (shown while available)
-    bool settlement_available_ = false;
 };
 
 } // namespace Nightmourn

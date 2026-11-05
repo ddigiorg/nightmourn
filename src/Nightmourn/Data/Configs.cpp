@@ -283,7 +283,7 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
 }
 
 BuildingPrototype read_building(Fields& f, const std::string& name, const auto& file_of) {
-    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .light = {}, .cost = {}, .config = {}, .picture = {} };
+    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .light = {}, .config = {}, .picture = {} };
     BuildingConfig& c = p.config;
 
     const std::string kind = f.get<std::string>("kind");
@@ -309,16 +309,6 @@ BuildingPrototype read_building(Fields& f, const std::string& name, const auto& 
     f.get("item",       p.item);
     f.get("settlement", p.settlement);
     f.get("light",      p.light);
-
-    // "cost": { "wood": 4 }, linked to items once they're all read
-    if (const Json* v = f.find("cost")) {
-        if (!v->is_object()) fail(f.source(), "'cost' must be an object of item names and counts");
-        for (const auto& [item, n] : v->items()) {
-            if (!n.is_number_unsigned() || n.get<std::uint32_t>() == 0)
-                fail(f.source(), "'cost' counts must be whole numbers of at least 1");
-            p.cost.emplace_back(item, n.get<std::uint32_t>());
-        }
-    }
 
     Fields pf({ f.source().file, f.source().what + ": picture" }, f.need("picture"));
     p.picture = read_animation(pf, file_of);
@@ -484,10 +474,20 @@ Configs Configs::load(std::string_view data_dir) {
                     } else if (type == "raid") {
                         put(out.raids, read_raid(f, name));
                     } else if (type == "item") {
-                        ItemPrototype p{ .name = name, .id = {}, .icon = {}, .stack_size = 1 };
+                        ItemPrototype p{ .name = name, .id = {}, .icon = {}, .stack_size = 1, .recipe = {}, .recipe_names = {} };
                         if (f.find("icon")) p.icon = resolve(src, mods, f.get<std::string>("icon"));
                         f.get("stack_size", p.stack_size);
                         if (p.stack_size == 0) fail(src, "'stack_size' must be at least 1");
+
+                        // "recipe": { "wood": 4 }, linked once every item is read
+                        if (const Json* v = f.find("recipe")) {
+                            if (!v->is_object()) fail(src, "'recipe' must be an object of item names and counts");
+                            for (const auto& [item, n] : v->items()) {
+                                if (!n.is_number_unsigned() || n.get<std::uint32_t>() == 0)
+                                    fail(src, "'recipe' counts must be whole numbers of at least 1");
+                                p.recipe_names.emplace_back(item, n.get<std::uint32_t>());
+                            }
+                        }
                         put(out.items, std::move(p));
                     } else if (type == "light") {
                         put(out.lights, read_light(f, name));
@@ -585,6 +585,16 @@ Configs Configs::load(std::string_view data_dir) {
         p.config.unit = &unit->config;
     }
 
+    for (ItemPrototype& p : out.items) {
+        p.recipe.clear();
+        for (const auto& [item_name, n] : p.recipe_names) {
+            const ItemPrototype* item = out.find_item(item_name);
+            if (!item) fail(where("item", p.name), "'recipe' names no item '" + item_name + "'");
+            if (item == &p) fail(where("item", p.name), "'recipe' can't take the item itself");
+            p.recipe.push_back({ item->id, n });
+        }
+    }
+
     for (std::size_t i = 0; i < out.buildings.size(); i++) {
         BuildingPrototype& p = out.buildings[i];
         p.config.name  = p.name;
@@ -593,12 +603,6 @@ Configs Configs::load(std::string_view data_dir) {
             const ItemPrototype* item = out.find_item(p.item);
             if (!item) fail(where("building", p.name), "'item' names no item '" + p.item + "'");
             p.config.item = item->id;
-        }
-        p.config.cost.clear();
-        for (const auto& [item_name, n] : p.cost) {
-            const ItemPrototype* item = out.find_item(item_name);
-            if (!item) fail(where("building", p.name), "'cost' names no item '" + item_name + "'");
-            p.config.cost.push_back({ item->id, n });
         }
         if (!p.settlement.empty()) {
             const SettlementPrototype* s = out.find_settlement(p.settlement);
