@@ -441,10 +441,19 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
 - [x] Player crafting queue: `recipe` configs and categories, paid when
       queued, made in the tick, shown over the action bar
       (`Crafting/CraftQueue.hpp`, demo 04).
-- [ ] **Settlement crafting**: workshops as settlement machines, run by a
-      crafting phase of `World::tick` (not by ticking buildings), with
-      per-item targets and reserve floors. Design: `crafting-design/DESIGN.md`
-      in the project files.
+- [x] Settlement crafting: workshops as settlement machines, one job each,
+      run by a crafting phase of `World::tick` (not by ticking buildings),
+      with per-item targets and reserve floors; idle machines sleep until
+      the stock or rules change, running jobs wait in a finish-tick heap
+      (`Crafting/CraftSite.hpp`). Rules menu (K, `GUI/CraftRulesMenu`),
+      job icons over workshops (`GUI/CraftOverlay`, Alt for all), and
+      deconstructing refunds the job (demo 04).
+- [ ] Rules menu: change a target with the mouse wheel over its slot
+      (needs the wheel from nezumi's UI), drag rules to reorder their
+      priority, and a hover tooltip on the job icons.
+- [ ] Text fields drop or reorder keys typed within one frame (seen with
+      xdotool: Backspace then digits). Look at how nezumi's text field
+      applies `typed_` against editing keys.
 - [ ] Discovery: the Items menu shows only discovered items, empty slots
       a placeholder emblem (nezumi `SlotStyle::placeholder`).
 - [ ] Live tooltips: nezumi restarts a tooltip's delay when its text

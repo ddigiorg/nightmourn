@@ -9,7 +9,8 @@
 // build area and its margin; figures stop at building footprints and slide
 // along them; a gate lets its own faction through; units hit walls; the
 // hero hits enemies; night raids spawn only after dark, outside the spawn
-// area, a few at a time.
+// area, a few at a time. A workshop crafts for its settlement in the
+// World's crafting phase.
 // =============================================================================
 
 #include "Nezumi/Core/Clock.hpp"
@@ -17,9 +18,11 @@
 #include "Nightmourn/Building/Building.hpp"
 #include "Nightmourn/Resource/Resource.hpp"
 #include "Nightmourn/Character/Character.hpp"
+#include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/Settlement/RaidSpawner.hpp"
 #include "Nightmourn/Unit/Unit.hpp"
 #include "Nightmourn/World/World.hpp"
+#include <array>   // array
 #include <cstdio>  // printf
 #include <cstdlib> // EXIT_FAILURE, EXIT_SUCCESS
 
@@ -421,6 +424,34 @@ static void test_not_solid() {
     CHECK(w.get_entity_as<Unit>(u)->position.x > 7.0f);
 }
 
+static void test_settlement_crafting() {
+    std::printf("a workshop crafts for its settlement\n");
+    set_items({ { "wood", 10 }, { "stone", 10 }, { "gold", 10 }, { "food", 10 }, { "plank", 10 } });
+    constexpr ItemID PLANK{ 4 };
+    static const std::array IN  = { ItemAmount{ Items::Wood, 1 } };
+    static const std::array OUT = { ItemAmount{ PLANK, 2 } };
+    static const Recipe PLANKS = { .name = "plank", .id = RecipeID{ 0 }, .ingredients = IN, .results = OUT, .ticks = 10, .category = 1u << 2 };
+
+    Fixture f;
+    World& w = f.world;
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+    Settlement* s = w.settlement_of(BLUE);
+    CHECK(s->crafting.machine_count() == 0); // the banner isn't a machine
+
+    const EntityHandle a = w.place_building(f.surface, WORKSHOP, { 2, 2 }, BLUE);
+    CHECK(s->crafting.machine_count() == 1 && s->crafting.machine(a));
+    s->inventory.add(Items::Wood, 5);
+    s->crafting.set_target(PLANKS, PLANK, 6);
+
+    for (int i = 0; i < 40; i++) w.tick();
+    CHECK(s->inventory.count(PLANK) == 6 && s->inventory.count(Items::Wood) == 2);
+
+    // Removed: it's no machine any more
+    w.remove_entity(a);
+    w.tick();
+    CHECK(s->crafting.machine_count() == 0);
+}
+
 int main() {
     test_founding();
     test_placement();
@@ -434,6 +465,7 @@ int main() {
     test_hero_attack();
     test_raids();
     test_not_solid();
+    test_settlement_crafting();
 
     if (g_failures) {
         std::printf("%d check(s) failed\n", g_failures);

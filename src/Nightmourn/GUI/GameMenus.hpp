@@ -4,10 +4,10 @@
 // The player's top-level menus, opened from the action bar's buttons or
 // their hotkeys: the character (skills and equipment), the player's inventory, the
 // settlement's inventory, items (every item in the game, and crafting),
-// options, debug and the Main Menu. Options and debug have no action bar
+// the settlement's crafting rules, options, debug and the Main Menu. Options and debug have no action bar
 // button: the main menu opens options, and the tilde key the debug menu.
-// The debug menu, the main menu and (given their panels) the inventories
-// and items do something; the others open an empty panel saying what they
+// The debug menu, the main menu and (given their panels) the inventories,
+// items and crafting rules do something; the others open an empty panel saying what they
 // will hold.
 //
 // The player opens and closes the settlement's inventory like any other.
@@ -50,6 +50,7 @@ namespace Nightmourn {
 std::string_view menu_title (Menu menu);
 Nezumi::ActionID menu_action(Menu menu);
 
+class CraftRulesMenu;
 class InventoryMenu;
 class ItemsMenu;
 
@@ -59,6 +60,7 @@ struct GameMenuPanels {
     InventoryMenu* inventory  = nullptr; // Menu::Inventory
     InventoryMenu* settlement = nullptr; // Menu::Settlement
     ItemsMenu*     items      = nullptr; // Menu::Items
+    CraftRulesMenu* rules     = nullptr; // Menu::Crafting
 };
 
 class GameMenus {

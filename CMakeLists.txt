@@ -84,6 +84,7 @@ add_library(nightmourn_world STATIC
     src/Nightmourn/Chunk/Chunk.cpp
     src/Nightmourn/Chunk/Pheromones.cpp
     src/Nightmourn/Crafting/CraftQueue.cpp
+    src/Nightmourn/Crafting/CraftSite.cpp
     src/Nightmourn/Data/Configs.cpp
     src/Nightmourn/Item/Inventory.cpp
     src/Nightmourn/Item/Items.cpp
@@ -128,6 +129,8 @@ add_library(nightmourn_game STATIC
     src/Nightmourn/Draw/WorldDrawer.cpp
     src/Nightmourn/Draw/WorldSheets.cpp
     src/Nightmourn/GUI/ActionBar.cpp
+    src/Nightmourn/GUI/CraftOverlay.cpp
+    src/Nightmourn/GUI/CraftRulesMenu.cpp
     src/Nightmourn/GUI/DebugMenu.cpp
     src/Nightmourn/GUI/GameMenus.cpp
     src/Nightmourn/GUI/InfoOverlay.cpp
