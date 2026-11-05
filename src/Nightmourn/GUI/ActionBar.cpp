@@ -229,11 +229,12 @@ void ActionBar::draw_queue_(Nezumi::UI::Context& ui) {
     if (r.right_clicked >= 0) cancels_.push_back({ static_cast<std::size_t>(r.right_clicked), CANCEL_MANY });
 
     // "Wooden arrow x10 (3 queued)
-    //  Being made, 1 s each
+    //  Being made: 0.4 s left, 1 s each
+    //  2.4 s for the whole queue
     //  Click: cancel 1   Right click: cancel 5"
     //
-    // Nothing in it changes while it's hovered (the UI restarts a tooltip's
-    // delay when its text changes), so no live countdown: the shade shows that
+    // Counts down live while hovered (the UI times a tooltip per widget, so
+    // it stays up as its text changes)
     if (r.hovered >= 0) {
         const std::size_t        i = static_cast<std::size_t>(r.hovered);
         const CraftQueue::Entry& e = entries[i];
@@ -251,9 +252,19 @@ void ActionBar::draw_queue_(Nezumi::UI::Context& ui) {
         }
 
         const double each = static_cast<double>(CraftQueue::ticks_for(*e.recipe, craft_speed_)) / TICKS_PER_SECOND;
-        if (i == 0 && queue_->blocked()) queue_tip_ += "\nDone, but there's no room in your inventory";
-        else {
-            std::snprintf(line, sizeof line, "\n%s%g s each", i == 0 ? "Being made, " : "", each);
+        if (i == 0 && queue_->blocked()) {
+            queue_tip_ += "\nDone, but there's no room in your inventory";
+        } else if (i == 0 && queue_->ticks_left() > 0) {
+            const double left = static_cast<double>(queue_->ticks_left()) / TICKS_PER_SECOND;
+            std::snprintf(line, sizeof line, "\nBeing made: %.1f s left, %g s each", left, each);
+            queue_tip_ += line;
+        } else {
+            std::snprintf(line, sizeof line, "\n%g s each", each);
+            queue_tip_ += line;
+        }
+        if (queue_->size() > 1) {
+            const double all = static_cast<double>(queue_->total_ticks_left(craft_speed_)) / TICKS_PER_SECOND;
+            std::snprintf(line, sizeof line, "\n%.1f s for the whole queue", all);
             queue_tip_ += line;
         }
         queue_tip_ += "\nClick: cancel 1   Right click: cancel 5";

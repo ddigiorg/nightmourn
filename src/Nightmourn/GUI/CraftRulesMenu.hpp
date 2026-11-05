@@ -12,8 +12,9 @@
 //   Keep  [-10] [ 100      ] [+10]
 //
 // Make lists what its machines can make between them, A to Z; Reserves the
-// ingredients those recipes use. Click a slot to pick it, then set its
-// number: the buttons step by 10 (Shift: 100), or type it.
+// ingredients those recipes use. The wheel over a slot steps its number by
+// 10 (Shift: 100); or click a slot to pick it, then use the buttons (the
+// same steps) or type the number.
 //
 // Like the Items menu it only asks: edits become CraftRuleChanges, which the
 // game applies to the settlement's CraftSite in on_tick, so the rules only
