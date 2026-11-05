@@ -7,8 +7,9 @@
 #include "Nezumi/Core/BasePath.hpp"
 #include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/Resource/ResourceTypes.hpp"
+#include "Nightmourn/World/Constants.hpp"
 #include <algorithm>   // find_if, sort
-#include <cmath>       // floor
+#include <cmath>       // floor, lround
 #include <filesystem>  // directory_iterator, path, recursive_directory_iterator
 #include <fstream>     // ifstream
 #include <limits>      // numeric_limits
@@ -275,10 +276,12 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
     f.get("mine_amount",   c.mine_amount);
     f.get("mine_reach",    c.mine_reach);
     f.get("build_reach",   c.build_reach);
+    f.get("craft_speed",   c.craft_speed);
     f.get("attack_interval", c.attack_interval);
     f.get("attack_damage",   c.attack_damage);
     f.get("attack_reach",    c.attack_reach);
     f.get_box("collision_box", c.collision_bounds);
+    if (c.craft_speed <= 0.0f) fail(f.source(), "'craft_speed' must be more than 0");
     return p;
 }
 
@@ -313,6 +316,18 @@ BuildingPrototype read_building(Fields& f, const std::string& name, const auto& 
     Fields pf({ f.source().file, f.source().what + ": picture" }, f.need("picture"));
     p.picture = read_animation(pf, file_of);
     pf.done();
+
+    // "crafting": { "categories": ["crafter"], "speed": 1.0, "unlocks_for_player": true }
+    if (const Json* v = f.find("crafting")) {
+        Fields cf({ f.source().file, f.source().what + ": crafting" }, *v);
+        const Json& cats = cf.need("categories");
+        if (!cats.is_array() || cats.empty()) fail(cf.source(), "'categories' must be a list of recipe-category names");
+        for (const Json& cat : cats) p.crafting_categories.push_back(as<std::string>(cf.source(), "categories", cat));
+        cf.get("speed",              c.crafting_speed);
+        cf.get("unlocks_for_player", c.unlocks_for_player);
+        cf.done();
+        if (c.crafting_speed <= 0.0f) fail(cf.source(), "'speed' must be more than 0");
+    }
 
     if (c.max_health == 0) fail(f.source(), "'max_health' must be at least 1");
     if (c.connects && c.footprint != TileCoord{ 1, 1 })
@@ -364,6 +379,53 @@ LightPrototype read_light(Fields& f, const std::string& name) {
     f.get("glow_height",    l.glow_height);
     f.get("glow_radius",    l.glow_radius);
     f.get("glow_intensity", l.glow_intensity);
+    return p;
+}
+
+// The name of item `id` among `out`'s items, for errors
+std::string_view item_name_of(const Configs& out, ItemID id) {
+    const ItemPrototype* p = out.item(id);
+    return p ? std::string_view(p->name) : std::string_view("item");
+}
+
+// { "wood": 4, "stone": 1 }: item names and counts of at least 1
+ItemAmountNames read_amounts(const Source& src, const std::string& key, const Json& v) {
+    if (!v.is_object()) fail(src, "'" + key + "' must be an object of item names and counts");
+    ItemAmountNames out;
+    for (const auto& [item, n] : v.items()) {
+        if (!n.is_number_unsigned() || n.get<std::uint64_t>() == 0 ||
+            n.get<std::uint64_t>() > std::numeric_limits<std::uint32_t>::max())
+            fail(src, "'" + key + "' counts must be whole numbers of at least 1");
+        out.emplace_back(item, n.get<std::uint32_t>());
+    }
+    return out;
+}
+
+// What a "recipe" config and an item's inline "recipe" share
+void read_recipe_common(Fields& f, RecipePrototype& p) {
+    if (const Json* v = f.find("ingredients")) p.ingredients = read_amounts(f.source(), "ingredients", *v);
+    f.get("time",     p.time);
+    f.get("category", p.category);
+    if (!(p.time > 0.0f)) fail(f.source(), "'time' must be more than 0 seconds");
+}
+
+RecipePrototype read_recipe(Fields& f, const std::string& name) {
+    RecipePrototype p{ .name = name };
+    read_recipe_common(f, p);
+    p.results = read_amounts(f.source(), "results", f.need("results"));
+    if (p.results.empty()) fail(f.source(), "'results' must name at least one item");
+    return p;
+}
+
+// An item's "recipe": makes "count" (default 1) of the item, and is named
+// after it
+RecipePrototype read_inline_recipe(Fields& f, const std::string& item) {
+    RecipePrototype p{ .name = item };
+    read_recipe_common(f, p);
+    std::uint32_t n = 1;
+    f.get("count", n);
+    if (n == 0) fail(f.source(), "'count' must be at least 1");
+    p.results.emplace_back(item, n);
     return p;
 }
 
@@ -474,21 +536,25 @@ Configs Configs::load(std::string_view data_dir) {
                     } else if (type == "raid") {
                         put(out.raids, read_raid(f, name));
                     } else if (type == "item") {
-                        ItemPrototype p{ .name = name, .id = {}, .icon = {}, .stack_size = 1, .recipe = {}, .recipe_names = {} };
+                        ItemPrototype p{ .name = name, .id = {}, .icon = {}, .stack_size = 1, .recipe = nullptr, .inline_recipe = {} };
                         if (f.find("icon")) p.icon = resolve(src, mods, f.get<std::string>("icon"));
                         f.get("stack_size", p.stack_size);
                         if (p.stack_size == 0) fail(src, "'stack_size' must be at least 1");
 
-                        // "recipe": { "wood": 4 }, linked once every item is read
+                        // "recipe": { "ingredients": { "wood": 4 }, "time": 2, ... },
+                        // linked once every item is read
                         if (const Json* v = f.find("recipe")) {
-                            if (!v->is_object()) fail(src, "'recipe' must be an object of item names and counts");
-                            for (const auto& [item, n] : v->items()) {
-                                if (!n.is_number_unsigned() || n.get<std::uint32_t>() == 0)
-                                    fail(src, "'recipe' counts must be whole numbers of at least 1");
-                                p.recipe_names.emplace_back(item, n.get<std::uint32_t>());
-                            }
+                            Fields rf({ src.file, src.what + ": recipe" }, *v);
+                            p.inline_recipe = read_inline_recipe(rf, name);
+                            rf.done();
                         }
                         put(out.items, std::move(p));
+                    } else if (type == "recipe") {
+                        put(out.recipes, read_recipe(f, name));
+                    } else if (type == "recipe-category") {
+                        RecipeCategoryPrototype p{ .name = name, .description = {}, .bit = 0 };
+                        f.get("description", p.description);
+                        put(out.recipe_categories, std::move(p));
                     } else if (type == "light") {
                         put(out.lights, read_light(f, name));
                     } else if (type == "tile") {
@@ -585,13 +651,74 @@ Configs Configs::load(std::string_view data_dir) {
         p.config.unit = &unit->config;
     }
 
-    for (ItemPrototype& p : out.items) {
-        p.recipe.clear();
-        for (const auto& [item_name, n] : p.recipe_names) {
+    // Recipe categories: a bit each
+    if (out.recipe_categories.size() > MAX_CRAFT_CATEGORIES)
+        fail(where("recipe-category", out.recipe_categories[MAX_CRAFT_CATEGORIES].name),
+             "too many recipe categories (at most " + std::to_string(MAX_CRAFT_CATEGORIES) + ")");
+    for (std::size_t i = 0; i < out.recipe_categories.size(); i++)
+        out.recipe_categories[i].bit = CraftCategoryMask{ 1 } << i;
+    const auto category_bit = [&](const Source& src, const std::string& name) {
+        const RecipeCategoryPrototype* c = out.find_recipe_category(name);
+        if (!c) fail(src, "names no recipe-category '" + name + "'");
+        return c->bit;
+    };
+    if (const RecipeCategoryPrototype* c = out.find_recipe_category("hand"))       out.hand_category       = c->bit;
+    if (const RecipeCategoryPrototype* c = out.find_recipe_category("settlement")) out.settlement_category = c->bit;
+
+    // Recipes: the explicit ones, then each item's inline one unless a
+    // recipe config of its name replaces it
+    for (const ItemPrototype& item : out.items) {
+        if (item.inline_recipe && !out.find_recipe(item.name)) {
+            out.recipes.push_back(*item.inline_recipe);
+            defined_in["recipe '" + item.name + "'"] = defined_in["item '" + item.name + "'"];
+        }
+    }
+    if (out.recipes.size() > std::numeric_limits<std::uint16_t>::max() - 1u)
+        fail(where("recipe", out.recipes.back().name), "too many recipes");
+
+    // Their items, back to back in recipe_amounts. Sized first, so the
+    // spans into it stay put.
+    std::size_t amounts = 0;
+    for (const RecipePrototype& p : out.recipes) amounts += p.ingredients.size() + p.results.size();
+    out.recipe_amounts.clear();
+    out.recipe_amounts.reserve(amounts);
+
+    const auto link_amounts = [&](const RecipePrototype& p, const ItemAmountNames& names, const char* key) {
+        const std::size_t first = out.recipe_amounts.size();
+        for (const auto& [item_name, n] : names) {
             const ItemPrototype* item = out.find_item(item_name);
-            if (!item) fail(where("item", p.name), "'recipe' names no item '" + item_name + "'");
-            if (item == &p) fail(where("item", p.name), "'recipe' can't take the item itself");
-            p.recipe.push_back({ item->id, n });
+            if (!item) fail(where("recipe", p.name), std::string("'") + key + "' names no item '" + item_name + "'");
+            out.recipe_amounts.push_back({ item->id, n });
+        }
+        return std::span<const ItemAmount>(out.recipe_amounts.data() + first, names.size());
+    };
+
+    for (std::size_t i = 0; i < out.recipes.size(); i++) {
+        RecipePrototype& p = out.recipes[i];
+        Recipe&          r = p.recipe;
+        r.name        = p.name;
+        r.id          = RecipeID{ static_cast<std::uint16_t>(i) };
+        r.ingredients = link_amounts(p, p.ingredients, "ingredients");
+        r.results     = link_amounts(p, p.results,     "results");
+        r.ticks       = static_cast<std::uint32_t>(std::max(1L, std::lround(p.time * static_cast<float>(TICKS_PER_SECOND))));
+        r.category    = category_bit(where("recipe", p.name), p.category);
+        for (const ItemAmount& in : r.ingredients)
+            if (r.makes(in.item) > 0)
+                fail(where("recipe", p.name), "can't take '" + std::string(item_name_of(out, in.item)) + "', which it makes");
+    }
+
+    // Each item's own recipe: the one named after it, else the first that
+    // makes it
+    for (ItemPrototype& item : out.items) {
+        item.recipe = nullptr;
+        if (const RecipePrototype* own = out.find_recipe(item.name); own && own->recipe.makes(item.id) > 0) {
+            item.recipe = &own->recipe;
+            continue;
+        }
+        for (const RecipePrototype& p : out.recipes) {
+            if (p.recipe.makes(item.id) == 0) continue;
+            item.recipe = &p.recipe;
+            break;
         }
     }
 
@@ -611,6 +738,9 @@ Configs Configs::load(std::string_view data_dir) {
         }
         if (!p.light.empty() && !out.find_light(p.light))
             fail(where("building", p.name), "'light' names no light '" + p.light + "'");
+        p.config.crafting_categories = 0;
+        for (const std::string& cat : p.crafting_categories)
+            p.config.crafting_categories |= category_bit(where("building", p.name), cat);
     }
 
     // What inventories go by
@@ -635,6 +765,8 @@ const BuildingPrototype*   Configs::find_building   (std::string_view n) const {
 const SettlementPrototype* Configs::find_settlement (std::string_view n) const { return find(settlements,  n); }
 const RaidPrototype*       Configs::find_raid       (std::string_view n) const { return find(raids,        n); }
 const ItemPrototype*       Configs::find_item       (std::string_view n) const { return find(items,        n); }
+const RecipePrototype*     Configs::find_recipe     (std::string_view n) const { return find(recipes,      n); }
+const RecipeCategoryPrototype* Configs::find_recipe_category(std::string_view n) const { return find(recipe_categories, n); }
 const LightPrototype*      Configs::find_light      (std::string_view n) const { return find(lights,       n); }
 const TileConfig*          Configs::find_tile       (std::string_view n) const { return find(tiles,        n); }
 const SpriteConfig*        Configs::find_sprite     (std::string_view n) const { return find(sprites,      n); }
@@ -651,6 +783,12 @@ const BuildingPrototype* Configs::building_for_item(ItemID item) const {
     if (!item) return nullptr;
     for (const BuildingPrototype& b : buildings)
         if (b.config.item == item) return &b;
+    return nullptr;
+}
+
+const RecipeCategoryPrototype* Configs::recipe_category(CraftCategoryMask bit) const {
+    for (const RecipeCategoryPrototype& c : recipe_categories)
+        if (c.bit & bit) return &c;
     return nullptr;
 }
 

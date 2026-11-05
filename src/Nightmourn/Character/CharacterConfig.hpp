@@ -36,6 +36,9 @@ struct CharacterConfig {
     // down or take one down, to the nearest edge of its footprint (tiles)
     float build_reach = 10.0f;
 
+    // Crafting: a recipe's time is divided by this (2: twice as fast)
+    float craft_speed = 1.0f;
+
     // Attacking: a blow every `attack_interval` ticks at most, dealing
     // `attack_damage` to an enemy whose collision box (or feet, for a
     // figure) is within `attack_reach` tiles. Lands at once, like mining.

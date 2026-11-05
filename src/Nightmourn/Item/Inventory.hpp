@@ -20,6 +20,11 @@
 //
 // Plain data, not an entity: whoever owns it (the Player) changes it outside
 // the World's tick, e.g. when OnEntityMined credits the player's character.
+//
+// count() is O(1): each inventory keeps a running total per item next to
+// its slots. version() changes whenever anything in it does, so something
+// waiting on it (a craft waiting for room, later a sleeping crafter) can
+// look again only when there's something new to see.
 // =============================================================================
 
 #pragma once
@@ -60,8 +65,13 @@ public:
     // Items
     // -------------------------------------------------------------------------
 
-    // Total of `item` over every slot
-    std::uint32_t count(ItemID item) const;
+    // Total of `item` over every slot, O(1)
+    std::uint32_t count(ItemID item) const {
+        return item && item.value() < totals_.size() ? totals_[item.value()] : 0;
+    }
+
+    // Changes whenever a slot does (never goes back to an earlier value)
+    std::uint32_t version() const { return version_; }
 
     // How many of `item` would fit: room on its stacks plus empty slots
     std::uint32_t room_for(ItemID item) const;
@@ -95,7 +105,12 @@ public:
                                   std::uint32_t amount = std::numeric_limits<std::uint32_t>::max());
 
 private:
+    // Keep totals_ and version_ in step with a slot change
+    void counted_(ItemID item, std::uint32_t added, std::uint32_t removed);
+
     std::vector<std::optional<ItemStack>> slots_;
+    std::vector<std::uint32_t>            totals_  = {}; // by ItemID, grown as items arrive
+    std::uint32_t                         version_ = 0;
 };
 
 // -----------------------------------------------------------------------------

@@ -1,28 +1,32 @@
 // =============================================================================
 // GUI/ItemsMenu.hpp
 //
-// The Items menu (I): every item in the game in one grid, A to Z, and where
-// items are crafted, like a recipe book. Hover an item for what it is and
-// what it's made from; click one that has a recipe to craft it (right click:
-// five), Ctrl + click to put it on the action bar.
+// The Items menu (I): every item in the game in one grid, A to Z, and how
+// each is made, like a recipe book. Hover an item for what it is, what it's
+// made from, how long it takes and where it can be made; click one to queue
+// crafting it, right click for five, Shift + click for as many as you can
+// afford; Ctrl + click puts it on the action bar.
 //
-//   [banner][barracks][crafter][food][gate][gold][house][stone][torch][wall]
-//   [wood  ]
+//   [banner][barracks][food][gate][gold][house][stone][torch][wall][wooden-arrow]
+//   [wood  ][workshop]
 //
-// Crafting takes the recipe (its item config's "recipe") from the
-// settlement's stock first while it's in reach, then the player's, and puts
-// the item in the player's inventory, all or nothing: with too little, or no
-// room for the item, nothing changes. Like moving stacks, it happens right
-// away, outside the World's sim. Crafting takes no time for now.
+// The menu only asks: clicks become CraftRequests, which the game hands to
+// the player's CraftQueue in on_tick (it pays, and says no when it can't),
+// so crafting stays in the fixed tick. An item is dimmed when one more
+// can't be queued where the player stands: wrong place, too few
+// ingredients, or no room for it. Its tooltip says which.
 //
-// Every item shows for now; later a slot opens once its item has been
-// discovered.
+// Every item shows for now; later only the discovered ones.
 //
-//   items_menu_.set_settlement(stock_in_reach);   // each frame, null if none
+//   items_menu_.set_crafting(here, &player_.crafting()); // each frame
 //   menus_.draw(ui, flags, { ..., .items = &items_menu_ });
+//   ...on_tick:
+//   for (const CraftRequest& r : items_menu_.take_requests())
+//       player_.crafting().enqueue(*r.recipe, r.count, here);
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Crafting/CraftQueue.hpp"
 #include "Nightmourn/GUI/UISheet.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include <cstddef>     // size_t
@@ -39,27 +43,34 @@ namespace Nightmourn {
 
 class ActionBar;
 class Configs;
-class Inventory;
 struct ItemPrototype;
 struct InventoryModifiers;
+
+// A click in the Items menu: queue `count` crafts of `recipe`
+// (CraftQueue::ALL: as many as can be paid for)
+struct CraftRequest {
+    const Recipe* recipe = nullptr;
+    std::uint32_t count  = 1;
+};
 
 class ItemsMenu {
 public:
 
-    // How many a right click crafts
+    // How many a right click queues
     static constexpr std::uint32_t CRAFT_MANY = 5;
 
     // -------------------------------------------------------------------------
     // Construction
     //
-    // `sheet`, `configs` and `player` must outlive the menu.
+    // `sheet` and `configs` must outlive the menu.
     // -------------------------------------------------------------------------
 
-    ItemsMenu(const UISheet& sheet, const Configs& configs, Inventory& player);
+    ItemsMenu(const UISheet& sheet, const Configs& configs);
 
-    // The settlement's stock while it's in reach, else null: crafting draws
-    // on it first
-    void set_settlement(Inventory* stock) { settlement_ = stock; }
+    // Where the player is crafting from and their queue, for dimming what
+    // can't be queued and saying why. Call each frame; `queue` must
+    // outlive the menu (null: nothing is dimmed).
+    void set_crafting(const CraftPlace& place, const CraftQueue* queue) { place_ = place; queue_ = queue; }
 
     // Where Ctrl + click puts shortcuts; must outlive the menu
     void set_action_bar(ActionBar* bar) { action_bar_ = bar; }
@@ -68,9 +79,8 @@ public:
     // Crafting
     // -------------------------------------------------------------------------
 
-    // Crafts up to `count` of `item` (stopping when it runs short or out of
-    // room). Returns how many it made.
-    std::uint32_t craft(ItemID item, std::uint32_t count = 1);
+    // Crafts asked for since the last call, oldest first
+    std::vector<CraftRequest> take_requests();
 
     // -------------------------------------------------------------------------
     // Draw
@@ -84,11 +94,13 @@ public:
 private:
     void tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item);
 
-    const UISheet* sheet_      = nullptr;
-    const Configs* configs_    = nullptr;
-    Inventory*     player_     = nullptr;
-    Inventory*     settlement_ = nullptr;
-    ActionBar*     action_bar_ = nullptr;
+    const UISheet*    sheet_      = nullptr;
+    const Configs*    configs_    = nullptr;
+    CraftPlace        place_      = {};
+    const CraftQueue* queue_      = nullptr;
+    ActionBar*        action_bar_ = nullptr;
+
+    std::vector<CraftRequest> requests_ = {};
 
     std::vector<const ItemPrototype*> sorted_ = {}; // A to Z
 

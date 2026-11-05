@@ -98,7 +98,8 @@ static void test_shipped_data() {
         CHECK(banner.config.settlement && banner.config.settlement->name == "player");
         CHECK(wall.config.connects && wall.picture.frame_count == 16);
         CHECK(p.building("house").config.footprint == TileCoord({ 2, 2 }));
-        CHECK(p.building("crafter").config.footprint == TileCoord({ 3, 3 }));
+        CHECK(p.building("workshop").config.footprint == TileCoord({ 3, 3 }));
+        CHECK(p.building("workshop").config.type == BuildingType::Crafter);
         CHECK(p.building_for_item(p.find_item("house")->id) == p.find_building("house"));
         CHECK(!p.building_for_item(Items::Wood));
         CHECK(p.building("torch").config.type == BuildingType::Torch && p.building("torch").light == "building-torch");
@@ -112,17 +113,50 @@ static void test_shipped_data() {
         CHECK(p.building("barracks").config.footprint == TileCoord({ 3, 3 }));
         CHECK(p.building_for_item(p.find_item("barracks")->id) == p.find_building("barracks"));
 
-        // What their items are crafted from, in wood; a banner can't be
+        // What their items are crafted from, in wood; wood is chopped, not made
         const auto wood = [&](const char* name) {
-            const auto& recipe = p.find_item(name)->recipe;
-            return recipe.size() == 1 && recipe[0].item == Items::Wood ? recipe[0].count : 0u;
+            const Recipe* recipe = p.find_item(name)->recipe;
+            return recipe && recipe->ingredients.size() == 1 && recipe->ingredients[0].item == Items::Wood
+                ? recipe->ingredients[0].count : 0u;
         };
-        CHECK(p.find_item("banner")->recipe.empty() && p.find_item("wood")->recipe.empty());
-        CHECK(wood("wall") == 1 && wood("torch") == 1 && wood("barracks") == 1);
-        CHECK(wood("house") == 4 && wood("crafter") == 9 && wood("gate") == 2);
+        CHECK(!p.find_item("wood")->recipe);
+        CHECK(wood("wall") == 1 && wood("torch") == 1 && wood("barracks") == 1 && wood("banner") == 5);
+        CHECK(wood("house") == 4 && wood("workshop") == 9 && wood("gate") == 2);
         CHECK(p.find_settlement("player") && p.find_settlement("player")->config.inventory_slots == 40);
     }
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
+
+    // Recipes: the items' inline ones, named after them; where they're made
+    {
+        CHECK(p.hand_category != 0 && p.settlement_category != 0 && p.hand_category != p.settlement_category);
+        const RecipeCategoryPrototype* crafter = p.find_recipe_category("crafter");
+        CHECK(crafter && crafter->bit != 0 && !crafter->description.empty());
+
+        const Recipe* torch = p.find_item("torch")->recipe;
+        CHECK(torch && torch->name == "torch" && torch->category == p.hand_category);
+        CHECK(torch && torch->ticks == 30 && torch->makes(p.find_item("torch")->id) == 1); // 0.5 s
+        CHECK(p.find_item("banner")->recipe->category == p.hand_category);
+        CHECK(p.find_item("house")->recipe->category == p.settlement_category);
+        CHECK(p.find_item("house")->recipe->ticks == 120); // 2 s
+
+        const Recipe* arrows = p.find_item("wooden-arrow")->recipe;
+        CHECK(arrows && crafter && arrows->category == crafter->bit);
+        CHECK(arrows && arrows->makes(p.find_item("wooden-arrow")->id) == 10);
+
+        // Ids are places, and every recipe's items lie in recipe_amounts
+        for (std::size_t i = 0; i < p.recipes.size(); i++) {
+            const Recipe& r = p.recipes[i].recipe;
+            CHECK(r.id.value() == i && p.recipe(r.id) == &r);
+            CHECK(!r.results.empty());
+            CHECK(r.results.data() >= p.recipe_amounts.data() &&
+                  r.results.data() + r.results.size() <= p.recipe_amounts.data() + p.recipe_amounts.size());
+        }
+
+        // The workshop unlocks crafter recipes for the player
+        const BuildingConfig& workshop = p.building("workshop").config;
+        CHECK(crafter && workshop.crafting_categories == crafter->bit && workshop.player_categories() == crafter->bit);
+        CHECK(p.building("house").config.player_categories() == 0);
+    }
     for (const char* sprite : { "eagle", "plate", "slot", "rim", "button", "divider", "fill",
                                 "menu/character", "menu/main" }) {
         CHECK(p.find_sprite(sprite) != nullptr);
@@ -228,16 +262,44 @@ static void test_errors() {
               .find("'pivot' must be [x, y]") != std::string::npos);
 
     // A mod item after the four base ones, with a recipe
-    const auto item = [](const std::string& recipe) {
-        return R"([ { "type": "item", "name": "wood" }, { "type": "item", "name": "stone" },
+    const auto item = [](const std::string& recipe, const std::string& more = "") {
+        return R"([ { "type": "recipe-category", "name": "hand" },
+                    { "type": "item", "name": "wood" }, { "type": "item", "name": "stone" },
                     { "type": "item", "name": "gold" }, { "type": "item", "name": "food" },
-                    { "type": "item", "name": "plank", "recipe": )" + recipe + " } ]";
+                    { "type": "item", "name": "plank", "recipe": )" + recipe + " } " + more + " ]";
     };
-    CHECK(broken(item(R"({ "wood": 2 })")) == "");
-    CHECK(broken(item(R"({ "gem": 2 })")).find("item 'plank': 'recipe' names no item 'gem'") != std::string::npos);
-    CHECK(broken(item(R"({ "plank": 1 })")).find("'recipe' can't take the item itself") != std::string::npos);
-    CHECK(broken(item(R"({ "wood": 0 })")).find("'recipe' counts must be whole numbers") != std::string::npos);
-    CHECK(broken(item(R"([ "wood" ])")).find("'recipe' must be an object") != std::string::npos);
+    CHECK(broken(item(R"({ "ingredients": { "wood": 2 } })")) == "");
+    CHECK(broken(item(R"({ "ingredients": { "gem": 2 } })")).find("recipe 'plank': 'ingredients' names no item 'gem'") != std::string::npos);
+    CHECK(broken(item(R"({ "ingredients": { "plank": 1 } })")).find("recipe 'plank': can't take 'plank', which it makes") != std::string::npos);
+    CHECK(broken(item(R"({ "ingredients": { "wood": 0 } })")).find("'ingredients' counts must be whole numbers") != std::string::npos);
+    CHECK(broken(item(R"([ "wood" ])")).find("item 'plank': recipe: must be an object") != std::string::npos);
+    CHECK(broken(item(R"({ "wood": 2 })")).find("item 'plank': recipe: unknown field 'wood'") != std::string::npos);
+    CHECK(broken(item(R"({ "time": 0 })")).find("'time' must be more than 0") != std::string::npos);
+    CHECK(broken(item(R"({ "count": 0 })")).find("'count' must be at least 1") != std::string::npos);
+    CHECK(broken(item(R"({ "category": "forge" })")).find("recipe 'plank': names no recipe-category 'forge'") != std::string::npos);
+
+    // A recipe config: makes several, and replaces an item's inline one of its name
+    const std::string planks = R"(, { "type": "recipe", "name": "plank", "ingredients": { "wood": 1 },
+                                      "results": { "plank": 4 }, "time": 1.5 })";
+    CHECK(broken(item(R"({ "ingredients": { "wood": 2 } })", planks)) == "");
+    {
+        const Configs c = Configs::load(dir.string());
+        const Recipe* r = c.find_item("plank")->recipe;
+        CHECK(c.recipes.size() == 1 && r && r->makes(c.find_item("plank")->id) == 4 && r->ticks == 90);
+        CHECK(r && r->ingredients.size() == 1 && r->ingredients[0].count == 1);
+    }
+    CHECK(broken(item("{}", R"(, { "type": "recipe", "name": "r", "ingredients": {} })"))
+              .find("recipe 'r': needs 'results'") != std::string::npos);
+    CHECK(broken(item("{}", R"(, { "type": "recipe", "name": "r", "results": {} })"))
+              .find("'results' must name at least one item") != std::string::npos);
+
+    // Buildings name the categories they craft
+    CHECK(broken(R"([ { "type": "building", "name": "b", "kind": "crafter", "crafting": { "categories": ["forge"] },
+                        "picture": { "filename": "__base__/b.png", "width": 1, "height": 1 } } ])")
+              .find("building 'b': names no recipe-category 'forge'") != std::string::npos);
+    CHECK(broken(R"([ { "type": "building", "name": "b", "kind": "crafter", "crafting": { "categories": [] },
+                        "picture": { "filename": "__base__/b.png", "width": 1, "height": 1 } } ])")
+              .find("'categories' must be a list") != std::string::npos);
     fs::remove_all(dir);
 }
 

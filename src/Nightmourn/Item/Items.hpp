@@ -40,6 +40,9 @@ void set_items(std::vector<ItemInfo> items);
 // Lowercase name of `item` ("wood"), or "item" for one that isn't loaded
 std::string_view item_name(ItemID item);
 
+// A config name as players read it: "wooden-arrow" -> "Wooden arrow"
+std::string display_name(std::string_view name);
+
 // Most of `item` one inventory slot holds (Factorio's stack size), or 1
 // for an item that isn't loaded
 std::uint16_t item_stack_size(ItemID item);

@@ -7,10 +7,17 @@
 // - 7 x 7 chunks of meadow, forests around the edges and a few trees near
 //   the hero, who starts at 0, 0 with only a banner (the action bar's slot
 //   1). Chop trees for wood (left click one, as in 02-mining), and craft
-//   buildings from it in the Items menu (I): click an item to craft one,
-//   right click for five, taking its "recipe" (items.json: a wall, torch or
-//   barracks 1 wood, a gate 2, a house 4, a crafter 9) from the
-//   settlement's inventory first while in reach, then the hero's.
+//   from it in the Items menu (I): click an item to queue one, right click
+//   for five, Shift + click for all you can afford. Its "recipe" (items.json:
+//   a wall, torch or barracks 1 wood, a gate 2, a house 4, a workshop 9, a
+//   banner 5) is paid when queued, from the hero's inventory first, then
+//   the settlement's while in reach, and each craft takes its time (0.5 to
+//   3 s). The queue shows over the action bar's left end, the one being made
+//   shaded for its time left; click an icon to cancel one (right click: 5)
+//   and get its wood back. Torches and banners are made anywhere; buildings
+//   only inside the settlement, and wooden arrows only in a settlement with
+//   a workshop. Walking out cancels and refunds those. With no room for
+//   what's made, the craft waits, red, until there is.
 // - Pick a building to place with its action bar slot (key or click), or by
 //   clicking its stack in either inventory, and its ghost follows the
 //   cursor, snapped to the tile grid: green where it fits, red where it
@@ -91,6 +98,7 @@
 #include "Nightmourn/GUI/UISheet.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Input/Picking.hpp"
+#include "Nightmourn/Crafting/CraftQueue.hpp"
 #include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/Lighting/BuildingLights.hpp"
 #include "Nightmourn/Lighting/DayNight.hpp"
@@ -199,6 +207,10 @@ static constexpr Tick          SPAWN_SHOW_TICKS = 60 * 6;
 
 // HUD text: distance from the screen's corner, and gap below show-info
 static constexpr float HUD_MARGIN = 8.0f;
+
+// Crafting notes: how long they show, and how far up the screen
+static constexpr float NOTE_SECONDS = 3.0f;
+static constexpr float NOTE_Y       = 130.0f;
 static constexpr float HUD_GAP    = 12.0f;
 
 constexpr Render::DrawParams DRAW_PARAMS_HUD = {
@@ -284,7 +296,7 @@ public:
         settlement_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, nullptr,
             InventoryMenu::Config{ .title = "Settlement Inventory", .anchor = { 0.495f, 0.66f }, .pivot = { 1.0f, 0.5f },
                                    .shortcuts = false });
-        items_menu_ = std::make_unique<Nightmourn::ItemsMenu>(ui_sheet_, configs_, player_.inventory());
+        items_menu_ = std::make_unique<Nightmourn::ItemsMenu>(ui_sheet_, configs_);
         items_menu_->set_action_bar(action_bar_.get());
 
         // Lighting replaces the engine's single pass
@@ -325,6 +337,8 @@ public:
 
         menus_.handle_input(engine.input());
         if (menus_.quit_requested()) engine.event_bus().dispatch(OnGameExited{});
+
+        craft_(world, engine);
 
         // A slot holding a building's item picks that building to place
         action_bar_->handle_input(engine.input());
@@ -442,6 +456,7 @@ public:
         }
         draw_hud_(r, engine, hud_top);
         draw_placement_reason_(r);
+        draw_note_(r);
 
         // The settlement may have fallen since the tick
         sync_stock_(*world_);
@@ -526,8 +541,93 @@ private:
         settlement_menu_->set_note(world.settlement_of(faction_bit(PLAYER_FACTION))
             ? "You're outside the settlement.\nStep back inside its borders\nto reach its stores."
             : "You have no settlement yet.\nPlace your banner to found one.");
-        items_menu_->set_settlement(stock ? &stock->inventory : nullptr);
+        items_menu_->set_crafting(craft_place_(world), &player_.crafting());
+        const Character* hero = player_.character(world);
+        action_bar_->set_crafting(&player_.crafting(), hero ? hero->config().craft_speed : 1.0f);
         return stock;
+    }
+
+    // -------------------------------------------------------------------------
+    // Crafting
+    // -------------------------------------------------------------------------
+
+    // Where the hero crafts from right now: their inventory, the
+    // settlement's while in reach, and what can be made where they stand
+    CraftPlace craft_place_(Nightmourn::World& world) {
+        Settlement* stock = settlement_in_reach_(world);
+        Settlement* home  = world.settlement_of(faction_bit(PLAYER_FACTION));
+        return CraftPlace{
+            .player     = &player_.inventory(),
+            .settlement = stock ? &stock->inventory : nullptr,
+            .home       = home ? &home->inventory : nullptr,
+            .categories = Player::craft_categories(configs_, stock),
+        };
+    }
+
+    // The Items menu's clicks queue crafts, the queue's clicks cancel them,
+    // and the queue makes the front one: each tick, before the world's
+    void craft_(Nightmourn::World& world, Nezumi::Engine& engine) {
+        const CraftPlace here  = craft_place_(world);
+        CraftQueue&      queue = player_.crafting();
+
+        for (const CraftRequest& req : items_menu_->take_requests()) {
+            const CraftOutcome o = queue.enqueue(*req.recipe, req.count, here);
+            if (o.refusal == CraftRefusal::None || (req.count == CraftQueue::ALL && o.queued > 0)) continue;
+            note_(engine, refusal_note_(o));
+        }
+        for (const CraftCancel& c : action_bar_->take_cancels()) queue.cancel(c.entry, c.count, here);
+
+        const CraftReport r = player_.tick_crafting(world, here);
+        if (r.blocked) note_(engine, "Inventory full: the craft waits for room");
+        if (r.cancelled > 0) {
+            char line[96];
+            std::snprintf(line, sizeof line, "Left the settlement: %u craft%s cancelled and refunded",
+                          static_cast<unsigned>(r.cancelled), r.cancelled == 1 ? "" : "s");
+            note_(engine, line);
+        }
+    }
+
+    static std::string refusal_note_(const CraftOutcome& o) {
+        switch (o.refusal) {
+            case CraftRefusal::None:       return {};
+            case CraftRefusal::WrongPlace: return "You can't make that here";
+            case CraftRefusal::NoRoom:     return "No room in your inventory";
+            case CraftRefusal::CantAfford: {
+                if (!o.short_of) return "Not enough to make that";
+                const std::string_view n = item_name(o.short_of->item);
+                return "Short " + std::to_string(o.short_of->count) + " " + std::string(n);
+            }
+        }
+        return {};
+    }
+
+    // A line of text over the action bar for a few seconds (Factorio's
+    // flying text), and in the log
+    std::string note_text_  = {};
+    float       note_until_ = 0.0f;
+
+    void note_(Nezumi::Engine& engine, std::string text) {
+        engine.logger().info(text);
+        note_text_  = std::move(text);
+        note_until_ = seconds_ + NOTE_SECONDS;
+    }
+
+    void draw_note_(Render::Renderer2D* r) const {
+        if (note_text_.empty() || seconds_ > note_until_) return;
+        const float     scale = screen_camera_->get_scale();
+        const glm::vec2 at    = { screen_camera_->get_size().x / scale * 0.5f, NOTE_Y };
+        r->draw_text(
+            note_text_, at, *font_,
+            Render::TextStyle {
+                .size          = 18.0f,
+                .color         = { 1.0f, 0.82f, 0.55f, 1.0f },
+                .outline_color = { 0.0f, 0.0f, 0.0f, 1.0f },
+                .outline_width = 3.0f,
+                .align         = Render::TextAlign::Center,
+                .valign        = Render::TextVAlign::Bottom,
+            },
+            DRAW_PARAMS_HUD
+        );
     }
 
     // Starts placing the building `item` puts up, if there's one to place
@@ -744,7 +844,7 @@ private:
             text += line;
         }
 
-        text += "\nI: items (click: craft)  slot or stack: pick a building  click: place (hold: wall)  Q: stop  right click: take down\n"
+        text += "\nI: items (click: craft 1, right: 5, shift: all)  queue icon: cancel  slot or stack: pick a building  click: place (hold: wall)  Q: stop  right click: take down\n"
                 "click a tree: chop  click an enemy: attack  B / V: inventories  F: deposit  P: spawn points  T: time  N: midnight  M: noon\n";
 
         r->draw_text(

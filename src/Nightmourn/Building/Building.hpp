@@ -17,10 +17,12 @@
 // (World::remove_entity, or health reaching 0) frees its tiles again; a
 // banner's removal disbands its settlement.
 //
-// Buildings don't tick yet, so they sleep in their chunk's inactive list and
-// cost nothing per tick. A building type that does something each tick (a
-// crafter working from the settlement's inventory) derives from Building,
-// overrides tick() and sets Tickable and Active in its constructor. It keeps
+// Buildings don't tick, so they sleep in their chunk's inactive list and
+// cost nothing per tick. Crafting buildings (a workshop) will stay that way:
+// their settlement's crafting runs as a phase of the World's tick over its
+// machines, not as building ticks (crafting-design/DESIGN.md). A building
+// type that really must act each tick derives from Building, overrides
+// tick() and sets Tickable and Active in its constructor. It keeps
 // Building's TYPE_ID, so drawers and queries still see a Building; tell it
 // apart by subtype_id (BuildingType).
 // =============================================================================

@@ -8,11 +8,11 @@
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/Item/Items.hpp"
+#include "Nightmourn/World/Constants.hpp"
 #include "Nezumi/Input/InputMap.hpp"
 #include "Nezumi/Input/KeyName.hpp"
 #include "Nezumi/UI/Context.hpp"
 #include <algorithm> // clamp, max, swap
-#include <cctype>    // toupper
 #include <cmath>     // round
 #include <cstdio>    // snprintf
 #include <string>    // string
@@ -84,6 +84,13 @@ namespace {
     constexpr std::uint8_t FLASH_FRAMES = 8; // a used slot shows pressed this long
 
     constexpr float HP_TEXT_SIZE = 10.0f;
+
+    // The crafting queue: smaller icons than the slots, in a row over the
+    // slab's left end, just clear of the eagles' heads
+    constexpr vec2  QUEUE_ICON    = { 26.0f, 26.0f };
+    constexpr float QUEUE_GAP     = 3.0f;
+    constexpr float QUEUE_RAISE   = 4.0f; // above the bar's top
+    constexpr vec4  QUEUE_BLOCKED = { 0.85f, 0.12f, 0.10f, 0.45f };
 }
 
 // -----------------------------------------------------------------------------
@@ -99,6 +106,12 @@ std::vector<std::size_t> ActionBar::take_used() {
     std::vector<std::size_t> used;
     used.swap(used_);
     return used;
+}
+
+std::vector<CraftCancel> ActionBar::take_cancels() {
+    std::vector<CraftCancel> out;
+    out.swap(cancels_);
+    return out;
 }
 
 bool ActionBar::add_shortcut(ItemID item) {
@@ -167,7 +180,87 @@ void ActionBar::draw(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
 
     ui.end_panel();
 
+    draw_queue_(ui);
+
     for (std::uint8_t& f : flash_) if (f > 0) f--;
+}
+
+void ActionBar::draw_queue_(Nezumi::UI::Context& ui) {
+    using Nezumi::UI::PanelFlags;
+    if (!queue_ || queue_->empty()) return;
+
+    const std::span<const CraftQueue::Entry> entries = queue_->entries();
+    const std::size_t n = std::min(entries.size(), QUEUE_ICONS);
+    const vec2 size = { static_cast<float>(n) * (QUEUE_ICON.x + QUEUE_GAP) - QUEUE_GAP, QUEUE_ICON.y };
+
+    const Nezumi::UI::PanelConfig config = {
+        .position = { rect_.min.x + CONTENT_X, rect_.min.y - QUEUE_RAISE },
+        .pivot    = { 0.0f, 1.0f },
+        .size     = size,
+        .min_size = size,
+        .flags    = PanelFlags::NoTitleBar | PanelFlags::NoBackground | PanelFlags::PinPosition,
+    };
+    if (!ui.begin_panel("##craft-queue", config)) return;
+    const vec2 origin = ui.content_rect().min;
+
+    // An icon per entry, by what it makes; the front one shaded for the
+    // time it has left
+    std::array<Nezumi::UI::Slot, QUEUE_ICONS> slots;
+    for (std::size_t i = 0; i < n; i++) {
+        const CraftQueue::Entry& e = entries[i];
+        Nezumi::UI::Slot&        s = slots[i];
+        s.icon = sheet_->item_icon(e.recipe->results.front().item);
+        if (e.count > 1) {
+            std::snprintf(queue_counts_[i].data(), queue_counts_[i].size(), "%u", static_cast<unsigned>(e.count));
+            s.count = queue_counts_[i].data();
+        }
+        if (i == 0) s.cooldown = queue_->blocked() ? 0.0f : 1.0f - queue_->progress();
+    }
+
+    Nezumi::UI::SlotStyle style = sheet_->item_slot_style(QUEUE_ICON, QUEUE_GAP);
+    style.label_size = 10.0f;
+    const Nezumi::UI::SlotGridResult r =
+        ui.slot_grid("queue", std::span(slots.data(), n), static_cast<int>(n), style);
+
+    // Done but no room: red over it
+    if (queue_->blocked()) ui.draw_rect(Rect::from_size(origin, QUEUE_ICON), QUEUE_BLOCKED, 3.0f);
+
+    if (r.clicked       >= 0) cancels_.push_back({ static_cast<std::size_t>(r.clicked), 1 });
+    if (r.right_clicked >= 0) cancels_.push_back({ static_cast<std::size_t>(r.right_clicked), CANCEL_MANY });
+
+    // "Wooden arrow x10 (3 queued)
+    //  Being made, 1 s each
+    //  Click: cancel 1   Right click: cancel 5"
+    //
+    // Nothing in it changes while it's hovered (the UI restarts a tooltip's
+    // delay when its text changes), so no live countdown: the shade shows that
+    if (r.hovered >= 0) {
+        const std::size_t        i = static_cast<std::size_t>(r.hovered);
+        const CraftQueue::Entry& e = entries[i];
+        const ItemAmount&     made = e.recipe->results.front();
+        char line[128];
+
+        queue_tip_ = display_name(item_name(made.item));
+        if (made.count > 1) {
+            std::snprintf(line, sizeof line, " x%u", static_cast<unsigned>(made.count));
+            queue_tip_ += line;
+        }
+        if (e.count > 1) {
+            std::snprintf(line, sizeof line, " (%u queued)", static_cast<unsigned>(e.count));
+            queue_tip_ += line;
+        }
+
+        const double each = static_cast<double>(CraftQueue::ticks_for(*e.recipe, craft_speed_)) / TICKS_PER_SECOND;
+        if (i == 0 && queue_->blocked()) queue_tip_ += "\nDone, but there's no room in your inventory";
+        else {
+            std::snprintf(line, sizeof line, "\n%s%g s each", i == 0 ? "Being made, " : "", each);
+            queue_tip_ += line;
+        }
+        queue_tip_ += "\nClick: cancel 1   Right click: cancel 5";
+        ui.tooltip(queue_tip_);
+    }
+
+    ui.end_panel();
 }
 
 void ActionBar::draw_hp_bar_(Nezumi::UI::Context& ui, const Rect& r, const Character* hero) {
@@ -244,11 +337,8 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         slots_[static_cast<std::size_t>(drop->payload.index)].reset();
     }
 
-    if (r.hovered >= 0 && slots_[static_cast<std::size_t>(r.hovered)]) {
-        std::string name(item_name(*slots_[static_cast<std::size_t>(r.hovered)]));
-        if (!name.empty()) name[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(name[0])));
-        ui.tooltip(name);
-    }
+    if (r.hovered >= 0 && slots_[static_cast<std::size_t>(r.hovered)])
+        ui.tooltip(display_name(item_name(*slots_[static_cast<std::size_t>(r.hovered)])));
 }
 
 void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& input, GameMenus& menus) {

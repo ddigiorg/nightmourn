@@ -1,0 +1,17 @@
+[
+    {
+        "type": "recipe-category",
+        "name": "hand",
+        "description": "by hand, anywhere"
+    },
+    {
+        "type": "recipe-category",
+        "name": "settlement",
+        "description": "inside your settlement"
+    },
+    {
+        "type": "recipe-category",
+        "name": "crafter",
+        "description": "in a settlement with a workshop"
+    }
+]

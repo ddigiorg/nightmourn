@@ -25,11 +25,22 @@
 //             for (std::size_t slot : action_bar_.take_used()) ...use it...
 //   on_draw:  action_bar_.draw(*engine.ui(), engine.input(), menus_, hero, &inventory);
 //
+// Above the slab's left end, the crafting queue: a small icon per queued
+// recipe (with how many, when more than one), the one being made shaded
+// for the time it has left and red when it's done but there's no room for
+// it. Click an icon to cancel one craft, right click for five; the game
+// takes the cancels and hands them to the queue.
+//
+//   action_bar_.set_crafting(&player_.crafting(), craft_speed); // each frame
+//   ...on_tick:
+//   for (const CraftCancel& c : action_bar_.take_cancels()) queue.cancel(c.entry, c.count, here);
+//
 // Fixed size, in UI points: it grows with the display scale like the rest
 // of the UI, not with the window.
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Crafting/CraftQueue.hpp"
 #include "Nightmourn/GUI/UISheet.hpp"
 #include "Nezumi/UI/Rect.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
@@ -38,6 +49,7 @@
 #include <cstdint>  // uint8_t, uint32_t, uint64_t
 #include <optional> // optional
 #include <span>     // span
+#include <string>   // string
 #include <vector>   // vector
 
 namespace Nezumi {
@@ -54,6 +66,12 @@ class Character;
 class GameMenus;
 class Inventory;
 
+// A click on the crafting queue: cancel `count` crafts of entry `entry`
+struct CraftCancel {
+    std::size_t   entry = 0;
+    std::uint32_t count = 1;
+};
+
 class ActionBar {
 public:
 
@@ -62,6 +80,11 @@ public:
     // -------------------------------------------------------------------------
 
     static constexpr std::size_t SLOT_COUNT = 10;
+
+    // Queue entries shown above the bar (any more wait unseen), and how
+    // many a right click on one cancels
+    static constexpr std::size_t   QUEUE_ICONS   = 16;
+    static constexpr std::uint32_t CANCEL_MANY   = 5;
 
     // The menus with a button, left to right: options open from the main
     // menu, and the debug menu from its key only
@@ -109,6 +132,17 @@ public:
     std::vector<std::size_t> take_used();
 
     // -------------------------------------------------------------------------
+    // Crafting queue
+    // -------------------------------------------------------------------------
+
+    // The queue to show (null: none) and the crafter's speed, for its
+    // times. `queue` must outlive the bar.
+    void set_crafting(const CraftQueue* queue, float speed = 1.0f) { queue_ = queue; craft_speed_ = speed; }
+
+    // Cancels clicked since the last call, oldest first
+    std::vector<CraftCancel> take_cancels();
+
+    // -------------------------------------------------------------------------
     // Draw
     //
     // Call from on_draw. `hero` is null while the hero is dead. Clicking a
@@ -128,6 +162,7 @@ private:
     void draw_hp_bar_  (Nezumi::UI::Context& ui, const Nezumi::UI::Rect& r, const Character* hero);
     void draw_slots_   (Nezumi::UI::Context& ui, const Nezumi::InputMap& input, const Inventory* inventory);
     void draw_buttons_ (Nezumi::UI::Context& ui, const Nezumi::InputMap& input, GameMenus& menus);
+    void draw_queue_   (Nezumi::UI::Context& ui);
 
     const UISheet* sheet_ = nullptr;
 
@@ -138,6 +173,12 @@ private:
 
     std::uint16_t    last_max_hp_ = 0; // shown while the hero is dead
     Nezumi::UI::Rect rect_        = {};
+
+    const CraftQueue*        queue_       = nullptr;
+    float                    craft_speed_ = 1.0f;
+    std::vector<CraftCancel> cancels_     = {};
+    std::array<std::array<char, 8>, QUEUE_ICONS> queue_counts_ = {};
+    std::string              queue_tip_   = {};
 };
 
 } // namespace Nightmourn

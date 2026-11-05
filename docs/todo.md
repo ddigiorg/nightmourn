@@ -438,9 +438,18 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
 - [ ] Friendly units (from the barracks), and raids that scale with the
       settlement.
 - [ ] Barracks tick: train unit blocks from the settlement's stock.
-- [ ] **Crafter tick**: `Crafter : Building` overrides `tick()` and sets
-      Tickable, reading recipes from config and drawing from and delivering
-      to its settlement's inventory through World commands.
+- [x] Player crafting queue: `recipe` configs and categories, paid when
+      queued, made in the tick, shown over the action bar
+      (`Crafting/CraftQueue.hpp`, demo 04).
+- [ ] **Settlement crafting**: workshops as settlement machines, run by a
+      crafting phase of `World::tick` (not by ticking buildings), with
+      per-item targets and reserve floors. Design: `crafting-design/DESIGN.md`
+      in the project files.
+- [ ] Discovery: the Items menu shows only discovered items, empty slots
+      a placeholder emblem (nezumi `SlotStyle::placeholder`).
+- [ ] Live tooltips: nezumi restarts a tooltip's delay when its text
+      changes, so the crafting queue's tooltip can't count down. Key the
+      tooltip by widget instead.
 - [ ] Storage buildings that add slots to the settlement inventory
       (decided: the stock stays as inventory slots, and one settlement per
       faction for now).

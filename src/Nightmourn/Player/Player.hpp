@@ -37,7 +37,12 @@
 //   });
 //
 // The inventory belongs to the player, not the character, so it survives
-// the character dying and respawning.
+// the character dying and respawning. So does the crafting queue
+// (Crafting/CraftQueue.hpp), which the game advances each tick:
+//
+//   const CraftPlace here = { .player = &player_.inventory(), .settlement = stock,
+//                             .home = home, .categories = Player::craft_categories(configs, in_reach) };
+//   player_.tick_crafting(world, here); // paused while there's no character
 //
 // Possession is just a handle: possess() another character to switch, and a
 // character that dies (World removes it) leaves the player with nothing to
@@ -45,6 +50,7 @@
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Crafting/CraftQueue.hpp"
 #include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/Projection.hpp"
@@ -60,6 +66,8 @@ namespace Nightmourn {
 
 class World;
 class Entity;
+class Configs;
+class Settlement;
 struct OnEntityMined;
 
 class Character;
@@ -117,6 +125,22 @@ public:
     void on_entity_mined(const OnEntityMined& event);
 
     // -------------------------------------------------------------------------
+    // Crafting
+    // -------------------------------------------------------------------------
+
+    CraftQueue&       crafting()       { return crafting_; }
+    const CraftQueue& crafting() const { return crafting_; }
+
+    // What the player can craft where they stand: by hand anywhere, and in
+    // their settlement (`in_settlement`, null when outside it) "settlement"
+    // plus whatever its buildings unlock
+    static CraftCategoryMask craft_categories(const Configs& configs, const Settlement* in_settlement);
+
+    // Advances the crafting queue one tick at the character's craft speed.
+    // Paused, with nothing cancelled, while there's no character.
+    CraftReport tick_crafting(const World& world, const CraftPlace& place);
+
+    // -------------------------------------------------------------------------
     // View
     // -------------------------------------------------------------------------
 
@@ -128,6 +152,7 @@ public:
 private:
     EntityHandle character_ = {};
     Inventory            inventory_ { INVENTORY_COLUMNS * INVENTORY_ROWS };
+    CraftQueue           crafting_  = {};
 };
 
 } // namespace Nightmourn
