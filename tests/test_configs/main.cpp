@@ -112,12 +112,12 @@ static void test_shipped_data() {
         CHECK(p.building("barracks").config.footprint == TileCoord({ 3, 3 }));
         CHECK(p.building_for_item(p.find_item("barracks")->id) == p.find_building("barracks"));
 
-        // What they cost in wood; a banner is free
+        // What their items are crafted from, in wood; a banner can't be
         const auto wood = [&](const char* name) {
-            const auto& cost = p.building(name).config.cost;
-            return cost.size() == 1 && cost[0].item == Items::Wood ? cost[0].count : 0u;
+            const auto& recipe = p.find_item(name)->recipe;
+            return recipe.size() == 1 && recipe[0].item == Items::Wood ? recipe[0].count : 0u;
         };
-        CHECK(p.building("banner").config.cost.empty());
+        CHECK(p.find_item("banner")->recipe.empty() && p.find_item("wood")->recipe.empty());
         CHECK(wood("wall") == 1 && wood("torch") == 1 && wood("barracks") == 1);
         CHECK(wood("house") == 4 && wood("crafter") == 9 && wood("gate") == 2);
         CHECK(p.find_settlement("player") && p.find_settlement("player")->config.inventory_slots == 40);
@@ -227,13 +227,17 @@ static void test_errors() {
     CHECK(broken(R"([ { "type": "sprite", "name": "s", "filename": "__base__/s.png", "pivot": [1] } ])")
               .find("'pivot' must be [x, y]") != std::string::npos);
 
-    const auto building = [](const std::string& cost) {
-        return R"([ { "type": "building", "name": "b", "kind": "house", "cost": )" + cost +
-               R"(, "picture": { "filename": "__base__/b.png", "width": 64, "height": 64 } } ])";
+    // A mod item after the four base ones, with a recipe
+    const auto item = [](const std::string& recipe) {
+        return R"([ { "type": "item", "name": "wood" }, { "type": "item", "name": "stone" },
+                    { "type": "item", "name": "gold" }, { "type": "item", "name": "food" },
+                    { "type": "item", "name": "plank", "recipe": )" + recipe + " } ]";
     };
-    CHECK(broken(building(R"({ "gem": 2 })")).find("building 'b': 'cost' names no item 'gem'") != std::string::npos);
-    CHECK(broken(building(R"({ "wood": 0 })")).find("'cost' counts must be whole numbers") != std::string::npos);
-    CHECK(broken(building(R"([ "wood" ])")).find("'cost' must be an object") != std::string::npos);
+    CHECK(broken(item(R"({ "wood": 2 })")) == "");
+    CHECK(broken(item(R"({ "gem": 2 })")).find("item 'plank': 'recipe' names no item 'gem'") != std::string::npos);
+    CHECK(broken(item(R"({ "plank": 1 })")).find("'recipe' can't take the item itself") != std::string::npos);
+    CHECK(broken(item(R"({ "wood": 0 })")).find("'recipe' counts must be whole numbers") != std::string::npos);
+    CHECK(broken(item(R"([ "wood" ])")).find("'recipe' must be an object") != std::string::npos);
     fs::remove_all(dir);
 }
 

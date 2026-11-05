@@ -55,6 +55,11 @@
     },
     {
         "type": "sprite",
+        "name": "menu/settlement",
+        "filename": "__base__/graphics/gui/menu/settlement.png"
+    },
+    {
+        "type": "sprite",
         "name": "menu/items",
         "filename": "__base__/graphics/gui/menu/items.png"
     },

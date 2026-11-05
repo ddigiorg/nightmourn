@@ -24,8 +24,9 @@
 //   same, between the two inventories (Inventory::move).
 // - Ctrl + click it to send the whole stack to the other inventory, Ctrl +
 //   right click to send half (Inventory::transfer). Whatever doesn't fit
-//   stays. (A plain click will pick the stack up onto the cursor, once
-//   there is one.)
+//   stays.
+// - Click it to pick it: take_picked() hands the game its item, e.g. to
+//   start placing the building it is (Factorio's picking a stack up).
 // - Drag it onto the action bar to make that slot a shortcut to the item
 //   (ActionBar::DRAG_TYPE), or Shift + click it to put it in the bar's
 //   first empty slot. Only from a menu with `shortcuts`: the action bar is
@@ -33,6 +34,9 @@
 //
 // More rows than fit scroll a whole row at a time, with the mouse wheel or
 // by dragging the scrollbar.
+//
+// With no inventory (a settlement's, while it's out of reach) the panel
+// stays the same size and shows its note instead.
 //
 // A stack dropped anywhere else stays where it was, until items can be
 // dropped on the ground.
@@ -44,6 +48,9 @@
 
 #pragma once
 #include "Nightmourn/GUI/UISheet.hpp"
+#include "Nightmourn/Item/ItemID.hpp"
+#include <optional>    // optional
+#include <utility>     // exchange
 #include <array>       // array
 #include <cstddef>     // size_t
 #include <cstdint>     // uint32_t
@@ -71,6 +78,19 @@ class InventoryMenu {
 public:
 
     // -------------------------------------------------------------------------
+    // Statics
+    // -------------------------------------------------------------------------
+
+    // Same slots as the action bar's, so an icon dragged between them
+    // doesn't change size
+    static constexpr glm::vec2 SLOT_SIZE = { 36.0f, 36.0f };
+    static constexpr float     SLOT_GAP  = 3.0f;
+
+    // A panel showing `rows` rows of `columns` slots (and scrolling the
+    // rest), title bar and padding included
+    static glm::vec2 panel_size(const Nezumi::UI::Context& ui, std::size_t columns, std::size_t rows);
+
+    // -------------------------------------------------------------------------
     // Config
     // -------------------------------------------------------------------------
 
@@ -92,7 +112,8 @@ public:
     // Construction
     //
     // `sheet` and `inventory` must outlive the menu (or `inventory` be
-    // swapped out first with set_inventory). A null inventory draws nothing.
+    // swapped out first with set_inventory). A null inventory shows the
+    // note (set_note).
     // -------------------------------------------------------------------------
 
     InventoryMenu(const UISheet& sheet, Inventory* inventory, const Config& config);
@@ -105,6 +126,13 @@ public:
 
     Inventory* inventory() const { return inventory_; }
     void set_inventory(Inventory* inventory) { inventory_ = inventory; }
+
+    // Shown instead of the slots while there's no inventory; '\n' breaks
+    // lines. Must outlive the menu (a string literal).
+    void set_note(std::string_view note) { note_ = note; }
+
+    // The item of the stack the player plainly clicked since the last call
+    std::optional<ItemID> take_picked() { return std::exchange(picked_, std::nullopt); }
 
     const Config& config() const { return config_; }
 
@@ -132,6 +160,8 @@ private:
     Config         config_    = {};
     ActionBar*     action_bar_ = nullptr;
     std::uint32_t  grid_id_   = 0; // its slot grid's UI id, once drawn
+    std::string_view      note_   = {};
+    std::optional<ItemID> picked_ = {};
 
     // Rebuilt every frame, kept to allocate nothing after the first
     std::vector<Nezumi::UI::Slot>    slots_  = {};

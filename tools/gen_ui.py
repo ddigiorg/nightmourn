@@ -37,9 +37,9 @@ RIM     = (80, 128, 152, 200)       # 36 x 36 pt, thin bevelled rim over the ico
 BUTTON  = (160, 128, 204, 192)      # 22 x 32 pt, rectangular menu button
 DIVIDER = (212, 128, 228, 200)      # 8 x 36 pt
 FILL    = (236, 128, 252, 142)      # 8 x 7 pt, hp bar fill (white, tinted in game)
-MENU_ICONS_AT = (260, 128)          # 7 x (40 x 40 px), 48 px apart
-ITEM_ICONS_AT = (604, 128)          # 4 x (72 x 72 px), 80 px apart
-MENU_ICONS = ["skills", "equipment", "inventory", "items", "options", "debug", "main"]
+MENU_ICONS_AT = (260, 128)          # 8 x (40 x 40 px), 48 px apart
+ITEM_ICONS_AT = (652, 128)          # 4 x (72 x 72 px), 80 px apart
+MENU_ICONS = ["skills", "equipment", "inventory", "settlement", "items", "options", "debug", "main"]
 ITEMS      = ["wood", "stone", "gold", "food"]
 
 LIGHT = np.array([-0.55, -0.70, 0.45])
@@ -433,6 +433,13 @@ def gen_menu_icon(name):
         d.polygon(P((13, 14), (27, 14), (24, 9), (16, 9)), fill=255)
         d.ellipse(P((14, 3), (26, 11)), outline=255, width=2 * S)
         line([(12, 17), (28, 17)], 1.6)
+    elif name == "settlement":  # a banner over a palisade: the settlement's stores
+        line([(20, 3), (20, 24)], 1.8)
+        d.polygon(P((21, 4), (33, 7), (21, 12)), fill=255)
+        for k in range(5):
+            x0 = 5 + 6.2 * k
+            d.polygon(P((x0, 37), (x0, 25), (x0 + 2.6, 21), (x0 + 5.2, 25), (x0 + 5.2, 37)), fill=255)
+        d.rectangle(P((4, 29), (36, 31)), fill=0)
     elif name == "items":       # crossed sword and scroll: an item codex
         d.rounded_rectangle(P((8, 6), (32, 34)), radius=4 * S, fill=255)
         d.rounded_rectangle(P((11, 9), (29, 31)), radius=2 * S, fill=0)

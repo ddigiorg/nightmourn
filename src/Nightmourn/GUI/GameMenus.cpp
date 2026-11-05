@@ -4,6 +4,7 @@
 
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InventoryMenu.hpp"
+#include "Nightmourn/GUI/ItemsMenu.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nezumi/Input/InputMap.hpp"
 #include "Nezumi/UI/Context.hpp"
@@ -19,6 +20,7 @@ std::string_view menu_title(Menu menu) {
         case Menu::Skills:    return "Skills";
         case Menu::Equipment: return "Equipment";
         case Menu::Inventory: return "Player Inventory";
+        case Menu::Settlement: return "Settlement Inventory";
         case Menu::Items:     return "Items";
         case Menu::Options:   return "Options";
         case Menu::Debug:     return "Debug options";
@@ -32,6 +34,7 @@ Nezumi::ActionID menu_action(Menu menu) {
         case Menu::Skills:    return Action::ToggleSkillsMenu;
         case Menu::Equipment: return Action::ToggleEquipmentMenu;
         case Menu::Inventory: return Action::ToggleInventoryMenu;
+        case Menu::Settlement: return Action::ToggleSettlementMenu;
         case Menu::Items:     return Action::ToggleItemsMenu;
         case Menu::Options:   return Action::ToggleOptionsMenu;
         case Menu::Debug:     return Action::ToggleDebugMenu;
@@ -55,7 +58,6 @@ void GameMenus::set_open(Menu menu, bool open) {
 }
 
 bool GameMenus::any_open() const {
-    if (settlement_open()) return true;
     for (std::size_t i = 0; i < MENU_COUNT; i++)
         if (is_open(static_cast<Menu>(i))) return true;
     return false;
@@ -63,16 +65,11 @@ bool GameMenus::any_open() const {
 
 void GameMenus::close_all() {
     for (std::size_t i = 0; i < MENU_COUNT; i++) set_open(static_cast<Menu>(i), false);
-    settlement_wanted_ = false;
 }
 
 void GameMenus::back() {
     if (any_open()) close_all();
     else            set_open(Menu::Main, true);
-}
-
-void GameMenus::set_settlement_open(bool open) {
-    settlement_wanted_ = open && settlement_available_;
 }
 
 // -----------------------------------------------------------------------------
@@ -86,7 +83,6 @@ void GameMenus::handle_input(const Nezumi::InputMap& input) {
         if (menu == Menu::Main) back();
         else                    toggle(menu);
     }
-    if (input.was_pressed(Action::ToggleSettlementMenu)) toggle_settlement();
     move_mod_     = input.is_held(Action::InventoryMoveMod);
     shortcut_mod_ = input.is_held(Action::InventoryShortcutMod);
 }
@@ -95,25 +91,29 @@ void GameMenus::handle_input(const Nezumi::InputMap& input) {
 // Draw
 // -----------------------------------------------------------------------------
 
-void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, InventoryMenu* inventory,
-                     InventoryMenu* settlement)
-{
+void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, const GameMenuPanels& panels) {
     if (is_open(Menu::Skills))    draw_stub_(ui, Menu::Skills,    "Skills you have learned, and the ones still to learn.");
     if (is_open(Menu::Equipment)) draw_stub_(ui, Menu::Equipment, "What your hero wears and wields.");
 
     // The two inventories, each the other's place to send stacks while both
-    // are open
-    const bool player_open = is_open(Menu::Inventory) && inventory;
-    const bool stock_open  = settlement_open() && settlement && settlement->inventory();
+    // are open and in reach
+    InventoryMenu* player = is_open(Menu::Inventory)  && panels.inventory  && panels.inventory->inventory()
+                          ? panels.inventory : nullptr;
+    InventoryMenu* stock  = is_open(Menu::Settlement) && panels.settlement && panels.settlement->inventory()
+                          ? panels.settlement : nullptr;
     const InventoryMenu::Modifiers mods = { .move = move_mod_, .shortcut = shortcut_mod_ };
     if (is_open(Menu::Inventory)) {
-        if (inventory) inventory->draw(ui, open_[static_cast<std::size_t>(Menu::Inventory)],
-                                       stock_open ? settlement : nullptr, mods);
-        else           draw_stub_(ui, Menu::Inventory, "What your hero carries.");
+        if (panels.inventory) panels.inventory->draw(ui, open_[static_cast<std::size_t>(Menu::Inventory)], stock, mods);
+        else                  draw_stub_(ui, Menu::Inventory, "What your hero carries.");
     }
-    if (stock_open) settlement->draw(ui, settlement_wanted_, player_open ? inventory : nullptr, mods);
-
-    if (is_open(Menu::Items))     draw_stub_(ui, Menu::Items,     "Every item you have discovered, and how to make it.");
+    if (is_open(Menu::Settlement)) {
+        if (panels.settlement) panels.settlement->draw(ui, open_[static_cast<std::size_t>(Menu::Settlement)], player, mods);
+        else                   draw_stub_(ui, Menu::Settlement, "What your settlement keeps in store.");
+    }
+    if (is_open(Menu::Items)) {
+        if (panels.items) panels.items->draw(ui, open_[static_cast<std::size_t>(Menu::Items)], mods);
+        else              draw_stub_(ui, Menu::Items, "Every item you have discovered, and how to make it.");
+    }
     if (is_open(Menu::Options))   draw_stub_(ui, Menu::Options,   "Video, sound and key bindings.");
     debug_.draw(ui, flags);
     if (is_open(Menu::Main))      draw_main_(ui);

@@ -44,32 +44,28 @@ float BuildPlacer::distance_to(glm::vec2 p, const TileRect& rect) {
     return glm::length(glm::max(glm::max(lo - p, p - hi), glm::vec2(0.0f)));
 }
 
-BuildPlacer::Blocker BuildPlacer::blocker_at_(TileCoord at, const Builder* builder,
-                                              std::span<Inventory* const> pay_from) const
-{
+BuildPlacer::Blocker BuildPlacer::blocker_at_(TileCoord at, const Builder* builder) const {
     if (!builder) return Blocker::NoBuilder;
     if (distance_to(builder->position, TileRect::from_size(at, building_->footprint)) > builder->reach)
         return Blocker::OutOfReach;
     if (building_->type != BuildingType::Banner && !builder->in_settlement) return Blocker::NotInSettlement;
-    if (Nightmourn::shortfall(building_->cost, pay_from)) return Blocker::Cost;
     return Blocker::None;
 }
 
-void BuildPlacer::update(World& world, SurfaceID surface, Inventory& items,
-                         std::span<Inventory* const> pay_from, const Builder* builder,
+void BuildPlacer::update(World& world, SurfaceID surface,
+                         std::span<Inventory* const> items_from, const Builder* builder,
                          EntityFactionsMask factions, std::optional<glm::vec2> cursor,
                          const Nezumi::InputMap& input)
 {
     if (!building_) return;
     if (input.was_pressed(config_.cancel)) { cancel(); return; }
 
-    shortfall_  = Nightmourn::shortfall(building_->cost, pay_from);
     has_cursor_ = cursor.has_value();
     if (!has_cursor_) { painted_.reset(); return; }
 
     origin_  = origin_at(*building_, *cursor);
     result_  = world.check_placement(surface, *building_, origin_, factions);
-    blocker_ = blocker_at_(origin_, builder, pay_from);
+    blocker_ = blocker_at_(origin_, builder);
 
     // A click places; holding paints walls, once per tile
     const bool held    = input.is_held(config_.place);
@@ -77,14 +73,13 @@ void BuildPlacer::update(World& world, SurfaceID surface, Inventory& items,
     if (!held && !clicked) { painted_.reset(); return; }
     if (!clicked && !building_->connects) return;
 
-    // Checked first, so a building only goes down if it's paid for, and
-    // paid for only once it's down
+    // The item is spent only once the building is down
+    const ItemAmount one[] = { { building_->item, 1 } };
     const auto place_at = [&](TileCoord at) {
-        if (items.count(building_->item) == 0) return;
-        if (blocker_at_(at, builder, pay_from) != Blocker::None) return;
+        if (count(items_from, building_->item) == 0) return;
+        if (blocker_at_(at, builder) != Blocker::None) return;
         if (!world.place_building(surface, *building_, at, factions)) return;
-        items.remove(building_->item, 1);
-        pay(building_->cost, pay_from);
+        pay(one, items_from);
     };
 
     if (building_->connects && painted_ && !clicked) {
@@ -104,9 +99,8 @@ void BuildPlacer::update(World& world, SurfaceID surface, Inventory& items,
     painted_ = origin_;
 
     result_    = world.check_placement(surface, *building_, origin_, factions);
-    shortfall_ = Nightmourn::shortfall(building_->cost, pay_from);
-    blocker_   = blocker_at_(origin_, builder, pay_from);
-    if (items.count(building_->item) == 0) cancel();
+    blocker_ = blocker_at_(origin_, builder);
+    if (count(items_from, building_->item) == 0) cancel();
 }
 
 // -----------------------------------------------------------------------------

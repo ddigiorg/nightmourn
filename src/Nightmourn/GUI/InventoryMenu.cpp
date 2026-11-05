@@ -14,11 +14,19 @@
 
 namespace Nightmourn {
 
-namespace {
-    // Same slots as the action bar's, so an icon dragged between them
-    // doesn't change size
-    constexpr glm::vec2 SLOT_SIZE = { 36.0f, 36.0f };
-    constexpr float     SLOT_GAP  = 3.0f;
+glm::vec2 InventoryMenu::panel_size(const Nezumi::UI::Context& ui, std::size_t columns, std::size_t rows) {
+    // Not AutoSize, since an AutoSize panel grows to fit instead of
+    // scrolling. The scrollbar sits in the right padding, so it needs no room
+    // of its own.
+    const auto grid = [](std::size_t count) {
+        return static_cast<float>(count) * SLOT_SIZE.x + static_cast<float>(count - 1) * SLOT_GAP;
+    };
+    const Nezumi::UI::Style& style = ui.style();
+    const float title_h = std::ceil(ui.text_height() + 2.0f * style.title_padding);
+    return {
+        grid(columns) + 2.0f * style.panel_padding.x,
+        grid(rows) + 2.0f * style.panel_padding.y + title_h + 1.0f,
+    };
 }
 
 InventoryMenu::InventoryMenu(const UISheet& sheet, Inventory* inventory, const Config& config)
@@ -34,24 +42,11 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
-    if (!inventory_) return;
-    Inventory&        inv  = *inventory_;
-    const std::size_t n    = inv.size();
     const std::size_t cols = config_.columns;
     if (other && !other->inventory_) other = nullptr;
 
-    // Sized to show visible_rows rows; the panel scrolls the rest. Not
-    // AutoSize, since an AutoSize panel grows to fit instead of scrolling.
-    // The scrollbar sits in the right padding, so it needs no room of its own.
-    const auto  grid_size = [&](std::size_t count) {
-        return static_cast<float>(count) * SLOT_SIZE.x + static_cast<float>(count - 1) * SLOT_GAP;
-    };
-    const Nezumi::UI::Style& style = ui.style();
-    const float title_h = std::ceil(ui.text_height() + 2.0f * style.title_padding);
-    const glm::vec2 size = {
-        grid_size(cols) + 2.0f * style.panel_padding.x,
-        grid_size(config_.visible_rows) + 2.0f * style.panel_padding.y + title_h + 1.0f,
-    };
+    // Sized to show visible_rows rows; the panel scrolls the rest
+    const glm::vec2 size = panel_size(ui, cols, config_.visible_rows);
 
     // Placed the first time it opens; the player can move it from there
     const PanelConfig config = {
@@ -63,6 +58,18 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
         .scroll_step = SLOT_SIZE.y + SLOT_GAP, // a whole row at a time
     };
     if (!ui.begin_panel(config_.title, &open, config)) return;
+
+    if (!inventory_) {
+        for (std::size_t at = 0; at <= note_.size();) {
+            const std::size_t end = std::min(note_.find('\n', at), note_.size());
+            ui.text(note_.substr(at, end - at), at == 0 ? ui.style().text : ui.style().text_dim);
+            at = end + 1;
+        }
+        ui.end_panel();
+        return;
+    }
+    Inventory&        inv = *inventory_;
+    const std::size_t n   = inv.size();
 
     if (slots_.size() < n) {
         slots_.resize(n);
@@ -107,6 +114,11 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
                 Inventory::transfer(inv, static_cast<std::size_t>(r.right_clicked), *other->inventory_,
                                     (stack->count + 1u) / 2u);
         }
+    }
+
+    // A plain click picks the stack
+    if (!mods.move && !mods.shortcut && r.clicked >= 0) {
+        if (const auto& stack = inv.slot(static_cast<std::size_t>(r.clicked))) picked_ = stack->item;
     }
 
     // Shift + click: onto the action bar

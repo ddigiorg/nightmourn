@@ -5,10 +5,11 @@
 // AoE2's build mode. Select a building (e.g. its item's action bar slot) and
 // its ghost follows the cursor, snapped to the tile grid and centered on it:
 // green where World::check_placement says it fits, red with the reason where
-// it doesn't. The place action puts it down and spends one of its item, plus
-// its config's cost (wood, ...) paid out of a list of inventories in order:
-// the settlement's stock first while it's in reach, then the player's. For
-// walls, holding it paints a wall along the cursor's path. Cancel (Q, like
+// it doesn't. The place action puts it down and spends one of its item, from
+// a list of inventories in order (the player's, then the settlement's while
+// it's in reach): putting a building up is free, crafting its item is what
+// costs (GUI/ItemsMenu). For walls, holding it paints a wall along the
+// cursor's path. Cancel (Q, like
 // Factorio's clearing the cursor), or running out of the item, ends it; the
 // item stays in the inventory until a building is actually put down, so
 // there's nothing to give back.
@@ -18,8 +19,8 @@
 // settlement's build area. The ghost is red with the reason otherwise
 // (blocker()).
 //
-//   Inventory* pay_from[] = { settlement_in_reach, &player.inventory() };
-//   on_tick:  placer_.update(world, surface, player.inventory(), pay_from, factions, cursor, input);
+//   Inventory* items_from[] = { &player.inventory(), settlement_in_reach };
+//   on_tick:  placer_.update(world, surface, items_from, &builder, factions, cursor, input);
 //   on_draw:  placer_.draw(ctx, world_drawer.buildings(), surface);
 //
 // While a banner is selected the ghost also shows the build area it would
@@ -39,7 +40,6 @@
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/TileCoord.hpp"
 #include "Nightmourn/Geometry/TileRect.hpp"
-#include "Nightmourn/Item/ItemAmount.hpp"
 #include "Nightmourn/Surface/SurfaceID.hpp"
 #include <cstdint>     // uint8_t
 #include <glm/glm.hpp> // vec2, vec4
@@ -87,7 +87,6 @@ public:
         NoBuilder,     // no one to build it (the hero is down)
         OutOfReach,    // further than the builder's reach
         NotInSettlement, // the builder is outside the build area
-        Cost,          // the cost can't be paid (shortfall())
     };
 
     // -------------------------------------------------------------------------
@@ -107,13 +106,13 @@ public:
     //
     // `cursor` is the world position under the mouse (none while the UI has
     // it), `builder` who builds (null: no one, nothing goes down). Places
-    // through World::place_building, spending the building's item from
-    // `items` and its cost from `pay_from` (in order; null entries are
-    // skipped); stops when there's no item left.
+    // through World::place_building, spending one of the building's item
+    // from `items_from` (the first that has one; null entries are skipped);
+    // stops when none has any left.
     // -------------------------------------------------------------------------
 
-    void update(World& world, SurfaceID surface, Inventory& items,
-                std::span<Inventory* const> pay_from, const Builder* builder,
+    void update(World& world, SurfaceID surface,
+                std::span<Inventory* const> items_from, const Builder* builder,
                 EntityFactionsMask factions, std::optional<glm::vec2> cursor,
                 const Nezumi::InputMap& input);
 
@@ -122,14 +121,10 @@ public:
     PlacementResult result() const { return result_; }
     bool            has_cursor() const { return has_cursor_; }
 
-    // What the cost is short of (e.g. 3 wood), none if it can be paid
-    std::optional<ItemAmount> shortfall() const { return shortfall_; }
-
     // What else stops it, checked in this order
     Blocker blocker() const { return blocker_; }
 
-    // It fits, someone can build it there, and it's paid for: the ghost is
-    // green
+    // It fits and someone can build it there: the ghost is green
     bool can_place() const { return is_ok(result_) && blocker_ == Blocker::None; }
 
     // Tiles from `p` to the nearest point of `rect`'s tiles (0 inside)
@@ -151,10 +146,9 @@ private:
     TileCoord             origin_     = {};
     PlacementResult       result_     = PlacementResult::Ok;
     bool                  has_cursor_ = false;
-    std::optional<ItemAmount> shortfall_ = {};
     Blocker               blocker_    = Blocker::None;
 
-    Blocker blocker_at_(TileCoord at, const Builder* builder, std::span<Inventory* const> pay_from) const;
+    Blocker blocker_at_(TileCoord at, const Builder* builder) const;
 
     // The last tile a held place action put a wall on, so painting places
     // once per tile

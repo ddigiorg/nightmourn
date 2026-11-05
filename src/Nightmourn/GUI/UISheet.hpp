@@ -31,17 +31,19 @@ namespace Nightmourn {
 
 class Configs;
 
-// The top-level menus, in the order of their buttons on the action bar
+// The top-level menus (GameMenus). The action bar has buttons for some of
+// them (ActionBar::BUTTONS)
 enum class Menu : std::uint8_t {
     Skills,
     Equipment,
     Inventory,
+    Settlement, // the settlement's inventory
     Items,     // codex of every item type discovered, with recipes
     Options,
     Debug,
     Main,
 };
-inline constexpr std::size_t MENU_COUNT = 7;
+inline constexpr std::size_t MENU_COUNT = 8;
 
 struct UISheet {
     static constexpr float DENSITY = 2.0f; // sheet pixels per UI point
@@ -49,7 +51,7 @@ struct UISheet {
     // Sprite names of the menu glyphs, by Menu. Item icons come from the
     // item configs' "icon" instead.
     static constexpr std::array<const char*, MENU_COUNT> MENU_ICON_NAMES = {
-        "menu/skills", "menu/equipment", "menu/inventory", "menu/items",
+        "menu/skills", "menu/equipment", "menu/inventory", "menu/settlement", "menu/items",
         "menu/options", "menu/debug", "menu/main",
     };
 
