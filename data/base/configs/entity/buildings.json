@@ -78,16 +78,21 @@
     },
     {
         "type": "building",
-        "name": "crafter",
+        "name": "workshop",
         "kind": "crafter",
         "size": [3, 3],
         "max_health": 800,
-        "item": "crafter",
+        "item": "workshop",
         "picture": {
-            "filename": "__base__/graphics/entity/building/crafter_mask.png",
+            "filename": "__base__/graphics/entity/building/workshop_mask.png",
             "width": 384,
             "height": 384,
             "pivot": [192, 192]
+        },
+        "crafting": {
+            "categories": ["crafter"],
+            "speed": 1.0,
+            "unlocks_for_player": true
         }
     },
     {

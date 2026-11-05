@@ -22,10 +22,11 @@
 //         entity/projectiles.json   projectile   arrow
 //         entity/characters.json    character    hero
 //         entity/trees.json         tree         oak, pine
-//         entity/buildings.json     building     banner, wall, gate, torch, house, crafter, barracks
+//         entity/buildings.json     building     banner, wall, gate, torch, house, workshop, barracks
 //         settlements.json          settlement   player
 //         raids.json                raid         night
-//         items.json                item         wood, stone, gold, food
+//         items.json                item         wood, stone, gold, food, ... (and their recipes)
+//         recipes.json              recipe-category  hand, settlement, crafter
 //         lights.json               light        torch, campfire, lantern, ...
 //         tiles.json                tile         grass
 //         gui.json                  sprite       plate, slot, menu/...
@@ -44,7 +45,8 @@
 // the type doesn't have is an error, so a typo can't go unnoticed.
 //
 // Units and durations are the C++ ones: distances in tiles, speeds in tiles
-// per second, durations in ticks (60 per second). Format the files with
+// per second, durations in ticks (60 per second), except where a field says
+// seconds (a recipe's "time", a raid's "interval"). Format the files with
 // tools/format_json.py.
 //
 // ## Types
@@ -118,12 +120,19 @@
 //                wall has 16 frames, one per set of connected sides (bits
 //                north 1, east 2, south 4, west 8). A banner names the
 //                "settlement" it founds. "solid": false lets figures walk
-//                through it (a torch). What it costs is its item's "recipe"
+//                through it (a torch). What it costs is its item's "recipe".
+//                A building that crafts, or lets the player craft more while
+//                it stands in their settlement, has a "crafting" block
 //
 //     { "type": "building", "name": "house", "kind": "house",
 //       "size": [2, 2], "max_health": 400, "item": "house",
 //       "picture": { "filename": "__base__/graphics/entity/building/house_mask.png",
 //                    "width": 268, "height": 250, "pivot": [134, 180] } }
+//
+//     { "type": "building", "name": "workshop", "kind": "crafter", ...,
+//       "crafting": { "categories": ["crafter"],     // what it makes
+//                     "speed": 1.0,                  // time multiplier (later)
+//                     "unlocks_for_player": true } } // the player may make them too
 //
 //   settlement   what a banner's settlement gets (Settlement/SettlementConfig.hpp)
 //
@@ -137,6 +146,31 @@
 //     { "type": "raid", "name": "night", "unit": "raider", "interval": 40,
 //       "max_alive": 2, "min_distance": 2, "max_distance": 8,
 //       "min_darkness": 0.5 }
+//
+//   item         a kind of item (Item/Items.hpp): its icon and stack size,
+//                and optionally an inline "recipe" making one of it, named
+//                after the item (a "recipe" config of that name replaces it)
+//
+//     { "type": "item", "name": "house", "icon": "__base__/graphics/gui/item/house.png",
+//       "stack_size": 10,
+//       "recipe": { "ingredients": { "wood": 4 }, "time": 2, "category": "settlement",
+//                   "count": 1 } }          // how many one craft makes (default 1)
+//
+//   recipe       how something is made (Crafting/Recipe.hpp): what it takes
+//                (none: from nothing), what it makes, how long in seconds
+//                (default 0.5) and its "category" (default "hand")
+//
+//     { "type": "recipe", "name": "wooden-arrow", "category": "crafter",
+//       "ingredients": { "wood": 1 }, "results": { "wooden-arrow": 10 },
+//       "time": 0.5 }
+//
+//   recipe-category  where recipes are made (at most 32). The code knows
+//                "hand" (the player, anywhere) and "settlement" (the player,
+//                in one of their settlements); buildings offer the rest. The
+//                "description" finishes "Made ..." in tooltips
+//
+//     { "type": "recipe-category", "name": "crafter",
+//       "description": "in a settlement with a workshop" }
 //
 //   item         something an inventory holds, its icon and how many fit
 //                in one slot. "recipe" (optional) is what crafting one
@@ -188,6 +222,7 @@
 #pragma once
 #include "Nightmourn/Building/BuildingConfig.hpp"
 #include "Nightmourn/Character/CharacterConfig.hpp"
+#include "Nightmourn/Crafting/Recipe.hpp"
 #include "Nightmourn/Item/ItemAmount.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include "Nightmourn/Lighting/LightSource.hpp"
@@ -284,6 +319,8 @@ struct BuildingPrototype {
     std::string     light;      // a light's name, or empty for none
     BuildingConfig  config;     // index: place among the buildings
     AnimationConfig picture;    // frames: 1, or 16 for a connecting wall
+
+    std::vector<std::string> crafting_categories = {}; // as read; linked into config
 };
 
 // "settlement"
@@ -299,6 +336,26 @@ struct RaidPrototype {
     RaidConfig  config; // unit: linked
 };
 
+// Some number of an item by name, as read (linked into ItemAmounts)
+using ItemAmountNames = std::vector<std::pair<std::string, std::uint32_t>>;
+
+// "recipe", and an item's inline "recipe"
+struct RecipePrototype {
+    std::string     name;
+    ItemAmountNames ingredients = {}; // as read
+    ItemAmountNames results     = {}; // as read
+    std::string     category    = "hand";
+    float           time        = 0.5f; // seconds
+    Recipe          recipe      = {};   // linked: spans into Configs::recipe_amounts
+};
+
+// "recipe-category"
+struct RecipeCategoryPrototype {
+    std::string       name;
+    std::string       description; // "in a settlement with a workshop"
+    CraftCategoryMask bit = 0;
+};
+
 // "item"
 struct ItemPrototype {
     std::string   name;
@@ -306,9 +363,11 @@ struct ItemPrototype {
     std::string   icon;            // resolved file name, or empty
     std::uint16_t stack_size = 1;
 
-    // What crafting one takes (empty: it can't be crafted), linked at load
-    std::vector<ItemAmount> recipe = {};
-    std::vector<std::pair<std::string, std::uint32_t>> recipe_names = {}; // as read
+    // How it's made: the recipe named after it if there is one, else the
+    // first that makes it; null for an item only found in the world. Linked.
+    const Recipe* recipe = nullptr;
+
+    std::optional<RecipePrototype> inline_recipe = {}; // as read: its "recipe"
 };
 
 // "light": `light.position` and `light.seed` are the game's to set
@@ -367,9 +426,19 @@ public:
     std::vector<SettlementPrototype> settlements;
     std::vector<RaidPrototype>       raids;
     std::vector<ItemPrototype>       items;
+    std::vector<RecipePrototype>     recipes;           // explicit ones, then the items' inline ones
+    std::vector<RecipeCategoryPrototype> recipe_categories;
     std::vector<LightPrototype>      lights;
     std::vector<TileConfig>          tiles;
     std::vector<SpriteConfig>        sprites;
+
+    // Every recipe's ingredients and results, back to back: Recipe's spans
+    // point in here, so starting a craft reads one small contiguous block
+    std::vector<ItemAmount> recipe_amounts;
+
+    // The categories the code offers (0 if their config is missing)
+    CraftCategoryMask hand_category       = 0; // the player, anywhere
+    CraftCategoryMask settlement_category = 0; // the player, in their settlement
 
     // Null if there's none by that name
     const UnitPrototype*       find_unit       (std::string_view name) const;
@@ -382,6 +451,8 @@ public:
     const SettlementPrototype* find_settlement (std::string_view name) const;
     const RaidPrototype*       find_raid       (std::string_view name) const;
     const ItemPrototype*       find_item       (std::string_view name) const;
+    const RecipePrototype*     find_recipe     (std::string_view name) const;
+    const RecipeCategoryPrototype* find_recipe_category(std::string_view name) const;
     const LightPrototype*      find_light      (std::string_view name) const;
     const TileConfig*          find_tile       (std::string_view name) const;
     const SpriteConfig*        find_sprite     (std::string_view name) const;
@@ -398,6 +469,19 @@ public:
 
     // The building that `item` places, or null if it places none
     const BuildingPrototype* building_for_item(ItemID item) const;
+
+    // The recipe by id, or null
+    const Recipe* recipe(RecipeID id) const {
+        return id && id.value() < recipes.size() ? &recipes[id.value()].recipe : nullptr;
+    }
+
+    // The item config by id, or null
+    const ItemPrototype* item(ItemID id) const {
+        return id && id.value() < items.size() ? &items[id.value()] : nullptr;
+    }
+
+    // The category config of a recipe's (or any one-bit) mask, or null
+    const RecipeCategoryPrototype* recipe_category(CraftCategoryMask bit) const;
 
     // Every file name the configs use, for checks
     std::vector<std::string> filenames() const;

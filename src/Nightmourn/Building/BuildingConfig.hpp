@@ -16,6 +16,7 @@
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Crafting/Recipe.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/TileCoord.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
@@ -32,7 +33,7 @@ enum class BuildingType : std::uint16_t {
     Banner,  // founds a settlement; its build area is centered on it
     Wall,    // joins up with the walls next to it
     House,   // (later) housing for settlers
-    Crafter, // (later) turns settlement items into other items each tick
+    Crafter, // crafts: a workshop, later a furnace, a shrine (its "crafting")
     Torch,   // lights the ground around it (its config's "light")
     Barracks,// (later) trains units from the settlement's stock
     Gate,    // a wall its own faction walks through (Building::lets_through)
@@ -64,6 +65,16 @@ struct BuildingConfig {
 
     // Banners: the settlement it founds (its build area, inventory, ...)
     const SettlementConfig* settlement = nullptr;
+
+    // Crafting ("crafting" in its config): the recipe categories it makes
+    // (as a settlement machine, later), how fast (a time multiplier), and
+    // whether standing in its settlement lets the player craft them too
+    CraftCategoryMask crafting_categories = 0;
+    float             crafting_speed      = 1.0f;
+    bool              unlocks_for_player  = false;
+
+    // The categories it lets the player craft while they're in its settlement
+    CraftCategoryMask player_categories() const { return unlocks_for_player ? crafting_categories : 0; }
 };
 
 } // namespace Nightmourn

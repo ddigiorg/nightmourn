@@ -13,11 +13,11 @@ namespace Nightmourn {
 // Items
 // -----------------------------------------------------------------------------
 
-std::uint32_t Inventory::count(ItemID item) const {
-    std::uint32_t total = 0;
-    for (const auto& s : slots_)
-        if (s && s->item == item) total += s->count;
-    return total;
+void Inventory::counted_(ItemID item, std::uint32_t added, std::uint32_t removed) {
+    if (added == removed) return;
+    if (item.value() >= totals_.size()) totals_.resize(static_cast<std::size_t>(item.value()) + 1, 0);
+    totals_[item.value()] = totals_[item.value()] + added - removed;
+    version_++;
 }
 
 std::uint32_t Inventory::room_for(ItemID item) const {
@@ -49,6 +49,7 @@ std::uint32_t Inventory::add(ItemID item, std::uint32_t amount) {
         s = ItemStack{ item, static_cast<std::uint16_t>(put) };
         left -= put;
     }
+    counted_(item, amount - left, 0);
     return amount - left;
 }
 
@@ -62,6 +63,7 @@ std::uint32_t Inventory::remove(ItemID item, std::uint32_t amount) {
         left -= take;
         if (s->count == 0) s.reset();
     }
+    counted_(item, 0, amount - left);
     return amount - left;
 }
 
@@ -77,14 +79,35 @@ void Inventory::move(Inventory& from, std::size_t from_slot, Inventory& to, std:
     if (!src) return;
 
     if (dst && dst->item == src->item) {
-        const std::uint16_t stack = item_stack_size(src->item);
+        const ItemID        item  = src->item;
+        const std::uint16_t stack = item_stack_size(item);
         const std::uint16_t put   = std::min<std::uint16_t>(src->count, static_cast<std::uint16_t>(stack - std::min(dst->count, stack)));
         dst->count = static_cast<std::uint16_t>(dst->count + put);
         src->count = static_cast<std::uint16_t>(src->count - put);
         if (src->count == 0) src.reset();
+        if (&from != &to) {
+            from.counted_(item, 0, put);
+            to.counted_(item, put, 0);
+        } else if (put > 0) {
+            from.version_++;
+        }
         return;
     }
+
+    // A swap: within one inventory the totals stay, between two each loses
+    // what it gave and gains what it got
+    const std::optional<ItemStack> gave = src, got = dst;
     std::swap(src, dst);
+    if (&from == &to) {
+        from.version_++;
+        return;
+    }
+    from.counted_(gave->item, 0, gave->count);
+    to.counted_(gave->item, gave->count, 0);
+    if (got) {
+        to.counted_(got->item, 0, got->count);
+        from.counted_(got->item, got->count, 0);
+    }
 }
 
 std::uint32_t Inventory::transfer(Inventory& from, std::size_t slot, Inventory& to, std::uint32_t amount) {
@@ -92,9 +115,11 @@ std::uint32_t Inventory::transfer(Inventory& from, std::size_t slot, Inventory& 
     auto& src = from.slots_[slot];
     if (!src) return 0;
 
-    const std::uint32_t moved = to.add(src->item, std::min<std::uint32_t>(amount, src->count));
+    const ItemID        item  = src->item;
+    const std::uint32_t moved = to.add(item, std::min<std::uint32_t>(amount, src->count));
     src->count = static_cast<std::uint16_t>(src->count - moved);
     if (src->count == 0) src.reset();
+    from.counted_(item, 0, moved);
     return moved;
 }
 

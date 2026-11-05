@@ -27,7 +27,14 @@
         "type": "item",
         "name": "banner",
         "icon": "__base__/graphics/gui/item/banner.png",
-        "stack_size": 1
+        "stack_size": 1,
+        "recipe": {
+            "ingredients": {
+                "wood": 5
+            },
+            "time": 2,
+            "category": "hand"
+        }
     },
     {
         "type": "item",
@@ -35,7 +42,11 @@
         "icon": "__base__/graphics/gui/item/wall.png",
         "stack_size": 100,
         "recipe": {
-            "wood": 1
+            "ingredients": {
+                "wood": 1
+            },
+            "time": 0.5,
+            "category": "settlement"
         }
     },
     {
@@ -44,16 +55,24 @@
         "icon": "__base__/graphics/gui/item/house.png",
         "stack_size": 10,
         "recipe": {
-            "wood": 4
+            "ingredients": {
+                "wood": 4
+            },
+            "time": 2,
+            "category": "settlement"
         }
     },
     {
         "type": "item",
-        "name": "crafter",
-        "icon": "__base__/graphics/gui/item/crafter.png",
+        "name": "workshop",
+        "icon": "__base__/graphics/gui/item/workshop.png",
         "stack_size": 10,
         "recipe": {
-            "wood": 9
+            "ingredients": {
+                "wood": 9
+            },
+            "time": 3,
+            "category": "settlement"
         }
     },
     {
@@ -62,7 +81,11 @@
         "icon": "__base__/graphics/gui/item/torch.png",
         "stack_size": 50,
         "recipe": {
-            "wood": 1
+            "ingredients": {
+                "wood": 1
+            },
+            "time": 0.5,
+            "category": "hand"
         }
     },
     {
@@ -71,7 +94,11 @@
         "icon": "__base__/graphics/gui/item/barracks.png",
         "stack_size": 10,
         "recipe": {
-            "wood": 1
+            "ingredients": {
+                "wood": 1
+            },
+            "time": 3,
+            "category": "settlement"
         }
     },
     {
@@ -80,7 +107,25 @@
         "icon": "__base__/graphics/gui/item/gate.png",
         "stack_size": 20,
         "recipe": {
-            "wood": 2
+            "ingredients": {
+                "wood": 2
+            },
+            "time": 1,
+            "category": "settlement"
+        }
+    },
+    {
+        "type": "item",
+        "name": "wooden-arrow",
+        "icon": "__base__/graphics/gui/item/wooden-arrow.png",
+        "stack_size": 100,
+        "recipe": {
+            "ingredients": {
+                "wood": 1
+            },
+            "count": 10,
+            "time": 1,
+            "category": "crafter"
         }
     }
 ]

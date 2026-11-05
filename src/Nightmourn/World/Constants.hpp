@@ -15,10 +15,18 @@
 // =============================================================================
 
 #pragma once
-#include <cstdint>     // int16_t, int32_t
+#include <cstdint>     // int16_t, int32_t, uint32_t
 #include <glm/glm.hpp> // vec2, uvec2
 
 namespace Nightmourn {
+
+// -----------------------------------------------------------------------------
+// Time
+// -----------------------------------------------------------------------------
+
+// World ticks per second of game time (Nezumi's ClockConfig fixed_timestep
+// is 1/60 s). Configs give times in seconds and turn them into ticks with it.
+inline constexpr std::uint32_t TICKS_PER_SECOND = 60;
 
 // -----------------------------------------------------------------------------
 // Chunk

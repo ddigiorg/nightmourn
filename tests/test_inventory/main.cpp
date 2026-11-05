@@ -4,14 +4,17 @@
 // Headless checks for Item/Inventory: stacks moving within one inventory and
 // between two (dragging between the player's and a settlement's), sending a
 // stack across, and paying and refunding a cost out of several inventories
-// in order, all or nothing.
+// in order, all or nothing; and the running totals behind count() and the
+// version() that changes with every change.
 // =============================================================================
 
 #include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/Item/Items.hpp"
 #include <array>   // array
 #include <cstdio>  // printf
+#include <cstdint> // uint32_t
 #include <cstdlib> // EXIT_FAILURE, EXIT_SUCCESS
+#include <random>  // mt19937
 
 using namespace Nightmourn;
 
@@ -95,10 +98,10 @@ static void test_pay() {
     CHECK(stock.count(Items::Wood) == 0 && carried.count(Items::Wood) == 4);
 
     // Short: says by how much, and takes nothing
-    const std::array crafter = { ItemAmount{ Items::Wood, 9 } };
-    const auto need = shortfall(crafter, from);
+    const std::array workshop = { ItemAmount{ Items::Wood, 9 } };
+    const auto need = shortfall(workshop, from);
     CHECK(need && need->item == Items::Wood && need->count == 5);
-    CHECK(!pay(crafter, from) && carried.count(Items::Wood) == 4);
+    CHECK(!pay(workshop, from) && carried.count(Items::Wood) == 4);
 
     // Two items: all or nothing
     const std::array both = { ItemAmount{ Items::Wood, 2 }, ItemAmount{ Items::Stone, 1 } };
@@ -128,8 +131,58 @@ static void test_give() {
     CHECK(give(std::array{ ItemAmount{ Items::Wood, 6 } }, to) && carried.count(Items::Wood) == 10);
 }
 
+// count() keeps running totals; they must always match the slots
+static std::uint32_t scanned(const Inventory& inv, ItemID item) {
+    std::uint32_t n = 0;
+    for (std::size_t i = 0; i < inv.size(); i++)
+        if (inv.slot(i) && inv.slot(i)->item == item) n += inv.slot(i)->count;
+    return n;
+}
+
+static void test_totals_and_version() {
+    std::printf("totals and version\n");
+    Inventory a(6), b(4);
+    std::mt19937 rng(3);
+    const ItemID items[] = { Items::Wood, Items::Stone, Items::Gold };
+    bool totals_ok = true, version_ok = true;
+    for (int step = 0; step < 4000; step++) {
+        Inventory& x = (rng() & 1) ? a : b;
+        Inventory& y = (rng() & 1) ? a : b;
+        const ItemID item = items[rng() % 3];
+        const std::uint32_t xv = x.version(), yv = y.version();
+        const std::uint32_t before = scanned(x, item);
+        bool changed = false;
+        switch (rng() % 5) {
+            case 0: changed = x.add(item, rng() % 15) > 0; break;
+            case 1: changed = x.remove(item, rng() % 15) > 0; break;
+            case 2: Inventory::move(x, rng() % x.size(), y, rng() % y.size()); break;
+            case 3: Inventory::transfer(x, rng() % x.size(), y, rng() % 8); break;
+            case 4: {
+                Inventory* const to[] = { &x, &y };
+                give(std::array{ ItemAmount{ item, static_cast<std::uint32_t>(rng() % 12) } }, to);
+                break;
+            }
+        }
+        for (const ItemID i : items)
+            if (a.count(i) != scanned(a, i) || b.count(i) != scanned(b, i)) totals_ok = false;
+        if (changed && x.version() == xv) version_ok = false;
+        if (scanned(x, item) != before && x.version() == xv) version_ok = false;
+        (void)yv;
+    }
+    CHECK(totals_ok);
+    CHECK(version_ok);
+
+    // Nothing changed, nothing new to see
+    Inventory c(2);
+    const std::uint32_t v = c.version();
+    CHECK(c.remove(Items::Wood, 5) == 0 && c.version() == v);
+    c.add(Items::Wood, 3);
+    CHECK(c.version() != v && c.count(Items::Wood) == 3 && c.count(ItemID{}) == 0);
+}
+
 int main() {
     set_test_items();
+    test_totals_and_version();
     test_move_between();
     test_transfer();
     test_pay();

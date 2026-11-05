@@ -6,12 +6,13 @@
 #include "Nightmourn/Data/Configs.hpp"
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/GUI/InventoryMenu.hpp"
-#include "Nightmourn/Item/Inventory.hpp" // can_add, pay, shortfall
 #include "Nightmourn/Item/Items.hpp"
+#include "Nightmourn/World/Constants.hpp"
 #include "Nezumi/UI/Context.hpp"
 #include <algorithm> // sort
-#include <cctype>    // toupper
 #include <cstdio>    // snprintf
+#include <optional>  // optional
+#include <span>      // span
 
 namespace Nightmourn {
 
@@ -19,15 +20,20 @@ namespace {
     constexpr std::size_t COLUMNS      = 10;
     constexpr std::size_t VISIBLE_ROWS = 4;
 
-    std::string capitalized(std::string_view name) {
-        std::string s(name);
-        if (!s.empty()) s[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(s[0])));
-        return s;
+    // "4 wood, 1 stone"
+    void append_amounts(std::string& out, std::span<const ItemAmount> amounts) {
+        char part[96];
+        for (std::size_t k = 0; k < amounts.size(); k++) {
+            const std::string_view n = item_name(amounts[k].item);
+            std::snprintf(part, sizeof part, "%s%u %.*s", k == 0 ? "" : ", ",
+                          static_cast<unsigned>(amounts[k].count), static_cast<int>(n.size()), n.data());
+            out += part;
+        }
     }
 }
 
-ItemsMenu::ItemsMenu(const UISheet& sheet, const Configs& configs, Inventory& player)
-    : sheet_(&sheet), configs_(&configs), player_(&player)
+ItemsMenu::ItemsMenu(const UISheet& sheet, const Configs& configs)
+    : sheet_(&sheet), configs_(&configs)
 {
     for (const ItemPrototype& item : configs.items) sorted_.push_back(&item);
     std::sort(sorted_.begin(), sorted_.end(),
@@ -39,20 +45,10 @@ ItemsMenu::ItemsMenu(const UISheet& sheet, const Configs& configs, Inventory& pl
 // Crafting
 // -----------------------------------------------------------------------------
 
-std::uint32_t ItemsMenu::craft(ItemID item, std::uint32_t count) {
-    const ItemPrototype* p = item.value() < configs_->items.size() ? &configs_->items[item.value()] : nullptr;
-    if (!p || p->recipe.empty()) return 0;
-
-    Inventory* const from[] = { settlement_, player_ };
-    std::uint32_t made = 0;
-    for (; made < count; made++) {
-        // Room first, so the recipe is only spent on an item that fits. An
-        // ingredient used up can free its slot, but needing that would only
-        // matter for a full inventory, and then crafting one less is fine.
-        if (!player_->can_add(item) || !pay(p->recipe, from)) break;
-        player_->add(item, 1);
-    }
-    return made;
+std::vector<CraftRequest> ItemsMenu::take_requests() {
+    std::vector<CraftRequest> out;
+    out.swap(requests_);
+    return out;
 }
 
 // -----------------------------------------------------------------------------
@@ -73,15 +69,14 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
     };
     if (!ui.begin_panel("Items", &open, config)) return;
 
-    // Each kind of item; a recipe you can't pay for dimmed
-    Inventory* const have[] = { settlement_, player_ };
+    // Each kind of item; one that can't be queued here and now dimmed
     for (std::size_t i = 0; i < sorted_.size(); i++) {
         const ItemPrototype& item = *sorted_[i];
         Nezumi::UI::Slot&    s    = slots_[i];
         s = {};
         s.icon  = sheet_->item_icon(item.id);
         s.value = item.id.value();
-        s.disabled = !item.recipe.empty() && shortfall(item.recipe, have).has_value();
+        s.disabled = item.recipe && queue_ && queue_->can_enqueue(*item.recipe, place_) != CraftRefusal::None;
     }
 
     // Not draggable: these are the kinds of items, not stacks
@@ -89,12 +84,16 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
         "items", slots_, static_cast<int>(COLUMNS),
         sheet_->item_slot_style(InventoryMenu::SLOT_SIZE, InventoryMenu::SLOT_GAP));
 
+    // Click: 1, Shift + click: all you can afford, Ctrl + click: action bar
     if (r.clicked >= 0) {
         const ItemPrototype& item = *sorted_[static_cast<std::size_t>(r.clicked)];
-        if (mods.shortcut) { if (action_bar_) action_bar_->add_shortcut(item.id); }
-        else               craft(item.id, 1);
+        if (mods.shortcut)  { if (action_bar_) action_bar_->add_shortcut(item.id); }
+        else if (item.recipe) requests_.push_back({ item.recipe, mods.move ? CraftQueue::ALL : 1u });
     }
-    if (r.right_clicked >= 0) craft(sorted_[static_cast<std::size_t>(r.right_clicked)]->id, CRAFT_MANY);
+    if (r.right_clicked >= 0) {
+        const ItemPrototype& item = *sorted_[static_cast<std::size_t>(r.right_clicked)];
+        if (item.recipe) requests_.push_back({ item.recipe, CRAFT_MANY });
+    }
 
     if (r.hovered >= 0) tooltip_(ui, *sorted_[static_cast<std::size_t>(r.hovered)]);
 
@@ -102,21 +101,48 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
 }
 
 // "House
-//  Crafted from 4 wood
+//  Makes 1 in 2 s from 4 wood
+//  Made inside your settlement
+//  Short 3 wood
 //  Builds a house, 2 x 2
-//  Stacks to 20
-//  Click: craft 1   Right click: craft 5   Ctrl + click: action bar"
+//  Stacks to 10
+//  Click: craft 1   Right click: 5   Shift + click: all   Ctrl + click: action bar"
 void ItemsMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item) {
-    char line[128];
-    tip_ = capitalized(item.name);
+    char line[160];
+    tip_ = display_name(item.name);
 
-    if (!item.recipe.empty()) {
-        tip_ += "\nCrafted from";
-        for (std::size_t k = 0; k < item.recipe.size(); k++) {
-            const std::string_view n = item_name(item.recipe[k].item);
-            std::snprintf(line, sizeof line, "%s %u %.*s", k == 0 ? "" : ",",
-                          static_cast<unsigned>(item.recipe[k].count), static_cast<int>(n.size()), n.data());
-            tip_ += line;
+    if (const Recipe* recipe = item.recipe) {
+        const float seconds = static_cast<float>(recipe->ticks) / static_cast<float>(TICKS_PER_SECOND);
+        std::snprintf(line, sizeof line, "\nMakes %u in %g s", static_cast<unsigned>(recipe->makes(item.id)), seconds);
+        tip_ += line;
+        if (!recipe->ingredients.empty()) {
+            tip_ += " from ";
+            append_amounts(tip_, recipe->ingredients);
+        }
+        if (recipe->results.size() > 1) {
+            tip_ += "\n(and makes ";
+            append_amounts(tip_, recipe->results);
+            tip_ += ")";
+        }
+        if (const RecipeCategoryPrototype* where = configs_->recipe_category(recipe->category);
+            where && !where->description.empty()) {
+            tip_ += "\nMade " + where->description;
+        }
+
+        // Why it can't be queued, if it can't
+        std::optional<ItemAmount> short_of;
+        switch (queue_ ? queue_->can_enqueue(*recipe, place_, &short_of) : CraftRefusal::None) {
+            case CraftRefusal::None:       break;
+            case CraftRefusal::WrongPlace: tip_ += "\nYou can't make it here"; break;
+            case CraftRefusal::NoRoom:     tip_ += "\nNo room in your inventory"; break;
+            case CraftRefusal::CantAfford:
+                if (short_of) {
+                    const std::string_view n = item_name(short_of->item);
+                    std::snprintf(line, sizeof line, "\nShort %u %.*s", static_cast<unsigned>(short_of->count),
+                                  static_cast<int>(n.size()), n.data());
+                    tip_ += line;
+                }
+                break;
         }
     } else {
         bool chopped = false;
@@ -133,9 +159,8 @@ void ItemsMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item) {
     std::snprintf(line, sizeof line, "\nStacks to %u", static_cast<unsigned>(item.stack_size));
     tip_ += line;
 
-
-    tip_ += item.recipe.empty() ? "\nCtrl + click: action bar"
-                                : "\nClick: craft 1   Right click: craft 5   Ctrl + click: action bar";
+    tip_ += item.recipe ? "\nClick: craft 1   Right click: 5   Shift + click: all   Ctrl + click: action bar"
+                        : "\nCtrl + click: action bar";
     ui.tooltip(tip_);
 }
 

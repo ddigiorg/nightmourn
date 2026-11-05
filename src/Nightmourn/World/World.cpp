@@ -244,19 +244,19 @@ EntityHandle World::place_building(
             settlement->set_occupant_(b.footprint(), b.handle);
             if (!b.settlement_id && b.is_friend(factions) && settlement->build_area().contains(b.footprint())) {
                 b.settlement_id = id;
-                settlement->building_count_++;
+                settlement->add_building_(b.config());
             }
             return true;
         });
         settlement->set_occupant_(footprint, banner);
-        settlement->building_count_++;
+        settlement->add_building_(config);
         return banner;
     }
 
     Settlement* settlement = settlement_of(factions);
     const EntityHandle handle = create_entity<Building>(surface_id, center, config, origin, factions, settlement->id());
     settlement->set_occupant_(footprint, handle);
-    settlement->building_count_++;
+    settlement->add_building_(config);
 
     // Join up with the walls next to it
     if (config.connects && config.footprint == TileCoord{ 1, 1 }) {
@@ -285,7 +285,7 @@ void World::on_building_removed_(Building& building) {
 
     Settlement* settlement = get_settlement(building.settlement_id);
     if (!settlement) return;
-    settlement->building_count_--;
+    settlement->remove_building_(building.config());
 
     // Its neighbours lose their connection to it
     if (building.connections) {

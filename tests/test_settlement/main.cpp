@@ -45,7 +45,9 @@ static const SettlementConfig SETTLEMENT = { .name = "test", .build_radius = 8, 
 static const BuildingConfig BANNER  = { .name = "banner",  .type = BuildingType::Banner,  .index = 0, .footprint = { 1, 1 }, .max_health = 100, .item = {}, .connects = false, .settlement = &SETTLEMENT };
 static const BuildingConfig WALL    = { .name = "wall",    .type = BuildingType::Wall,    .index = 1, .footprint = { 1, 1 }, .max_health = 50,  .item = {}, .connects = true,  .settlement = nullptr };
 static const BuildingConfig HOUSE   = { .name = "house",   .type = BuildingType::House,   .index = 2, .footprint = { 2, 2 }, .max_health = 80,  .item = {}, .connects = false, .settlement = nullptr };
-static const BuildingConfig CRAFTER = { .name = "crafter", .type = BuildingType::Crafter, .index = 3, .footprint = { 3, 3 }, .max_health = 90,  .item = {}, .connects = false, .settlement = nullptr };
+// Unlocks category bit 2 ("crafter") for the player while it stands
+static const BuildingConfig WORKSHOP = { .name = "workshop", .type = BuildingType::Crafter, .index = 3, .footprint = { 3, 3 }, .max_health = 90, .item = {}, .connects = false, .settlement = nullptr,
+                                         .crafting_categories = 1u << 2, .crafting_speed = 1.0f, .unlocks_for_player = true };
 
 static const BuildingConfig GATE    = { .name = "gate",    .type = BuildingType::Gate,    .index = 4, .footprint = { 1, 1 }, .max_health = 60,  .item = {}, .connects = true,  .settlement = nullptr };
 
@@ -115,7 +117,7 @@ static void test_placement() {
     const EntityHandle house = w.place_building(f.surface, HOUSE, { 2, 2 }, BLUE);
     CHECK(house);
     PlacementResult why = PlacementResult::Ok;
-    CHECK(!w.place_building(f.surface, CRAFTER, { 1, 1 }, BLUE, &why) && why == PlacementResult::Occupied);
+    CHECK(!w.place_building(f.surface, WORKSHOP, { 1, 1 }, BLUE, &why) && why == PlacementResult::Occupied);
     CHECK(w.building_at(f.surface, { 3, 3 }) == house && !w.building_at(f.surface, { 4, 4 }));
 
     // Footprint and position: a 2x2 on tiles 2..3 stands at their shared corner, 3, 3
@@ -134,8 +136,30 @@ static void test_placement() {
     w.remove_entity(house);
     w.tick();
     CHECK(!w.building_at(f.surface, { 3, 3 }));
-    CHECK(w.check_placement(f.surface, CRAFTER, { 1, 1 }, BLUE) == PlacementResult::Ok);
+    CHECK(w.check_placement(f.surface, WORKSHOP, { 1, 1 }, BLUE) == PlacementResult::Ok);
     CHECK(w.settlement_of(BLUE)->building_count() == 1);
+}
+
+static void test_unlocked_categories() {
+    std::printf("unlocked categories\n");
+    Fixture f;
+    World& w = f.world;
+    w.place_building(f.surface, BANNER, { 0, 0 }, BLUE);
+    const Settlement* s = w.settlement_of(BLUE);
+    CHECK(s && s->unlocked_categories() == 0);
+
+    // Two workshops unlock it once; it stays until the last one goes
+    const EntityHandle a = w.place_building(f.surface, WORKSHOP, { 2, 2 }, BLUE);
+    const EntityHandle b = w.place_building(f.surface, WORKSHOP, { -5, -5 }, BLUE);
+    w.place_building(f.surface, HOUSE, { 2, -4 }, BLUE);
+    CHECK(a && b && s->unlocked_categories() == (1u << 2));
+    w.tick();
+    w.remove_entity(a);
+    w.tick();
+    CHECK(s->unlocked_categories() == (1u << 2));
+    w.remove_entity(b);
+    w.tick();
+    CHECK(s->unlocked_categories() == 0 && s->building_count() == 2);
 }
 
 static void test_walls() {
@@ -400,6 +424,7 @@ static void test_not_solid() {
 int main() {
     test_founding();
     test_placement();
+    test_unlocked_categories();
     test_walls();
     test_disband_and_adopt();
     test_spawn_area();

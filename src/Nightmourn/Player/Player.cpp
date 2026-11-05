@@ -6,6 +6,8 @@
 #include "Nezumi/Input/InputMap.hpp"
 #include "Nightmourn/Entity/EntityResource.hpp"
 #include "Nightmourn/Events/OnEntityMined.hpp"
+#include "Nightmourn/Data/Configs.hpp"
+#include "Nightmourn/Settlement/Settlement.hpp"
 #include "Nightmourn/World/World.hpp"
 #include "Nightmourn/Character/Character.hpp"
 #include "Nightmourn/Input/Actions.hpp"
@@ -88,6 +90,22 @@ std::optional<glm::vec2> Player::view_target(const World& world,
     const Character* c = character(world);
     if (!c) return std::nullopt;
     return proj.to_view(c->position.to_vec2());
+}
+
+// -----------------------------------------------------------------------------
+// Crafting
+// -----------------------------------------------------------------------------
+
+CraftCategoryMask Player::craft_categories(const Configs& configs, const Settlement* in_settlement) {
+    CraftCategoryMask m = configs.hand_category;
+    if (in_settlement) m |= configs.settlement_category | in_settlement->unlocked_categories();
+    return m;
+}
+
+CraftReport Player::tick_crafting(const World& world, const CraftPlace& place) {
+    const Character* c = character(world);
+    if (!c) return {};
+    return crafting_.tick(place, c->config().craft_speed);
 }
 
 } // namespace Nightmourn

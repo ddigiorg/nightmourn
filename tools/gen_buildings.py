@@ -10,6 +10,9 @@
 #   data/base/graphics/entity/building/<name>_mask.png
 #   data/base/graphics/gui/item/<name>.png              72 x 72 item icons
 #
+# Plus icons for a few crafted items that aren't buildings (a bundle of
+# wooden arrows), drawn the same way.
+#
 # Art is 128 px per tile (SPRITE_PIXELS_PER_TILE), so a house's 2 x 2 tile
 # footprint is 256 px square. Each picture's pivot is the footprint's
 # center (the middle of a square; the foot of the banner's and torch's
@@ -146,6 +149,26 @@ def gen_connector(door):
 ICON      = 72
 ICON_TINT = (110, 160, 235)
 
+# ------------------------------------------------------------------------------
+# Crafted items (icons only)
+# ------------------------------------------------------------------------------
+
+def gen_arrows():
+    """Three arrows side by side, pointing up-right: shafts, heads and
+    fletching, white with the black outline."""
+    img = Image.new("RGBA", (TILE, TILE), CLEAR)
+    d = ImageDraw.Draw(img)
+    for k, off in enumerate((-26, 0, 26)):
+        x0, y0 = 22 + off, 106          # tail
+        x1, y1 = 100 + off, 28          # tip
+        for color, w in ((BLACK, 14), (WHITE, 6)):
+            d.line([(x0 + 10, y0 - 10), (x1 - 6, y1 + 6)], fill=color, width=w)
+        head = [(x1 + 6, y1 - 6), (x1 - 16, y1 + 0), (x1 - 0, y1 + 16)]
+        d.polygon(head, fill=WHITE, outline=BLACK, width=4)
+        fletch = [(x0, y0), (x0 + 4, y0 - 22), (x0 + 22, y0 - 4)]
+        d.polygon(fletch, fill=WHITE, outline=BLACK, width=4)
+    return img
+
 def gen_icon(mask):
     bg = Image.new("RGBA", (ICON, ICON), (20, 26, 36, 255))
     d = ImageDraw.Draw(bg)
@@ -183,7 +206,7 @@ def main():
         "gate":     gen_connector(door=True),
         "torch":    gen_torch(),
         "house":    gen_box("house",    2, 44),
-        "crafter":  gen_box("crafter",  3, 56),
+        "workshop": gen_box("workshop", 3, 50),
         "barracks": gen_box("barracks", 3, 56),
     }
 
@@ -200,6 +223,7 @@ def main():
     icons = {name: img for name, (img, _) in pictures.items()}
     for name in ("wall", "gate"):
         icons[name] = icons[name].crop((10 * TILE, 0, 11 * TILE, TILE))
+    icons["wooden-arrow"] = gen_arrows()
     for name, img in icons.items():
         path = os.path.join(idir, f"{name}.png")
         gen_icon(img).save(path, optimize=True)

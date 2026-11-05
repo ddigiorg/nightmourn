@@ -20,9 +20,15 @@
 //
 // Enemy spawning asks World::is_spawn_blocked, which checks every
 // settlement's spawn_area().
+//
+// Crafting: unlocked_categories() is what its buildings let the player
+// craft while they stand in it (a workshop: "crafter"), kept up to date as
+// buildings join and leave, so asking costs nothing.
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Building/BuildingConfig.hpp"
+#include "Nightmourn/Crafting/Recipe.hpp"
 #include "Nightmourn/Entity/EntityFactionsMask.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/TileRect.hpp"
@@ -30,7 +36,10 @@
 #include "Nightmourn/Settlement/SettlementConfig.hpp"
 #include "Nightmourn/Settlement/SettlementID.hpp"
 #include "Nightmourn/Surface/SurfaceID.hpp"
+#include <array>   // array
+#include <bit>     // countr_zero
 #include <cstddef> // size_t
+#include <cstdint> // uint16_t
 #include <vector>  // vector
 
 namespace Nightmourn {
@@ -75,6 +84,9 @@ public:
     // Buildings standing in it (the banner included)
     std::size_t building_count() const { return building_count_; }
 
+    // Recipe categories its buildings let the player craft while in it
+    CraftCategoryMask unlocked_categories() const { return unlocked_; }
+
     // -------------------------------------------------------------------------
     // Occupancy
     // -------------------------------------------------------------------------
@@ -104,6 +116,28 @@ public:
 private:
     friend class World;
 
+    // World only: a building joins or leaves it
+    void add_building_(const BuildingConfig& config) {
+        building_count_++;
+        for_each_bit_(config.player_categories(), [&](std::size_t i) {
+            if (unlock_counts_[i]++ == 0) unlocked_ |= CraftCategoryMask{ 1 } << i;
+        });
+    }
+    void remove_building_(const BuildingConfig& config) {
+        building_count_--;
+        for_each_bit_(config.player_categories(), [&](std::size_t i) {
+            if (--unlock_counts_[i] == 0) unlocked_ &= ~(CraftCategoryMask{ 1 } << i);
+        });
+    }
+
+    template <typename Fn>
+    static void for_each_bit_(CraftCategoryMask mask, Fn&& fn) {
+        while (mask) {
+            fn(static_cast<std::size_t>(std::countr_zero(mask)));
+            mask &= mask - 1;
+        }
+    }
+
     // World only: marks `rect`'s tiles (clipped to the build area) as taken
     // by `building`, or frees them with a null handle
     void set_occupant_(const TileRect& rect, EntityHandle building) {
@@ -126,6 +160,9 @@ private:
     const SettlementConfig* config_         = nullptr;
     std::vector<EntityHandle> occupancy_    = {}; // row-major over build_area_
     std::size_t             building_count_ = 0;
+
+    CraftCategoryMask                                   unlocked_      = 0;
+    std::array<std::uint16_t, MAX_CRAFT_CATEGORIES>     unlock_counts_ = {}; // buildings unlocking each
 };
 
 } // namespace Nightmourn
