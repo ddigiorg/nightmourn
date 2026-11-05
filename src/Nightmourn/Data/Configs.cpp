@@ -282,7 +282,7 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
 }
 
 BuildingPrototype read_building(Fields& f, const std::string& name, const auto& file_of) {
-    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .light = {}, .config = {}, .picture = {} };
+    BuildingPrototype p{ .name = name, .item = {}, .settlement = {}, .light = {}, .cost = {}, .config = {}, .picture = {} };
     BuildingConfig& c = p.config;
 
     const std::string kind = f.get<std::string>("kind");
@@ -308,6 +308,16 @@ BuildingPrototype read_building(Fields& f, const std::string& name, const auto& 
     f.get("item",       p.item);
     f.get("settlement", p.settlement);
     f.get("light",      p.light);
+
+    // "cost": { "wood": 4 }, linked to items once they're all read
+    if (const Json* v = f.find("cost")) {
+        if (!v->is_object()) fail(f.source(), "'cost' must be an object of item names and counts");
+        for (const auto& [item, n] : v->items()) {
+            if (!n.is_number_unsigned() || n.get<std::uint32_t>() == 0)
+                fail(f.source(), "'cost' counts must be whole numbers of at least 1");
+            p.cost.emplace_back(item, n.get<std::uint32_t>());
+        }
+    }
 
     Fields pf({ f.source().file, f.source().what + ": picture" }, f.need("picture"));
     p.picture = read_animation(pf, file_of);
@@ -582,6 +592,12 @@ Configs Configs::load(std::string_view data_dir) {
             const ItemPrototype* item = out.find_item(p.item);
             if (!item) fail(where("building", p.name), "'item' names no item '" + p.item + "'");
             p.config.item = item->id;
+        }
+        p.config.cost.clear();
+        for (const auto& [item_name, n] : p.cost) {
+            const ItemPrototype* item = out.find_item(item_name);
+            if (!item) fail(where("building", p.name), "'cost' names no item '" + item_name + "'");
+            p.config.cost.push_back({ item->id, n });
         }
         if (!p.settlement.empty()) {
             const SettlementPrototype* s = out.find_settlement(p.settlement);

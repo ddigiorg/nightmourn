@@ -10,15 +10,26 @@
 //   bag.count(Items::Wood);             // over every slot
 //   bag.move(from, to);                 // merges, or swaps
 //
+// The player's inventory and a settlement's are both Inventories, so moving
+// stacks between two of them (Inventory::move, Inventory::transfer) and
+// paying a cost out of several in turn (pay, give) work for any pair: a
+// chest, a cart, a barracks' stock later.
+//
+//   Inventory* from[] = { &settlement.inventory, &player.inventory() };
+//   if (pay(building.cost, from)) ...place it...  // settlement first
+//
 // Plain data, not an entity: whoever owns it (the Player) changes it outside
 // the World's tick, e.g. when OnEntityMined credits the player's character.
 // =============================================================================
 
 #pragma once
+#include "Nightmourn/Item/ItemAmount.hpp"
 #include "Nightmourn/Item/ItemID.hpp"
 #include <cstddef>  // size_t
 #include <cstdint>  // uint16_t, uint32_t
+#include <limits>   // numeric_limits
 #include <optional> // optional
+#include <span>     // span
 #include <vector>   // vector
 
 namespace Nightmourn {
@@ -71,10 +82,42 @@ public:
     // Moves slot `from` onto slot `to`, the way dragging one onto the other
     // does: into an empty slot, onto a stack of the same item (as much as
     // fits; the rest stays behind), or swapped with a different item
-    void move(std::size_t from, std::size_t to);
+    void move(std::size_t from, std::size_t to) { move(*this, from, *this, to); }
+
+    // The same between two inventories (or within one): slot `from_slot` of
+    // `from` onto slot `to_slot` of `to`
+    static void move(Inventory& from, std::size_t from_slot, Inventory& to, std::size_t to_slot);
+
+    // Sends up to `amount` of the stack in `from`'s slot `slot` to `to`, the
+    // way add() puts it there (topping up its stacks, then empty slots).
+    // Whatever doesn't fit stays in the slot. Returns how many moved.
+    static std::uint32_t transfer(Inventory& from, std::size_t slot, Inventory& to,
+                                  std::uint32_t amount = std::numeric_limits<std::uint32_t>::max());
 
 private:
     std::vector<std::optional<ItemStack>> slots_;
 };
+
+// -----------------------------------------------------------------------------
+// Several inventories at once
+//
+// `from` / `to` are tried in order, so the first is drawn on (or filled)
+// first: a building's cost comes out of the settlement before the player.
+// Null entries are skipped, for an inventory that's out of reach.
+// -----------------------------------------------------------------------------
+
+// Total of `item` over all of them
+std::uint32_t count(std::span<Inventory* const> from, ItemID item);
+
+// The first part of `cost` they don't have enough of, and how many short
+// they are; none if they can pay all of it
+std::optional<ItemAmount> shortfall(std::span<const ItemAmount> cost, std::span<Inventory* const> from);
+
+// Takes all of `cost`, or nothing if they can't pay it all. True if paid.
+bool pay(std::span<const ItemAmount> cost, std::span<Inventory* const> from);
+
+// Adds all of `items`, overflowing from one inventory into the next, or
+// nothing if they don't all fit. True if given.
+bool give(std::span<const ItemAmount> items, std::span<Inventory* const> to);
 
 } // namespace Nightmourn

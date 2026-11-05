@@ -202,7 +202,10 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         s.flash = flash_[i] > 0 || input.is_held(Action::use_slot(i));
     }
 
-    const Nezumi::UI::SlotStyle style = sheet_->item_slot_style(SLOT_SIZE, SLOT_GAP);
+    // A stack that can't be a shortcut doesn't light the slots up
+    Nezumi::UI::SlotStyle style = sheet_->item_slot_style(SLOT_SIZE, SLOT_GAP);
+    const Nezumi::UI::DragPayload* drag = ui.drag_payload();
+    if (drag && drag->type == DRAG_TYPE && (drag->value & NOT_A_SHORTCUT)) style.drop_hover = {};
 
     ui.set_next_pos({ CONTENT_X, SLOTS_Y });
     const Nezumi::UI::Context::ID grid = ui.get_id("slots");
@@ -216,7 +219,7 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
         const std::size_t to = static_cast<std::size_t>(r.dropped);
         if (r.payload.source == grid && r.payload.index >= 0) {
             std::swap(slots_[to], slots_[static_cast<std::size_t>(r.payload.index)]);
-        } else {
+        } else if (!(r.payload.value & NOT_A_SHORTCUT)) {
             slots_[to] = ItemID{ static_cast<ItemID::value_t>(r.payload.value) };
         }
     }

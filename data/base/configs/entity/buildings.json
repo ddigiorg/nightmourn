@@ -21,6 +21,9 @@
         "size": [1, 1],
         "max_health": 200,
         "item": "wall",
+        "cost": {
+            "wood": 1
+        },
         "connects": true,
         "picture": {
             "filename": "__base__/graphics/entity/building/wall_mask.png",
@@ -37,6 +40,9 @@
         "size": [1, 1],
         "max_health": 300,
         "item": "gate",
+        "cost": {
+            "wood": 2
+        },
         "connects": true,
         "picture": {
             "filename": "__base__/graphics/entity/building/gate_mask.png",
@@ -53,6 +59,9 @@
         "size": [1, 1],
         "max_health": 50,
         "item": "torch",
+        "cost": {
+            "wood": 1
+        },
         "solid": false,
         "light": "building-torch",
         "picture": {
@@ -69,6 +78,9 @@
         "size": [2, 2],
         "max_health": 400,
         "item": "house",
+        "cost": {
+            "wood": 4
+        },
         "picture": {
             "filename": "__base__/graphics/entity/building/house_mask.png",
             "width": 256,
@@ -83,6 +95,9 @@
         "size": [3, 3],
         "max_health": 800,
         "item": "crafter",
+        "cost": {
+            "wood": 9
+        },
         "picture": {
             "filename": "__base__/graphics/entity/building/crafter_mask.png",
             "width": 384,
@@ -97,6 +112,9 @@
         "size": [3, 3],
         "max_health": 1200,
         "item": "barracks",
+        "cost": {
+            "wood": 1
+        },
         "picture": {
             "filename": "__base__/graphics/entity/building/barracks_mask.png",
             "width": 384,

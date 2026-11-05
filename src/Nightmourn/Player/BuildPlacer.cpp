@@ -38,13 +38,15 @@ TileCoord BuildPlacer::origin_at(const BuildingConfig& building, glm::vec2 curso
     };
 }
 
-void BuildPlacer::update(World& world, SurfaceID surface, Inventory& inventory,
+void BuildPlacer::update(World& world, SurfaceID surface, Inventory& items,
+                         std::span<Inventory* const> pay_from,
                          EntityFactionsMask factions, std::optional<glm::vec2> cursor,
                          const Nezumi::InputMap& input)
 {
     if (!building_) return;
     if (input.was_pressed(config_.cancel)) { cancel(); return; }
 
+    shortfall_  = Nightmourn::shortfall(building_->cost, pay_from);
     has_cursor_ = cursor.has_value();
     if (!has_cursor_) { painted_.reset(); return; }
 
@@ -57,9 +59,14 @@ void BuildPlacer::update(World& world, SurfaceID surface, Inventory& inventory,
     if (!held && !clicked) { painted_.reset(); return; }
     if (!clicked && !building_->connects) return;
 
+    // Checked first, so a building only goes down if it's paid for, and
+    // paid for only once it's down
     const auto place_at = [&](TileCoord at) {
-        if (inventory.count(building_->item) == 0) return;
-        if (world.place_building(surface, *building_, at, factions)) inventory.remove(building_->item, 1);
+        if (items.count(building_->item) == 0) return;
+        if (Nightmourn::shortfall(building_->cost, pay_from)) return;
+        if (!world.place_building(surface, *building_, at, factions)) return;
+        items.remove(building_->item, 1);
+        pay(building_->cost, pay_from);
     };
 
     if (building_->connects && painted_ && !clicked) {
@@ -78,8 +85,9 @@ void BuildPlacer::update(World& world, SurfaceID surface, Inventory& inventory,
     }
     painted_ = origin_;
 
-    result_ = world.check_placement(surface, *building_, origin_, factions);
-    if (inventory.count(building_->item) == 0) cancel();
+    result_    = world.check_placement(surface, *building_, origin_, factions);
+    shortfall_ = Nightmourn::shortfall(building_->cost, pay_from);
+    if (items.count(building_->item) == 0) cancel();
 }
 
 // -----------------------------------------------------------------------------
@@ -89,7 +97,7 @@ void BuildPlacer::update(World& world, SurfaceID surface, Inventory& inventory,
 void BuildPlacer::draw(DrawContext& ctx, const BuildingDrawer& drawer, SurfaceID surface) const {
     if (!building_ || !has_cursor_) return;
 
-    const bool      ok   = is_ok(result_);
+    const bool      ok   = can_place();
     const glm::vec4 tint = ok ? config_.valid_tint : config_.invalid_tint;
 
     // A banner shows the base it would found

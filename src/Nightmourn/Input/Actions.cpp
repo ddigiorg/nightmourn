@@ -24,6 +24,7 @@ void bind_default_actions(Nezumi::InputMap& input) {
     input.bind(Action::ToggleInventoryMenu, ScanCode::B);
     input.bind(Action::ToggleItemsMenu,     ScanCode::I);
     input.bind(Action::ToggleOptionsMenu,   ScanCode::O);
+    input.bind(Action::ToggleSettlementMenu, ScanCode::V);
     input.bind(Action::ToggleMainMenu,      ScanCode::Escape);
 
     // 1, 2, ... 9, 0: the number row, in its order on the keyboard

@@ -6,10 +6,11 @@
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/Item/Inventory.hpp"
 #include "Nightmourn/Item/Items.hpp"
-#include "Nightmourn/Player/Player.hpp"
 #include "Nezumi/UI/Context.hpp"
-#include <cctype> // toupper
-#include <cstdio> // snprintf
+#include <algorithm> // max, min
+#include <cctype>    // toupper
+#include <cmath>     // ceil
+#include <cstdio>    // snprintf
 
 namespace Nightmourn {
 
@@ -20,28 +21,52 @@ namespace {
     constexpr float     SLOT_GAP  = 3.0f;
 }
 
-InventoryMenu::InventoryMenu(const UISheet& sheet, Inventory& inventory)
+InventoryMenu::InventoryMenu(const UISheet& sheet, Inventory* inventory, const Config& config)
     : sheet_(&sheet)
-    , inventory_(&inventory)
-    , slots_(inventory.size())
-    , counts_(inventory.size())
-{}
+    , inventory_(inventory)
+    , config_(config)
+{
+    config_.columns      = std::max<std::size_t>(config_.columns, 1);
+    config_.visible_rows = std::max<std::size_t>(config_.visible_rows, 1);
+}
 
-void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open) {
+void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* other) {
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
-    // Centered the first time it opens; the player can move it from there
-    const PanelConfig config = {
-        .position = ui.screen_size() * 0.5f,
-        .pivot    = { 0.5f, 0.5f },
-        .flags    = PanelFlags::Movable | PanelFlags::AutoSize,
+    if (!inventory_) return;
+    Inventory&        inv  = *inventory_;
+    const std::size_t n    = inv.size();
+    const std::size_t cols = config_.columns;
+    if (other && !other->inventory_) other = nullptr;
+
+    // Sized to show visible_rows rows; the panel scrolls the rest. Not
+    // AutoSize, since an AutoSize panel grows to fit instead of scrolling.
+    // The scrollbar sits in the right padding, so it needs no room of its own.
+    const auto  grid_size = [&](std::size_t count) {
+        return static_cast<float>(count) * SLOT_SIZE.x + static_cast<float>(count - 1) * SLOT_GAP;
     };
-    if (!ui.begin_panel("Inventory", &open, config)) return;
+    const Nezumi::UI::Style& style = ui.style();
+    const float title_h = std::ceil(ui.text_height() + 2.0f * style.title_padding);
+    const glm::vec2 size = {
+        grid_size(cols) + 2.0f * style.panel_padding.x,
+        grid_size(config_.visible_rows) + 2.0f * style.panel_padding.y + title_h + 1.0f,
+    };
 
-    Inventory&        inv = *inventory_;
-    const std::size_t n   = inv.size();
+    // Placed the first time it opens; the player can move it from there
+    const PanelConfig config = {
+        .position = ui.screen_size() * config_.anchor,
+        .pivot    = config_.pivot,
+        .size     = size,
+        .min_size = size,
+        .flags    = PanelFlags::Movable,
+    };
+    if (!ui.begin_panel(config_.title, &open, config)) return;
 
+    if (slots_.size() < n) {
+        slots_.resize(n);
+        counts_.resize(n);
+    }
     for (std::size_t i = 0; i < n; i++) {
         Nezumi::UI::Slot& s = slots_[i];
         s = {};
@@ -52,17 +77,35 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open) {
         s.icon  = sheet_->item_icon(stack->item);
         s.count = counts_[i].data();
         s.value = stack->item.value(); // what an action bar slot points at
+        if (!config_.shortcuts) s.value |= ActionBar::NOT_A_SHORTCUT;
     }
 
-    const Nezumi::UI::Context::ID    grid = ui.get_id("slots");
-    const Nezumi::UI::SlotGridResult r    = ui.slot_grid(
-        "slots", slots_, static_cast<int>(Player::INVENTORY_COLUMNS),
+    grid_id_ = ui.get_id("slots");
+    const Nezumi::UI::SlotGridResult r = ui.slot_grid(
+        "slots", std::span<const Nezumi::UI::Slot>(slots_.data(), n), static_cast<int>(cols),
         sheet_->item_slot_style(SLOT_SIZE, SLOT_GAP), ActionBar::DRAG_TYPE);
 
-    // Only stacks from this grid move; an action bar shortcut dropped here
-    // is just a shortcut, with no stack behind it
-    if (r.dropped >= 0 && r.payload.source == grid && r.payload.index >= 0)
-        inv.move(static_cast<std::size_t>(r.payload.index), static_cast<std::size_t>(r.dropped));
+    // Only stacks move: from this grid, or the other inventory's. An action
+    // bar shortcut dropped here is just a shortcut, with no stack behind it.
+    if (r.dropped >= 0 && r.payload.index >= 0) {
+        const std::size_t from = static_cast<std::size_t>(r.payload.index);
+        const std::size_t to   = static_cast<std::size_t>(r.dropped);
+        if (r.payload.source == grid_id_)
+            inv.move(from, to);
+        else if (other && r.payload.source == other->grid_id_)
+            Inventory::move(*other->inventory_, from, inv, to);
+    }
+
+    // Click: the whole stack to the other inventory; right click: half
+    if (other) {
+        if (r.clicked >= 0)
+            Inventory::transfer(inv, static_cast<std::size_t>(r.clicked), *other->inventory_);
+        if (r.right_clicked >= 0) {
+            if (const auto& stack = inv.slot(static_cast<std::size_t>(r.right_clicked)))
+                Inventory::transfer(inv, static_cast<std::size_t>(r.right_clicked), *other->inventory_,
+                                    (stack->count + 1u) / 2u);
+        }
+    }
 
     // "Wood (37)"
     if (r.hovered >= 0) {

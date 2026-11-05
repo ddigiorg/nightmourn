@@ -118,17 +118,18 @@
 //                wall has 16 frames, one per set of connected sides (bits
 //                north 1, east 2, south 4, west 8). A banner names the
 //                "settlement" it founds. "solid": false lets figures walk
-//                through it (a torch)
+//                through it (a torch). "cost" is what putting it up takes
+//                on top of its item, by item name (optional)
 //
 //     { "type": "building", "name": "house", "kind": "house",
-//       "size": [2, 2], "max_health": 400, "item": "house",
+//       "size": [2, 2], "max_health": 400, "item": "house", "cost": { "wood": 4 },
 //       "picture": { "filename": "__base__/graphics/entity/building/house_mask.png",
 //                    "width": 268, "height": 250, "pivot": [134, 180] } }
 //
 //   settlement   what a banner's settlement gets (Settlement/SettlementConfig.hpp)
 //
 //     { "type": "settlement", "name": "player", "build_radius": 16,
-//       "spawn_margin": 8, "min_gap": 4, "inventory_slots": 60 }
+//       "spawn_margin": 8, "min_gap": 4, "inventory_slots": 40 }
 //
 //   raid         night raids on settlements (Settlement/RaidConfig.hpp):
 //                which "unit" spawns, every "interval" seconds while
@@ -277,7 +278,8 @@ struct BuildingPrototype {
     std::string     item;       // an item's name, or empty for none
     std::string     settlement; // banners: a settlement's name
     std::string     light;      // a light's name, or empty for none
-    BuildingConfig  config;     // index: place among the buildings
+    std::vector<std::pair<std::string, std::uint32_t>> cost; // item names and counts
+    BuildingConfig  config;     // index: place among the buildings; cost: linked
     AnimationConfig picture;    // frames: 1, or 16 for a connecting wall
 };
 
