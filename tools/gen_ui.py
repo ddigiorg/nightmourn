@@ -26,20 +26,20 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw
 
-ATLAS_W, ATLAS_H = 1328, 208
+ATLAS_W, ATLAS_H = 1270, 208
 
 # Pixel boxes { x0, y0, x1, y1 } on the --sheet preview; each box's size is
 # its piece's size.
 EAGLE   = (0, 0, 160, 120)          # 80 x 60 pt, crouched, faces right (inward on the left)
-PLATE   = (168, 0, 1318, 100)       # 575 x 50 pt
+PLATE   = (168, 0, 1260, 100)       # 546 x 50 pt
 SLOT    = (0, 128, 72, 200)         # 36 x 36 pt, socket under the icon
 RIM     = (80, 128, 152, 200)       # 36 x 36 pt, thin bevelled rim over the icon
 BUTTON  = (160, 128, 204, 192)      # 22 x 32 pt, rectangular menu button
 DIVIDER = (212, 128, 228, 200)      # 8 x 36 pt
 FILL    = (236, 128, 252, 142)      # 8 x 7 pt, hp bar fill (white, tinted in game)
-MENU_ICONS_AT = (260, 128)          # 8 x (40 x 40 px), 48 px apart
-ITEM_ICONS_AT = (652, 128)          # 4 x (72 x 72 px), 80 px apart
-MENU_ICONS = ["skills", "equipment", "inventory", "settlement", "items", "options", "debug", "main"]
+MENU_ICONS_AT = (260, 128)          # 7 x (40 x 40 px), 48 px apart
+ITEM_ICONS_AT = (604, 128)          # 4 x (72 x 72 px), 80 px apart
+MENU_ICONS = ["character", "inventory", "settlement", "items", "options", "debug", "main"]
 ITEMS      = ["wood", "stone", "gold", "food"]
 
 LIGHT = np.array([-0.55, -0.70, 0.45])
@@ -416,23 +416,23 @@ def gen_menu_icon(name):
     def line(pts, width):
         d.line(P(*pts), fill=255, width=int(width * S), joint="curve")
 
-    if name == "skills":        # open book
-        d.polygon(P((4, 10), (19, 13), (19, 33), (4, 30)), fill=255)
-        d.polygon(P((21, 13), (36, 10), (36, 30), (21, 33)), fill=255)
-        for k in range(3):
-            line([(7, 16 + 4 * k), (16, 18 + 4 * k)], 1.2)
-            line([(24, 18 + 4 * k), (33, 16 + 4 * k)], 1.2)
-    elif name == "equipment":   # helmet
-        d.pieslice(P((7, 6), (33, 38)), 180, 360, fill=255)
-        d.rectangle(P((7, 21), (33, 30)), fill=255)
-        d.rectangle(P((18, 6), (22, 31)), fill=0)
-        d.rectangle(P((10, 18), (30, 21)), fill=0)
-        d.rectangle(P((19, 7), (21, 34)), fill=255)
-    elif name == "inventory":   # bag
-        d.ellipse(P((7, 13), (33, 37)), fill=255)
-        d.polygon(P((13, 14), (27, 14), (24, 9), (16, 9)), fill=255)
-        d.ellipse(P((14, 3), (26, 11)), outline=255, width=2 * S)
-        line([(12, 17), (28, 17)], 1.6)
+    if name == "character":     # head and shoulders: the hero (skills and equipment)
+        d.ellipse(P((13, 4), (27, 18)), fill=255)
+        d.pieslice(P((6, 20), (34, 52)), 180, 360, fill=255)
+        d.rectangle(P((6, 35), (34, 40)), fill=0)
+        # A thin gap between head and shoulders, so they read apart
+        d.arc(P((11.5, 2.5), (28.5, 19.5)), 30, 150, fill=0, width=int(1.5 * S))
+    elif name == "inventory":   # backpack: carry handle, flap, front pocket, side straps
+        d.rounded_rectangle(P((9, 9), (31, 37)), radius=6 * S, fill=255)
+        d.rounded_rectangle(P((15, 3), (25, 11)), radius=3 * S, outline=255, width=int(2 * S))
+        # Flap over the top, its edge cut into the body
+        d.arc(P((9, 4), (31, 22)), 0, 180, fill=0, width=int(1.4 * S))
+        d.rectangle(P((18.6, 17), (21.4, 22)), fill=0)
+        # Front pocket
+        d.rounded_rectangle(P((13, 25), (27, 34)), radius=2 * S, outline=0, width=int(1.4 * S))
+        # Side straps
+        line([(6.5, 15), (6.5, 33)], 2.0)
+        line([(33.5, 15), (33.5, 33)], 2.0)
     elif name == "settlement":  # a banner over a palisade: the settlement's stores
         line([(20, 3), (20, 24)], 1.8)
         d.polygon(P((21, 4), (33, 7), (21, 12)), fill=255)
@@ -440,11 +440,14 @@ def gen_menu_icon(name):
             x0 = 5 + 6.2 * k
             d.polygon(P((x0, 37), (x0, 25), (x0 + 2.6, 21), (x0 + 5.2, 25), (x0 + 5.2, 37)), fill=255)
         d.rectangle(P((4, 29), (36, 31)), fill=0)
-    elif name == "items":       # crossed sword and scroll: an item codex
-        d.rounded_rectangle(P((8, 6), (32, 34)), radius=4 * S, fill=255)
-        d.rounded_rectangle(P((11, 9), (29, 31)), radius=2 * S, fill=0)
-        for k in range(4):
-            line([(14, 14 + 4.5 * k), (26, 14 + 4.5 * k)], 1.4)
+    elif name == "items":       # closed book: the item codex
+        d.rounded_rectangle(P((9, 4), (32, 36)), radius=2 * S, fill=255)
+        # Spine down the left, page edges along the right and bottom
+        d.rectangle(P((13, 4), (14.4, 36)), fill=0)
+        d.rectangle(P((28.6, 7), (30, 34.5)), fill=0)
+        d.rectangle(P((14.4, 33.2), (30, 34.5)), fill=0)
+        # A plate on the cover
+        d.rounded_rectangle(P((17, 10), (26, 17)), radius=1 * S, outline=0, width=int(1.3 * S))
     elif name == "options":     # gear
         cx, cy = 20 * S, 20 * S
         pts = []
@@ -464,12 +467,9 @@ def gen_menu_icon(name):
         line([(17, 7), (13, 3)], 1.4)
         line([(23, 7), (27, 3)], 1.4)
         d.line(P((20, 14), (20, 33)), fill=0, width=int(1.2 * S))
-    elif name == "main":        # moon over a gate: the main menu
-        d.ellipse(P((8, 4), (24, 20)), fill=255)
-        d.ellipse(P((13, 2), (28, 17)), fill=0)
-        d.rectangle(P((8, 22), (32, 36)), fill=255)
-        d.pieslice(P((14, 24), (26, 38)), 180, 360, fill=0)
-        d.rectangle(P((14, 31), (26, 36)), fill=0)
+    elif name == "main":        # three bars: the Main Menu
+        for yy in (11, 20, 29):
+            d.rounded_rectangle(P((7, yy - 2.2), (33, yy + 2.2)), radius=2.2 * S, fill=255)
 
     a = np.asarray(img.resize((40, 40), Image.BOX), dtype=np.float64) / 255.0
     # A soft dark halo so the glyph reads on stone

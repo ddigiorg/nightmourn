@@ -4,7 +4,7 @@
 // Nightmourn's UI art: one sprite sheet packed at load from the "sprite"
 // configs (data/base/configs/gui.json, PNGs in data/base/graphics/gui/
 // made by tools/gen_ui.py: placeholder art until hand-drawn sprites replace
-// it). Pieces are looked up by config name ("eagle", "menu/skills",
+// it). Pieces are looked up by config name ("eagle", "menu/character",
 // "item/wood", ...); a nine-slice's border comes from its config. Painted
 // at 2x, so every image is drawn at density 2: a 160x120 px eagle is 80x60
 // UI points.
@@ -34,8 +34,7 @@ class Configs;
 // The top-level menus (GameMenus). The action bar has buttons for some of
 // them (ActionBar::BUTTONS)
 enum class Menu : std::uint8_t {
-    Skills,
-    Equipment,
+    Character, // skills and equipment
     Inventory,
     Settlement, // the settlement's inventory
     Items,     // codex of every item type discovered, with recipes
@@ -43,7 +42,7 @@ enum class Menu : std::uint8_t {
     Debug,
     Main,
 };
-inline constexpr std::size_t MENU_COUNT = 8;
+inline constexpr std::size_t MENU_COUNT = 7;
 
 struct UISheet {
     static constexpr float DENSITY = 2.0f; // sheet pixels per UI point
@@ -51,7 +50,7 @@ struct UISheet {
     // Sprite names of the menu glyphs, by Menu. Item icons come from the
     // item configs' "icon" instead.
     static constexpr std::array<const char*, MENU_COUNT> MENU_ICON_NAMES = {
-        "menu/skills", "menu/equipment", "menu/inventory", "menu/settlement", "menu/items",
+        "menu/character", "menu/inventory", "menu/settlement", "menu/items",
         "menu/options", "menu/debug", "menu/main",
     };
 

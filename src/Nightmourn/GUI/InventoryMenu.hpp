@@ -22,13 +22,13 @@
 //   stack of the same item (as much as fits), or swapped with another item.
 // - Drag it onto a slot of the `other` menu (the one open beside it): the
 //   same, between the two inventories (Inventory::move).
-// - Ctrl + click it to send the whole stack to the other inventory, Ctrl +
+// - Shift + click it to send the whole stack to the other inventory, Shift +
 //   right click to send half (Inventory::transfer). Whatever doesn't fit
 //   stays.
 // - Click it to pick it: take_picked() hands the game its item, e.g. to
 //   start placing the building it is (Factorio's picking a stack up).
 // - Drag it onto the action bar to make that slot a shortcut to the item
-//   (ActionBar::DRAG_TYPE), or Shift + click it to put it in the bar's
+//   (ActionBar::DRAG_TYPE), or Ctrl + click it to put it in the bar's
 //   first empty slot. Only from a menu with `shortcuts`: the action bar is
 //   for the player's own items.
 //
@@ -70,8 +70,8 @@ class Inventory;
 // Modifier keys held this frame, for an InventoryMenu's clicks (GameMenus
 // reads them from input)
 struct InventoryModifiers {
-    bool move     = false; // Ctrl: to the other inventory
-    bool shortcut = false; // Shift: onto the action bar
+    bool move     = false; // Shift: to the other inventory
+    bool shortcut = false; // Ctrl: onto the action bar
 };
 
 class InventoryMenu {
@@ -136,7 +136,7 @@ public:
 
     const Config& config() const { return config_; }
 
-    // Where Shift + click puts shortcuts (a menu with `shortcuts` only).
+    // Where Ctrl + click puts shortcuts (a menu with `shortcuts` only).
     // Must outlive the menu, or be cleared first.
     void set_action_bar(ActionBar* bar) { action_bar_ = bar; }
 

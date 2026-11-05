@@ -124,7 +124,7 @@ static void test_shipped_data() {
     }
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
     for (const char* sprite : { "eagle", "plate", "slot", "rim", "button", "divider", "fill",
-                                "menu/skills", "menu/main" }) {
+                                "menu/character", "menu/main" }) {
         CHECK(p.find_sprite(sprite) != nullptr);
     }
     CHECK(p.find_sprite("plate")->border == glm::vec4(8.0f));
