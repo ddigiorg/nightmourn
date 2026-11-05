@@ -100,6 +100,17 @@ std::vector<std::size_t> ActionBar::take_used() {
     return used;
 }
 
+bool ActionBar::add_shortcut(ItemID item) {
+    for (const auto& s : slots_)
+        if (s == item) return true;
+    for (auto& s : slots_) {
+        if (s) continue;
+        s = item;
+        return true;
+    }
+    return false;
+}
+
 void ActionBar::use_(std::size_t i) {
     flash_[i] = FLASH_FRAMES;
     if (slots_[i]) used_.push_back(i);

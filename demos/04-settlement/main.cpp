@@ -14,12 +14,14 @@
 //   doesn't, with the reason by the cursor. Left click places it and spends
 //   one of its item and its wood (buildings.json "cost": a wall or torch 1,
 //   a gate 2, a house 4, a crafter 9, a barracks 1), from the settlement's
-//   inventory first while the hero is in its build area, then the hero's;
-//   hold left click to paint a wall. Q (or the slot again) stops, Factorio's
-//   clearing the cursor: the item never left the inventory.
-// - Right click a building to take it down: its item and wood come back
-//   (the item to the hero, the wood to the settlement first), if there's
-//   room. A banner only goes once it stands alone.
+//   inventory first, then the hero's; hold left click to paint a wall. Q
+//   (or the slot again) stops, Factorio's clearing the cursor: the item
+//   never left the inventory. Only the banner can go down with the hero
+//   outside the build area, and nothing further than the hero's
+//   build_reach (10 tiles, characters.json) from the hero.
+// - Right click a building within reach to take it down: its item and wood
+//   come back (the item to the hero, the wood to the settlement first), if
+//   there's room. A banner only goes once it stands alone.
 // - Only a banner goes down first. It founds the settlement (World::
 //   place_building) and its build area, a square of tiles around it outlined
 //   in the player's blue; while placing anything else the area is filled, and
@@ -39,9 +41,11 @@
 //   the Settlement Inventory (V, or left click the banner), 10 x 4 each and
 //   scrolling once they grow. The settlement's only opens while the hero is
 //   in its build area; walking out closes it, and walking back in opens it
-//   again if it was open. With both open, drag stacks between them, click
-//   one to send the whole stack across, or right click to send half. F
-//   sends everything chopped. Only the player's items go on the action bar.
+//   again if it was open. With both open, drag stacks between them, Ctrl +
+//   click one to send the whole stack across, or Ctrl + right click to send
+//   half. Shift + click a stack of yours to put it on the action bar (only
+//   the player's items go there). Rows past the fourth scroll, a row at a
+//   time, by wheel or scrollbar. F sends everything chopped.
 // - Enemies can't spawn in the build area or spawn_margin tiles around it.
 //   P scatters 900 would-be spawn points over the map, red where a spawn is
 //   allowed and none inside the no-spawn area (also outlined, dashed, with
@@ -298,6 +302,8 @@ public:
         spawn_hero_(world, HERO_SPAWN);
         snap_camera_ = true;
 
+        player_menu_->set_action_bar(action_bar_.get());
+
         engine.logger().info("Settlement Demo");
         engine.logger().info("1-7: banner, wall, gate, torch, house, crafter, barracks. Left click: place (hold for walls), chop, or hit a raider. "
                              "Q: stop placing. Right click: take a building down. B / V: player / settlement inventory. "
@@ -332,7 +338,9 @@ public:
         // Buildings are paid for out of the settlement's stock first
         Inventory* const pay_from[] = { stock ? &stock->inventory : nullptr, &player_.inventory() };
         const std::optional<glm::vec2> cursor = cursor_world_(engine);
-        placer_.update(world, surface_id_, player_.inventory(), pay_from, faction_bit(PLAYER_FACTION), cursor, input);
+        const std::optional<BuildPlacer::Builder> builder = builder_(world);
+        placer_.update(world, surface_id_, player_.inventory(), pay_from, builder ? &*builder : nullptr,
+                       faction_bit(PLAYER_FACTION), cursor, input);
 
         // Clicking the banner opens the settlement's inventory
         if (!placer_.active() && input.was_pressed(Action::Mine)) {
@@ -507,6 +515,18 @@ private:
         return s;
     }
 
+    // The hero as the one building: where they stand, how far they reach,
+    // and whether they're in the settlement's area. None while they're down.
+    std::optional<BuildPlacer::Builder> builder_(Nightmourn::World& world) const {
+        const Character* hero = player_.character(world);
+        if (!hero) return std::nullopt;
+        return BuildPlacer::Builder{
+            .position      = hero->position.to_vec2(),
+            .reach         = hero->config().build_reach,
+            .in_settlement = settlement_in_reach_(world) != nullptr,
+        };
+    }
+
     // F: hand the settlement everything chopped, if the hero is in its area
     void deposit_(Nightmourn::World& world) {
         Settlement* s = settlement_in_reach_(world);
@@ -526,6 +546,11 @@ private:
     void remove_building_(Nightmourn::World& world, Nezumi::Engine& engine) {
         const Building* b = hovered_building_(engine);
         if (!b || !has_any(b->factions_mask, faction_bit(PLAYER_FACTION))) return;
+        const std::optional<BuildPlacer::Builder> builder = builder_(world);
+        if (!builder || BuildPlacer::distance_to(builder->position, b->footprint()) > builder->reach) {
+            engine.logger().info("Too far away to take it down.");
+            return;
+        }
         if (b->is(BuildingType::Banner)) {
             const Settlement* s = world.get_settlement(b->settlement_id);
             if (s && s->building_count() > 1) {
@@ -733,12 +758,21 @@ private:
 
         std::string why(placement_message(placer_.result()));
         if (is_ok(placer_.result())) {
-            const ItemAmount       need = *placer_.shortfall();
-            const std::string_view item = item_name(need.item);
-            char line[64];
-            std::snprintf(line, sizeof line, "needs %u more %.*s", static_cast<unsigned>(need.count),
-                          static_cast<int>(item.size()), item.data());
-            why = line;
+            switch (placer_.blocker()) {
+                case BuildPlacer::Blocker::None:            break;
+                case BuildPlacer::Blocker::NoBuilder:       why = "no one to build it"; break;
+                case BuildPlacer::Blocker::OutOfReach:      why = "out of reach"; break;
+                case BuildPlacer::Blocker::NotInSettlement: why = "stand in the settlement to build"; break;
+                case BuildPlacer::Blocker::Cost: {
+                    const ItemAmount       need = *placer_.shortfall();
+                    const std::string_view item = item_name(need.item);
+                    char line[64];
+                    std::snprintf(line, sizeof line, "needs %u more %.*s", static_cast<unsigned>(need.count),
+                                  static_cast<int>(item.size()), item.data());
+                    why = line;
+                    break;
+                }
+            }
         }
         r->draw_text(
             why, at, *font_,

@@ -109,6 +109,8 @@ private:
     std::array<bool, MENU_COUNT> open_  = {}; // all but Debug, which DebugMenu keeps
     DebugMenu                    debug_ = {};
     bool                         quit_  = false;
+    bool                         move_mod_     = false; // Ctrl held (InventoryMenu)
+    bool                         shortcut_mod_ = false; // Shift held
 
     bool settlement_wanted_    = false; // opened by the player (shown while available)
     bool settlement_available_ = false;

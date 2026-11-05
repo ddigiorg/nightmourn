@@ -87,6 +87,10 @@ public:
     std::optional<ItemID> slot(std::size_t i) const { return slots_[i]; }
     void set_slot(std::size_t i, std::optional<ItemID> item) { slots_[i] = item; }
 
+    // Puts `item` in the first empty slot, unless a slot already has it.
+    // False if it's on the bar nowhere afterwards (no empty slot).
+    bool add_shortcut(ItemID item);
+
     // -------------------------------------------------------------------------
     // Tick
     // -------------------------------------------------------------------------

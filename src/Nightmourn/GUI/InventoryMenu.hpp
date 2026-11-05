@@ -22,11 +22,17 @@
 //   stack of the same item (as much as fits), or swapped with another item.
 // - Drag it onto a slot of the `other` menu (the one open beside it): the
 //   same, between the two inventories (Inventory::move).
-// - Click it to send the whole stack to the other inventory, right click to
-//   send half (Inventory::transfer). Whatever doesn't fit stays.
+// - Ctrl + click it to send the whole stack to the other inventory, Ctrl +
+//   right click to send half (Inventory::transfer). Whatever doesn't fit
+//   stays. (A plain click will pick the stack up onto the cursor, once
+//   there is one.)
 // - Drag it onto the action bar to make that slot a shortcut to the item
-//   (ActionBar::DRAG_TYPE), only from a menu with `shortcuts`: the action
-//   bar is for the player's own items.
+//   (ActionBar::DRAG_TYPE), or Shift + click it to put it in the bar's
+//   first empty slot. Only from a menu with `shortcuts`: the action bar is
+//   for the player's own items.
+//
+// More rows than fit scroll a whole row at a time, with the mouse wheel or
+// by dragging the scrollbar.
 //
 // A stack dropped anywhere else stays where it was, until items can be
 // dropped on the ground.
@@ -51,7 +57,15 @@ namespace Nezumi::UI {
 
 namespace Nightmourn {
 
+class ActionBar;
 class Inventory;
+
+// Modifier keys held this frame, for an InventoryMenu's clicks (GameMenus
+// reads them from input)
+struct InventoryModifiers {
+    bool move     = false; // Ctrl: to the other inventory
+    bool shortcut = false; // Shift: onto the action bar
+};
 
 class InventoryMenu {
 public:
@@ -94,6 +108,12 @@ public:
 
     const Config& config() const { return config_; }
 
+    // Where Shift + click puts shortcuts (a menu with `shortcuts` only).
+    // Must outlive the menu, or be cleared first.
+    void set_action_bar(ActionBar* bar) { action_bar_ = bar; }
+
+    using Modifiers = InventoryModifiers;
+
     // -------------------------------------------------------------------------
     // Draw
     //
@@ -103,12 +123,14 @@ public:
     // it isn't part of the World's sim.
     // -------------------------------------------------------------------------
 
-    void draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* other = nullptr);
+    void draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* other = nullptr,
+              Modifiers mods = {});
 
 private:
     const UISheet* sheet_     = nullptr;
     Inventory*     inventory_ = nullptr;
     Config         config_    = {};
+    ActionBar*     action_bar_ = nullptr;
     std::uint32_t  grid_id_   = 0; // its slot grid's UI id, once drawn
 
     // Rebuilt every frame, kept to allocate nothing after the first

@@ -30,7 +30,7 @@ InventoryMenu::InventoryMenu(const UISheet& sheet, Inventory* inventory, const C
     config_.visible_rows = std::max<std::size_t>(config_.visible_rows, 1);
 }
 
-void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* other) {
+void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* other, Modifiers mods) {
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
@@ -60,6 +60,7 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
         .size     = size,
         .min_size = size,
         .flags    = PanelFlags::Movable,
+        .scroll_step = SLOT_SIZE.y + SLOT_GAP, // a whole row at a time
     };
     if (!ui.begin_panel(config_.title, &open, config)) return;
 
@@ -96,8 +97,9 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
             Inventory::move(*other->inventory_, from, inv, to);
     }
 
-    // Click: the whole stack to the other inventory; right click: half
-    if (other) {
+    // Ctrl + click: the whole stack to the other inventory; Ctrl + right
+    // click: half
+    if (other && mods.move) {
         if (r.clicked >= 0)
             Inventory::transfer(inv, static_cast<std::size_t>(r.clicked), *other->inventory_);
         if (r.right_clicked >= 0) {
@@ -105,6 +107,12 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
                 Inventory::transfer(inv, static_cast<std::size_t>(r.right_clicked), *other->inventory_,
                                     (stack->count + 1u) / 2u);
         }
+    }
+
+    // Shift + click: onto the action bar
+    if (mods.shortcut && !mods.move && r.clicked >= 0 && config_.shortcuts && action_bar_) {
+        if (const auto& stack = inv.slot(static_cast<std::size_t>(r.clicked)))
+            action_bar_->add_shortcut(stack->item);
     }
 
     // "Wood (37)"

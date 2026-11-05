@@ -32,6 +32,10 @@ struct CharacterConfig {
     uint16_t mine_amount   = 1;
     float    mine_reach    = 2.0f;
 
+    // Building: how far from the character's feet it can put a building
+    // down or take one down, to the nearest edge of its footprint (tiles)
+    float build_reach = 10.0f;
+
     // Attacking: a blow every `attack_interval` ticks at most, dealing
     // `attack_damage` to an enemy whose collision box (or feet, for a
     // figure) is within `attack_reach` tiles. Lands at once, like mining.

@@ -108,6 +108,7 @@ static void test_shipped_data() {
         CHECK(p.tree("oak").resource.collision_bounds.min == p.tree("oak").resource.collision_bounds.max);
         CHECK(p.raid("night").config.unit == &p.unit("raider").config && p.raid("night").config.max_alive >= 1);
         CHECK(p.character("hero").config.attack_damage > 0);
+        CHECK(p.character("hero").config.build_reach == 10.0f);
         CHECK(p.building("barracks").config.footprint == TileCoord({ 3, 3 }));
         CHECK(p.building_for_item(p.find_item("barracks")->id) == p.find_building("barracks"));
 

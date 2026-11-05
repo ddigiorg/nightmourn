@@ -87,6 +87,8 @@ void GameMenus::handle_input(const Nezumi::InputMap& input) {
         else                    toggle(menu);
     }
     if (input.was_pressed(Action::ToggleSettlementMenu)) toggle_settlement();
+    move_mod_     = input.is_held(Action::InventoryMoveMod);
+    shortcut_mod_ = input.is_held(Action::InventoryShortcutMod);
 }
 
 // -----------------------------------------------------------------------------
@@ -103,12 +105,13 @@ void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, InventoryMenu* 
     // are open
     const bool player_open = is_open(Menu::Inventory) && inventory;
     const bool stock_open  = settlement_open() && settlement && settlement->inventory();
+    const InventoryMenu::Modifiers mods = { .move = move_mod_, .shortcut = shortcut_mod_ };
     if (is_open(Menu::Inventory)) {
         if (inventory) inventory->draw(ui, open_[static_cast<std::size_t>(Menu::Inventory)],
-                                       stock_open ? settlement : nullptr);
+                                       stock_open ? settlement : nullptr, mods);
         else           draw_stub_(ui, Menu::Inventory, "What your hero carries.");
     }
-    if (stock_open) settlement->draw(ui, settlement_wanted_, player_open ? inventory : nullptr);
+    if (stock_open) settlement->draw(ui, settlement_wanted_, player_open ? inventory : nullptr, mods);
 
     if (is_open(Menu::Items))     draw_stub_(ui, Menu::Items,     "Every item you have discovered, and how to make it.");
     if (is_open(Menu::Options))   draw_stub_(ui, Menu::Options,   "Video, sound and key bindings.");

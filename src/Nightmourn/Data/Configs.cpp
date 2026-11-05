@@ -274,6 +274,7 @@ CharacterPrototype read_character(Fields& f, const std::string& name) {
     f.get("mine_interval", c.mine_interval);
     f.get("mine_amount",   c.mine_amount);
     f.get("mine_reach",    c.mine_reach);
+    f.get("build_reach",   c.build_reach);
     f.get("attack_interval", c.attack_interval);
     f.get("attack_damage",   c.attack_damage);
     f.get("attack_reach",    c.attack_reach);

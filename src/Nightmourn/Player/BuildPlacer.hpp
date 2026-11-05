@@ -13,6 +13,11 @@
 // item stays in the inventory until a building is actually put down, so
 // there's nothing to give back.
 //
+// Someone has to do the building: the Builder (the hero) must stand within
+// its reach of the footprint and, for anything but a banner, inside its
+// settlement's build area. The ghost is red with the reason otherwise
+// (blocker()).
+//
 //   Inventory* pay_from[] = { settlement_in_reach, &player.inventory() };
 //   on_tick:  placer_.update(world, surface, player.inventory(), pay_from, factions, cursor, input);
 //   on_draw:  placer_.draw(ctx, world_drawer.buildings(), surface);
@@ -33,8 +38,10 @@
 #include "Nightmourn/Entity/EntityFactionsMask.hpp"
 #include "Nightmourn/Entity/EntityID.hpp"
 #include "Nightmourn/Geometry/TileCoord.hpp"
+#include "Nightmourn/Geometry/TileRect.hpp"
 #include "Nightmourn/Item/ItemAmount.hpp"
 #include "Nightmourn/Surface/SurfaceID.hpp"
+#include <cstdint>     // uint8_t
 #include <glm/glm.hpp> // vec2, vec4
 #include <optional>    // optional
 #include <span>        // span
@@ -67,6 +74,22 @@ public:
 
     explicit BuildPlacer(const Config& config) : config_(config) {}
 
+    // Who is building, this update
+    struct Builder {
+        glm::vec2 position      = {};    // world, the character's feet
+        float     reach         = 0.0f;  // tiles, to the footprint's nearest edge
+        bool      in_settlement = false; // stands in its faction's build area
+    };
+
+    // Why a building that fits the ground still can't go down
+    enum class Blocker : std::uint8_t {
+        None,
+        NoBuilder,     // no one to build it (the hero is down)
+        OutOfReach,    // further than the builder's reach
+        NotInSettlement, // the builder is outside the build area
+        Cost,          // the cost can't be paid (shortfall())
+    };
+
     // -------------------------------------------------------------------------
     // Selection
     // -------------------------------------------------------------------------
@@ -83,13 +106,14 @@ public:
     // Update (between ticks)
     //
     // `cursor` is the world position under the mouse (none while the UI has
-    // it). Places through World::place_building, spending the building's item
-    // from `items` and its cost from `pay_from` (in order; null entries are
+    // it), `builder` who builds (null: no one, nothing goes down). Places
+    // through World::place_building, spending the building's item from
+    // `items` and its cost from `pay_from` (in order; null entries are
     // skipped); stops when there's no item left.
     // -------------------------------------------------------------------------
 
     void update(World& world, SurfaceID surface, Inventory& items,
-                std::span<Inventory* const> pay_from,
+                std::span<Inventory* const> pay_from, const Builder* builder,
                 EntityFactionsMask factions, std::optional<glm::vec2> cursor,
                 const Nezumi::InputMap& input);
 
@@ -101,8 +125,15 @@ public:
     // What the cost is short of (e.g. 3 wood), none if it can be paid
     std::optional<ItemAmount> shortfall() const { return shortfall_; }
 
-    // It fits and it's paid for: the ghost is green
-    bool can_place() const { return is_ok(result_) && !shortfall_; }
+    // What else stops it, checked in this order
+    Blocker blocker() const { return blocker_; }
+
+    // It fits, someone can build it there, and it's paid for: the ghost is
+    // green
+    bool can_place() const { return is_ok(result_) && blocker_ == Blocker::None; }
+
+    // Tiles from `p` to the nearest point of `rect`'s tiles (0 inside)
+    static float distance_to(glm::vec2 p, const TileRect& rect);
 
     // Bottom-left footprint tile of `building` centered on world `cursor`
     static TileCoord origin_at(const BuildingConfig& building, glm::vec2 cursor);
@@ -121,6 +152,9 @@ private:
     PlacementResult       result_     = PlacementResult::Ok;
     bool                  has_cursor_ = false;
     std::optional<ItemAmount> shortfall_ = {};
+    Blocker               blocker_    = Blocker::None;
+
+    Blocker blocker_at_(TileCoord at, const Builder* builder, std::span<Inventory* const> pay_from) const;
 
     // The last tile a held place action put a wall on, so painting places
     // once per tile
