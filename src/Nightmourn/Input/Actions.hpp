@@ -26,8 +26,8 @@ namespace Action {
 
     // Menus (see GUI/GameMenus.hpp)
     inline constexpr Nezumi::ActionID ToggleDebugMenu     = 4;
-    inline constexpr Nezumi::ActionID ToggleSkillsMenu    = 5;
-    inline constexpr Nezumi::ActionID ToggleEquipmentMenu = 6;
+    inline constexpr Nezumi::ActionID ToggleCharacterMenu = 5; // skills and equipment
+    // 6: free (was the equipment menu, now part of the character menu)
     inline constexpr Nezumi::ActionID ToggleInventoryMenu = 7;
     inline constexpr Nezumi::ActionID ToggleItemsMenu     = 8;
     inline constexpr Nezumi::ActionID ToggleOptionsMenu   = 9;
@@ -39,8 +39,8 @@ namespace Action {
     // The settlement's inventory (GameMenus: only inside its build area)
     inline constexpr Nezumi::ActionID ToggleSettlementMenu = 12;
 
-    // Held while clicking an inventory stack: Ctrl sends it to the other
-    // inventory open beside it, Shift puts it on the action bar
+    // Held while clicking an inventory stack: Shift sends it to the other
+    // inventory open beside it, Ctrl puts it on the action bar
     inline constexpr Nezumi::ActionID InventoryMoveMod     = 13;
     inline constexpr Nezumi::ActionID InventoryShortcutMod = 14;
 
@@ -56,10 +56,10 @@ namespace Action {
 
 // Bind every action to its default keys: W/A/S/D for movement, the left
 // mouse button for mining, 1-9 and 0 for
-// the first ten action bar slots, K / C / B / I / O for the skill,
-// equipment, inventory, items and options menus, V for the settlement's
-// inventory, Ctrl and Shift (either side) as the inventory click modifiers,
-// Escape for the main menu,
+// the first ten action bar slots, C / B / I / O for the character,
+// inventory, items and options menus, V for the settlement's inventory,
+// Shift and Ctrl (either side) as the inventory click modifiers, Escape for
+// the Main Menu,
 // and the tilde key (the one left of 1, whatever the layout prints on it)
 // for the debug menu
 void bind_default_actions(Nezumi::InputMap& input);

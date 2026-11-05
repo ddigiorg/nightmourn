@@ -2,9 +2,9 @@
 // GUI/GameMenus.hpp
 //
 // The player's top-level menus, opened from the action bar's buttons or
-// their hotkeys: skills, equipment, the player's inventory, the
+// their hotkeys: the character (skills and equipment), the player's inventory, the
 // settlement's inventory, items (every item in the game, and crafting),
-// options, debug and the main menu. Options and debug have no action bar
+// options, debug and the Main Menu. Options and debug have no action bar
 // button: the main menu opens options, and the tilde key the debug menu.
 // The debug menu, the main menu and (given their panels) the inventories
 // and items do something; the others open an empty panel saying what they
@@ -103,8 +103,8 @@ private:
     std::array<bool, MENU_COUNT> open_  = {}; // all but Debug, which DebugMenu keeps
     DebugMenu                    debug_ = {};
     bool                         quit_  = false;
-    bool                         move_mod_     = false; // Ctrl held (InventoryMenu)
-    bool                         shortcut_mod_ = false; // Shift held
+    bool                         move_mod_     = false; // Shift held (InventoryMenu)
+    bool                         shortcut_mod_ = false; // Ctrl held
 };
 
 } // namespace Nightmourn

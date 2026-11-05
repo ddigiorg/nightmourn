@@ -17,22 +17,20 @@ using Nezumi::UI::PanelFlags;
 
 std::string_view menu_title(Menu menu) {
     switch (menu) {
-        case Menu::Skills:    return "Skills";
-        case Menu::Equipment: return "Equipment";
+        case Menu::Character: return "Character";
         case Menu::Inventory: return "Player Inventory";
         case Menu::Settlement: return "Settlement Inventory";
         case Menu::Items:     return "Items";
         case Menu::Options:   return "Options";
         case Menu::Debug:     return "Debug options";
-        case Menu::Main:      return "Main menu";
+        case Menu::Main:      return "Main Menu";
     }
     return "Menu";
 }
 
 Nezumi::ActionID menu_action(Menu menu) {
     switch (menu) {
-        case Menu::Skills:    return Action::ToggleSkillsMenu;
-        case Menu::Equipment: return Action::ToggleEquipmentMenu;
+        case Menu::Character: return Action::ToggleCharacterMenu;
         case Menu::Inventory: return Action::ToggleInventoryMenu;
         case Menu::Settlement: return Action::ToggleSettlementMenu;
         case Menu::Items:     return Action::ToggleItemsMenu;
@@ -92,8 +90,7 @@ void GameMenus::handle_input(const Nezumi::InputMap& input) {
 // -----------------------------------------------------------------------------
 
 void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, const GameMenuPanels& panels) {
-    if (is_open(Menu::Skills))    draw_stub_(ui, Menu::Skills,    "Skills you have learned, and the ones still to learn.");
-    if (is_open(Menu::Equipment)) draw_stub_(ui, Menu::Equipment, "What your hero wears and wields.");
+    if (is_open(Menu::Character)) draw_stub_(ui, Menu::Character, "Your hero's skills, and what they wear and wield.");
 
     // The two inventories, each the other's place to send stacks while both
     // are open and in reach

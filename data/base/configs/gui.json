@@ -40,13 +40,8 @@
     },
     {
         "type": "sprite",
-        "name": "menu/skills",
-        "filename": "__base__/graphics/gui/menu/skills.png"
-    },
-    {
-        "type": "sprite",
-        "name": "menu/equipment",
-        "filename": "__base__/graphics/gui/menu/equipment.png"
+        "name": "menu/character",
+        "filename": "__base__/graphics/gui/menu/character.png"
     },
     {
         "type": "sprite",

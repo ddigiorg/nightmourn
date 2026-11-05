@@ -104,7 +104,7 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
             Inventory::move(*other->inventory_, from, inv, to);
     }
 
-    // Ctrl + click: the whole stack to the other inventory; Ctrl + right
+    // Shift + click: the whole stack to the other inventory; Shift + right
     // click: half
     if (other && mods.move) {
         if (r.clicked >= 0)
@@ -121,7 +121,7 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
         if (const auto& stack = inv.slot(static_cast<std::size_t>(r.clicked))) picked_ = stack->item;
     }
 
-    // Shift + click: onto the action bar
+    // Ctrl + click: onto the action bar
     if (mods.shortcut && !mods.move && r.clicked >= 0 && config_.shortcuts && action_bar_) {
         if (const auto& stack = inv.slot(static_cast<std::size_t>(r.clicked)))
             action_bar_->add_shortcut(stack->item);

@@ -105,7 +105,7 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
 //  Crafted from 4 wood
 //  Builds a house, 2 x 2
 //  Stacks to 20
-//  Click: craft 1   Right click: craft 5   Shift + click: action bar"
+//  Click: craft 1   Right click: craft 5   Ctrl + click: action bar"
 void ItemsMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item) {
     char line[128];
     tip_ = capitalized(item.name);
@@ -134,8 +134,8 @@ void ItemsMenu::tooltip_(Nezumi::UI::Context& ui, const ItemPrototype& item) {
     tip_ += line;
 
 
-    tip_ += item.recipe.empty() ? "\nShift + click: action bar"
-                                : "\nClick: craft 1   Right click: craft 5   Shift + click: action bar";
+    tip_ += item.recipe.empty() ? "\nCtrl + click: action bar"
+                                : "\nClick: craft 1   Right click: craft 5   Ctrl + click: action bar";
     ui.tooltip(tip_);
 }
 

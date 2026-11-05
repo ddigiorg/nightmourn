@@ -36,7 +36,7 @@ namespace {
     // its ends; the slab wastes no room around what it holds
     constexpr vec2  EAGLE_SIZE    = { 80.0f, 60.0f }; // the swept-back wing takes the outer 10
     constexpr float EAGLE_OVERLAP = 6.0f;               // over each end of the slab
-    constexpr vec2  PLATE_SIZE    = { 575.0f, 50.0f };
+    constexpr vec2  PLATE_SIZE    = { 546.0f, 50.0f };
     constexpr float PLATE_X       = EAGLE_SIZE.x - EAGLE_OVERLAP;
     constexpr float PLATE_Y       = EAGLE_SIZE.y - PLATE_SIZE.y;
     constexpr vec2  BAR_SIZE      = { PLATE_SIZE.x + 2.0f * PLATE_X, EAGLE_SIZE.y };

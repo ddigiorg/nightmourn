@@ -4,7 +4,7 @@
 // The Items menu (I): every item in the game in one grid, A to Z, and where
 // items are crafted, like a recipe book. Hover an item for what it is and
 // what it's made from; click one that has a recipe to craft it (right click:
-// five), Shift + click to put it on the action bar.
+// five), Ctrl + click to put it on the action bar.
 //
 //   [banner][barracks][crafter][food][gate][gold][house][stone][torch][wall]
 //   [wood  ]
@@ -61,7 +61,7 @@ public:
     // on it first
     void set_settlement(Inventory* stock) { settlement_ = stock; }
 
-    // Where Shift + click puts shortcuts; must outlive the menu
+    // Where Ctrl + click puts shortcuts; must outlive the menu
     void set_action_bar(ActionBar* bar) { action_bar_ = bar; }
 
     // -------------------------------------------------------------------------
