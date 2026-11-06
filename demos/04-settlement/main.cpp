@@ -18,14 +18,17 @@
 //   only inside the settlement, and wooden arrows only in a settlement with
 //   a workshop. Walking out cancels and refunds those. With no room for
 //   what's made, the craft waits, red, until there is.
-// - Workshops also craft for the settlement on their own, from its
-//   inventory into it. Its rules (K, or left click a workshop): on Make,
-//   pick an item and set how many to keep in store; on Reserves, how much
-//   of an ingredient never to use. Each workshop makes one thing at a time,
-//   taking the rules in turn. An icon over a working workshop shows what
-//   it's making, shaded for the time left, red when the stores have no room
-//   for it; hold Alt to see the idle ones too. Taking a workshop down
-//   refunds its job's wood to the settlement.
+// - The banner and workshops also craft for the settlement on their own,
+//   from its inventory into it: the banner torches and buildings, workshops
+//   arrows too. What they make is set on the Settlement menu's Crafting tab
+//   (left click a workshop, or V and the tab), a row per item: drag the
+//   slider's two grabs or type the numbers. Min: never used as an
+//   ingredient below it. Max: made while there are fewer (0: not made).
+//   Priority: 0 to 255, higher first. Each machine makes one thing at a
+//   time, the highest priority it can afford, taking equals in turn. An
+//   icon over a working one shows what it's making, shaded for the time
+//   left, red when the stores have no room for it; hold Alt to see the idle
+//   ones too. Taking one down refunds its job's wood to the settlement.
 // - Pick a building to place with its action bar slot (key or click), or by
 //   clicking its stack in either inventory, and its ghost follows the
 //   cursor, snapped to the tile grid: green where it fits, red where it
@@ -54,11 +57,12 @@
 //   up (1x, 20x, paused), N jumps to midnight and M to noon. Torches light
 //   the base at night, and the hero carries a small lantern.
 // - Two inventories, the same InventoryMenu: the Player Inventory (B) and
-//   the Settlement Inventory (V, or left click the banner), each with an
-//   action bar button, 10 x 4 and scrolling once they grow. The
-//   settlement's opens and closes when the player says; while the hero is
-//   outside the build area it says its stores are out of reach. With both
-//   open and in reach, drag stacks between them, Ctrl +
+//   the Settlement menu's Inventory tab (V, or left click the banner), each
+//   with an action bar button, 10 wide and scrolling (the settlement's 80
+//   slots, 6 rows in view). The settlement's opens and closes when the
+//   player says; while the hero is outside the build area it says its
+//   stores are out of reach. With both open and in reach, drag stacks
+//   between them, Ctrl +
 //   click one to send the whole stack across, or Ctrl + right click to send
 //   half. Shift + click a stack of yours to put it on the action bar (only
 //   the player's items go there). Rows past the fourth scroll, a row at a
@@ -76,7 +80,7 @@
 //
 // Controls: W/A/S/D move, mouse wheel zooms, 1-0 slots, left click place /
 // chop, Q stop placing, right click take a building down, B player
-// inventory, V settlement inventory, K settlement crafting, Alt crafting
+// inventory, V settlement (inventory and crafting tabs), Alt crafting
 // icons, F deposit, H hit, P spawn points, T
 // time speed, N midnight, M noon, tilde (~) debug menu, Escape main menu.
 // =============================================================================
@@ -100,11 +104,11 @@
 #include "Nightmourn/Events/OnEntityMined.hpp"
 #include "Nightmourn/GUI/ActionBar.hpp"
 #include "Nightmourn/GUI/CraftOverlay.hpp"
-#include "Nightmourn/GUI/CraftRulesMenu.hpp"
 #include "Nightmourn/GUI/GameMenus.hpp"
 #include "Nightmourn/GUI/InfoOverlay.hpp"
 #include "Nightmourn/GUI/InventoryMenu.hpp"
 #include "Nightmourn/GUI/ItemsMenu.hpp"
+#include "Nightmourn/GUI/SettlementMenu.hpp"
 #include "Nightmourn/GUI/Theme.hpp"
 #include "Nightmourn/GUI/UISheet.hpp"
 #include "Nightmourn/Input/Actions.hpp"
@@ -304,12 +308,9 @@ public:
         // Side by side, just either side of the screen's center
         player_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory(),
             InventoryMenu::Config{ .title = "Player Inventory", .anchor = { 0.505f, 0.66f }, .pivot = { 0.0f, 0.5f } });
-        settlement_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, nullptr,
-            InventoryMenu::Config{ .title = "Settlement Inventory", .anchor = { 0.495f, 0.66f }, .pivot = { 1.0f, 0.5f },
-                                   .shortcuts = false });
+        settlement_menu_ = std::make_unique<Nightmourn::SettlementMenu>(ui_sheet_, configs_);
         items_menu_ = std::make_unique<Nightmourn::ItemsMenu>(ui_sheet_, configs_);
         items_menu_->set_action_bar(action_bar_.get());
-        rules_menu_    = std::make_unique<Nightmourn::CraftRulesMenu>(ui_sheet_, configs_);
         craft_overlay_ = std::make_unique<Nightmourn::CraftOverlay>(ui_sheet_);
 
         // Lighting replaces the engine's single pass
@@ -334,7 +335,7 @@ public:
 
         engine.logger().info("Settlement Demo");
         engine.logger().info("1: banner. I: items (click to craft). Left click: place (hold for walls), chop, or hit a raider. "
-                             "Q: stop placing. Right click: take a building down. B / V: player / settlement inventory. "
+                             "Q: stop placing. Right click: take a building down. B: player inventory. V: settlement (inventory, crafting). "
                              "F: deposit. H: hit. P: spawn points.");
     }
 
@@ -368,13 +369,13 @@ public:
         placer_.update(world, surface_id_, items_from, builder ? &*builder : nullptr,
                        faction_bit(PLAYER_FACTION), cursor, input);
 
-        // Clicking the banner opens the settlement's inventory, a workshop
-        // its crafting rules
+        // Clicking the banner opens the Settlement on its inventory, a
+        // workshop on its crafting; again, or on the same tab, closes it
         if (!placer_.active() && input.was_pressed(Action::Mine)) {
             const Building* b = hovered_building_(engine);
             if (b && stock && b->settlement_id == stock->id()) {
-                if (b->is(BuildingType::Banner))       menus_.toggle(Menu::Settlement);
-                if (b->config().crafting_categories)  menus_.toggle(Menu::Crafting);
+                if      (b->is(BuildingType::Banner))      open_settlement_(engine, SettlementMenu::InventoryTab);
+                else if (b->config().crafting_categories) open_settlement_(engine, SettlementMenu::CraftingTab);
             }
         }
 
@@ -486,11 +487,10 @@ public:
         const Nightmourn::Inventory& inventory = player_.inventory();
         action_bar_->draw(*engine.ui(), engine.input(), menus_, player_.character(world), &inventory);
         menus_.draw(*engine.ui(), debug_flags_,
-                    { .inventory = player_menu_.get(), .settlement = settlement_menu_.get(), .items = items_menu_.get(),
-                      .rules = rules_menu_.get() });
+                    { .inventory = player_menu_.get(), .settlement = settlement_menu_.get(), .items = items_menu_.get() });
 
         // A building's stack clicked in either inventory picks it to place
-        for (InventoryMenu* m : { player_menu_.get(), settlement_menu_.get() })
+        for (InventoryMenu* m : { player_menu_.get(), &settlement_menu_->inventory() })
             if (const auto item = m->take_picked()) pick_building_(*item, *world_);
     }
 
@@ -507,7 +507,6 @@ public:
         action_bar_.reset();
         player_menu_.reset();
         items_menu_.reset();
-        rules_menu_.reset();
         craft_overlay_.reset();
         settlement_menu_.reset();
         engine.logger().info("Goodbye!");
@@ -549,6 +548,17 @@ private:
         respawn_in_ = RESPAWN_SECONDS;
     }
 
+    // Opens the Settlement menu on `tab`, or closes it if it's already
+    // showing that tab
+    void open_settlement_(Nezumi::Engine& engine, SettlementMenu::Tab tab) {
+        if (menus_.is_open(Menu::Settlement) && settlement_menu_->tab() == tab) {
+            menus_.set_open(Menu::Settlement, false);
+            return;
+        }
+        settlement_menu_->show_tab(*engine.ui(), tab);
+        menus_.set_open(Menu::Settlement, true);
+    }
+
     // The player's settlement if the hero stands in its build area (where
     // its inventory can be reached), else null
     Settlement* settlement_in_reach_(Nightmourn::World& world) const {
@@ -562,13 +572,13 @@ private:
     // note saying why it's not), and returns it
     Settlement* sync_stock_(Nightmourn::World& world) {
         Settlement* stock = settlement_in_reach_(world);
-        settlement_menu_->set_inventory(stock ? &stock->inventory : nullptr);
-        settlement_menu_->set_note(world.settlement_of(faction_bit(PLAYER_FACTION))
+        settlement_menu_->inventory().set_inventory(stock ? &stock->inventory : nullptr);
+        settlement_menu_->inventory().set_note(world.settlement_of(faction_bit(PLAYER_FACTION))
             ? "You're outside the settlement.\nStep back inside its borders\nto reach its stores."
             : "You have no settlement yet.\nPlace your banner to found one.");
         items_menu_->set_crafting(craft_place_(world), &player_.crafting());
         Settlement* home = world.settlement_of(faction_bit(PLAYER_FACTION));
-        rules_menu_->set_site(home ? &home->crafting : nullptr, home ? &home->inventory : nullptr, stock != nullptr);
+        settlement_menu_->set_site(home ? &home->crafting : nullptr, home ? &home->inventory : nullptr, stock != nullptr);
         const Character* hero = player_.character(world);
         action_bar_->set_crafting(&player_.crafting(), hero ? hero->config().craft_speed : 1.0f);
         return stock;
@@ -604,10 +614,11 @@ private:
         }
         for (const CraftCancel& c : action_bar_->take_cancels()) queue.cancel(c.entry, c.count, here);
 
-        // The settlement's rules, set in its menu (only while inside it)
+        // The settlement's limits, set on its Crafting tab (only while
+        // inside it)
         Settlement* stock = settlement_in_reach_(world);
-        for (const CraftRuleChange& c : rules_menu_->take_changes())
-            if (stock) c.apply(stock->crafting);
+        for (const SettlementCraftEdit& e : settlement_menu_->take_edits())
+            if (stock) e.apply(stock->crafting);
 
         const CraftReport r = player_.tick_crafting(world, here);
         if (r.blocked) note_(engine, "Inventory full: the craft waits for room");
@@ -857,7 +868,7 @@ private:
 
         std::snprintf(line, sizeof line, "carrying %u wood%s\n",
                       static_cast<unsigned>(player_.inventory().count(Items::Wood)),
-                      settlement_in_reach_(*world_) ? "   (in the settlement: V opens its inventory)" : "");
+                      settlement_in_reach_(*world_) ? "   (in the settlement: V opens its menu)" : "");
         text += line;
 
         if (placer_.active()) {
@@ -887,7 +898,7 @@ private:
         }
 
         text += "\nI: items (click: craft 1, right: 5, shift: all)  queue icon: cancel  slot or stack: pick a building  click: place (hold: wall)  Q: stop  right click: take down\n"
-                "click a tree: chop  click an enemy: attack  B / V: inventories  F: deposit  P: spawn points  T: time  N: midnight  M: noon\n";
+                "click a tree: chop  click an enemy: attack  B: inventory  V: settlement  F: deposit  P: spawn points  T: time  N: midnight  M: noon\n";
 
         r->draw_text(
             text, { HUD_MARGIN, top }, *font_,
@@ -948,9 +959,8 @@ private:
     Nightmourn::UISheet                        ui_sheet_          = {};
     std::unique_ptr<Nightmourn::ActionBar>     action_bar_        = nullptr;
     std::unique_ptr<Nightmourn::InventoryMenu> player_menu_       = nullptr;
-    std::unique_ptr<Nightmourn::InventoryMenu> settlement_menu_   = nullptr;
+    std::unique_ptr<Nightmourn::SettlementMenu> settlement_menu_  = nullptr;
     std::unique_ptr<Nightmourn::ItemsMenu>     items_menu_        = nullptr;
-    std::unique_ptr<Nightmourn::CraftRulesMenu> rules_menu_       = nullptr;
     std::unique_ptr<Nightmourn::CraftOverlay>  craft_overlay_     = nullptr;
     InfoOverlay                                info_overlay_      = {};
 

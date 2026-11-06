@@ -24,7 +24,8 @@
 // Crafting: unlocked_categories() is what its buildings let the player
 // craft while they stand in it (a workshop: "crafter"), kept up to date as
 // buildings join and leave, so asking costs nothing. Its crafting buildings
-// are also its machines (`crafting`, a CraftSite): they make what its rules
+// are also its machines (`crafting`, a CraftSite; the banner too): they make
+// what its limits (min, max, priority per item, the Settlement menu)
 // ask for out of its inventory, ticked by World in its crafting phase.
 // =============================================================================
 

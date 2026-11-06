@@ -445,11 +445,17 @@ Tuning in `data/base/configs/entity/buildings.json` and `settlements.json`
       run by a crafting phase of `World::tick` (not by ticking buildings),
       with per-item targets and reserve floors; idle machines sleep until
       the stock or rules change, running jobs wait in a finish-tick heap
-      (`Crafting/CraftSite.hpp`). Rules menu (K, `GUI/CraftRulesMenu`),
-      job icons over workshops (`GUI/CraftOverlay`, Alt for all), and
-      deconstructing refunds the job (demo 04).
-- [ ] Rules menu: drag rules to reorder their priority, and a hover
-      tooltip on the job icons.
+      (`Crafting/CraftSite.hpp`). Job icons over workshops
+      (`GUI/CraftOverlay`, Alt for all), and deconstructing refunds the
+      job (demo 04).
+- [x] Settlement menu with tabs (nezumi `PanelConfig::tabs`): Inventory
+      (80 slots, scrolling) and Crafting, a row per item with min, max and
+      priority (two-grab `range_slider` plus fields). Min replaces the
+      reserve floor, max the target, and machines take the highest
+      priority first. The banner crafts hand and settlement recipes
+      (torches, buildings) (`GUI/SettlementMenu`, demo 04).
+- [ ] Settlement menu: more tabs (citizens, stats), a filter / search on
+      the Crafting tab, and a hover tooltip on the job icons.
 - [ ] Discovery: the Items menu shows only discovered items, empty slots
       a placeholder emblem (nezumi `SlotStyle::placeholder`, now in).
 - [x] Live tooltips: nezumi times a tooltip per widget, so the crafting

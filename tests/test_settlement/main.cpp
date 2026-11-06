@@ -441,7 +441,7 @@ static void test_settlement_crafting() {
     const EntityHandle a = w.place_building(f.surface, WORKSHOP, { 2, 2 }, BLUE);
     CHECK(s->crafting.machine_count() == 1 && s->crafting.machine(a));
     s->inventory.add(Items::Wood, 5);
-    s->crafting.set_target(PLANKS, PLANK, 6);
+    s->crafting.set_max(PLANKS, PLANK, 6);
 
     for (int i = 0; i < 40; i++) w.tick();
     CHECK(s->inventory.count(PLANK) == 6 && s->inventory.count(Items::Wood) == 2);

@@ -3,9 +3,9 @@
 // =============================================================================
 
 #include "Nightmourn/GUI/GameMenus.hpp"
-#include "Nightmourn/GUI/CraftRulesMenu.hpp"
 #include "Nightmourn/GUI/InventoryMenu.hpp"
 #include "Nightmourn/GUI/ItemsMenu.hpp"
+#include "Nightmourn/GUI/SettlementMenu.hpp"
 #include "Nightmourn/Input/Actions.hpp"
 #include "Nezumi/Input/InputMap.hpp"
 #include "Nezumi/UI/Context.hpp"
@@ -20,9 +20,8 @@ std::string_view menu_title(Menu menu) {
     switch (menu) {
         case Menu::Character: return "Character";
         case Menu::Inventory: return "Player Inventory";
-        case Menu::Settlement: return "Settlement Inventory";
+        case Menu::Settlement: return SettlementMenu::TITLE;
         case Menu::Items:     return "Items";
-        case Menu::Crafting:  return "Settlement Crafting";
         case Menu::Options:   return "Options";
         case Menu::Debug:     return "Debug options";
         case Menu::Main:      return "Main Menu";
@@ -36,7 +35,6 @@ Nezumi::ActionID menu_action(Menu menu) {
         case Menu::Inventory: return Action::ToggleInventoryMenu;
         case Menu::Settlement: return Action::ToggleSettlementMenu;
         case Menu::Items:     return Action::ToggleItemsMenu;
-        case Menu::Crafting:  return Action::ToggleCraftingMenu;
         case Menu::Options:   return Action::ToggleOptionsMenu;
         case Menu::Debug:     return Action::ToggleDebugMenu;
         case Menu::Main:      return Action::ToggleMainMenu;
@@ -96,11 +94,13 @@ void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, const GameMenuP
     if (is_open(Menu::Character)) draw_stub_(ui, Menu::Character, "Your hero's skills, and what they wear and wield.");
 
     // The two inventories, each the other's place to send stacks while both
-    // are open and in reach
+    // are open and in reach (the settlement's only on its Inventory tab)
     InventoryMenu* player = is_open(Menu::Inventory)  && panels.inventory  && panels.inventory->inventory()
                           ? panels.inventory : nullptr;
-    InventoryMenu* stock  = is_open(Menu::Settlement) && panels.settlement && panels.settlement->inventory()
-                          ? panels.settlement : nullptr;
+    InventoryMenu* stock  = is_open(Menu::Settlement) && panels.settlement
+                         && panels.settlement->tab() == SettlementMenu::InventoryTab
+                         && panels.settlement->inventory().inventory()
+                          ? &panels.settlement->inventory() : nullptr;
     const InventoryMenu::Modifiers mods = { .move = move_mod_, .shortcut = shortcut_mod_ };
     if (is_open(Menu::Inventory)) {
         if (panels.inventory) panels.inventory->draw(ui, open_[static_cast<std::size_t>(Menu::Inventory)], stock, mods);
@@ -108,15 +108,11 @@ void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, const GameMenuP
     }
     if (is_open(Menu::Settlement)) {
         if (panels.settlement) panels.settlement->draw(ui, open_[static_cast<std::size_t>(Menu::Settlement)], player, mods);
-        else                   draw_stub_(ui, Menu::Settlement, "What your settlement keeps in store.");
+        else                   draw_stub_(ui, Menu::Settlement, "What your settlement keeps in store, and makes.");
     }
     if (is_open(Menu::Items)) {
         if (panels.items) panels.items->draw(ui, open_[static_cast<std::size_t>(Menu::Items)], mods);
         else              draw_stub_(ui, Menu::Items, "Every item you have discovered, and how to make it.");
-    }
-    if (is_open(Menu::Crafting)) {
-        if (panels.rules) panels.rules->draw(ui, open_[static_cast<std::size_t>(Menu::Crafting)], mods);
-        else              draw_stub_(ui, Menu::Crafting, "What your settlement's workshops keep in store.");
     }
     if (is_open(Menu::Options))   draw_stub_(ui, Menu::Options,   "Video, sound and key bindings.");
     debug_.draw(ui, flags);

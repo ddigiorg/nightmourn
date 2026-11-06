@@ -154,6 +154,10 @@ public:
     void draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* other = nullptr,
               Modifiers mods = {});
 
+    // The same inside a panel someone else began (a tab of the Settlement
+    // menu): the slots, or the note, at the layout cursor
+    void draw_contents(Nezumi::UI::Context& ui, InventoryMenu* other = nullptr, Modifiers mods = {});
+
 private:
     const UISheet* sheet_     = nullptr;
     Inventory*     inventory_ = nullptr;

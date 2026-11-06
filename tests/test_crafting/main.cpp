@@ -277,7 +277,7 @@ static void test_site_target() {
     // No rules: nothing
     CHECK(site.tick(0, stock).started == 0);
 
-    site.set_target(SWORDS, SWORD, 2);
+    site.set_max(SWORDS, SWORD, 2);
     CHECK(site.tick(0, stock).started == 1);
     CHECK(stock.count(Items::Wood) == 7 && site.in_progress(SWORD) == 1);
     CHECK(site.machine(A)->state == MachineState::Working && site.machine(A)->progress(10) == 0.5f);
@@ -297,8 +297,8 @@ static void test_site_target() {
     CHECK(site.tick(101, stock).started == 1);
 
     // Target 0 drops the rule; the job under way still finishes
-    site.set_target(SWORDS, SWORD, 0);
-    CHECK(site.rules().empty() && site.target(SWORD) == 0);
+    site.set_max(SWORDS, SWORD, 0);
+    CHECK(site.rules().empty() && site.limits(SWORD).max == 0);
     CHECK(run(site, stock, 102, 200).made == 1 && stock.count(SWORD) == 2);
 }
 
@@ -309,9 +309,9 @@ static void test_site_floor() {
     CraftSite site;
     const BuildingConfig ws = workshop();
     site.add_machine(A, ws);
-    site.set_floor(Items::Wood, 5);
-    site.set_target(SWORDS, SWORD, 10);
-    CHECK(site.floor(Items::Wood) == 5);
+    site.set_min(Items::Wood, 5);
+    site.set_max(SWORDS, SWORD, 10);
+    CHECK(site.limits(Items::Wood).min == 5);
 
     // 7 - 3 would leave 4, under 5
     CHECK(site.tick(0, stock).started == 0 && stock.count(Items::Wood) == 7);
@@ -322,7 +322,7 @@ static void test_site_floor() {
     CHECK(run(site, stock, 2, 100).started == 0 && stock.count(SWORD) == 1);
 
     // Floor 0: it uses the rest
-    site.set_floor(Items::Wood, 0);
+    site.set_min(Items::Wood, 0);
     CHECK(run(site, stock, 101, 200).made == 1 && stock.count(Items::Wood) == 2);
 }
 
@@ -336,11 +336,11 @@ static void test_site_machines_share() {
     site.add_machine(B, ws);
 
     // One sword wanted: one machine makes it
-    site.set_target(SWORDS, SWORD, 1);
+    site.set_max(SWORDS, SWORD, 1);
     CHECK(site.tick(0, stock).started == 1 && stock.count(Items::Wood) == 17);
 
     // Two more: both work, in parallel
-    site.set_target(SWORDS, SWORD, 3);
+    site.set_max(SWORDS, SWORD, 3);
     CHECK(site.tick(1, stock).started == 1);
     CHECK(site.machine(A)->state == MachineState::Working && site.machine(B)->state == MachineState::Working);
     CHECK(site.in_progress(SWORD) == 2);
@@ -355,8 +355,8 @@ static void test_site_round_robin() {
     CraftSite site;
     const BuildingConfig ws = workshop(2.0f); // planks 5 ticks, swords 10
     site.add_machine(A, ws);
-    site.set_target(PLANKS, PLANK, 100);
-    site.set_target(SWORDS, SWORD, 100);
+    site.set_max(PLANKS, PLANK, 100);
+    site.set_max(SWORDS, SWORD, 100);
 
     site.tick(0, stock);
     CHECK(site.machine(A)->recipe == &PLANKS && site.machine(A)->finish == 5);
@@ -370,8 +370,32 @@ static void test_site_round_robin() {
     BuildingConfig bench = workshop();
     bench.crafting_categories = HAND;
     hands.add_machine(A, bench);
-    hands.set_target(SWORDS, SWORD, 5);
+    hands.set_max(SWORDS, SWORD, 5);
     CHECK(hands.tick(0, stock).started == 0);
+}
+
+static void test_site_priority() {
+    std::printf("site: higher priority first\n");
+    Inventory stock(8);
+    stock.add(Items::Wood, 50);
+    CraftSite site;
+    const BuildingConfig ws = workshop(2.0f); // planks 5 ticks, swords 10
+    site.add_machine(A, ws);
+    site.set_max(PLANKS, PLANK, 100);
+    site.set_max(SWORDS, SWORD, 100);
+    site.set_priority(SWORD, 5);
+    CHECK(site.limits(SWORD).priority == 5 && site.limits(PLANK).priority == 0);
+
+    // Swords for as long as they're wanted, though planks came first
+    site.tick(0, stock);
+    CHECK(site.machine(A)->recipe == &SWORDS);
+    run(site, stock, 1, 10);
+    CHECK(site.machine(A)->recipe == &SWORDS);
+
+    // Enough swords: planks get their turn
+    site.set_max(SWORDS, SWORD, 2);
+    run(site, stock, 11, 20);
+    CHECK(stock.count(SWORD) == 2 && site.machine(A)->recipe == &PLANKS);
 }
 
 static void test_site_sleeps() {
@@ -380,7 +404,7 @@ static void test_site_sleeps() {
     CraftSite site;
     const BuildingConfig ws = workshop();
     site.add_machine(A, ws);
-    site.set_target(SWORDS, SWORD, 1);
+    site.set_max(SWORDS, SWORD, 1);
     CHECK(site.tick(0, stock).started == 0);
     CHECK(run(site, stock, 1, 50).started == 0);
 
@@ -397,7 +421,7 @@ static void test_site_output_full() {
     CraftSite site;
     const BuildingConfig ws = workshop();
     site.add_machine(A, ws);
-    site.set_target(SWORDS, SWORD, 1);
+    site.set_max(SWORDS, SWORD, 1);
     CHECK(site.tick(0, stock).started == 1);
 
     CHECK(run(site, stock, 1, 30).made == 0);
@@ -416,7 +440,7 @@ static void test_site_machine_leaves() {
     CraftSite site;
     const BuildingConfig ws = workshop();
     site.add_machine(A, ws);
-    site.set_target(SWORDS, SWORD, 5);
+    site.set_max(SWORDS, SWORD, 5);
     site.tick(0, stock);
     CHECK(stock.count(Items::Wood) == 7);
 
@@ -454,6 +478,7 @@ int main() {
     test_site_floor();
     test_site_machines_share();
     test_site_round_robin();
+    test_site_priority();
     test_site_sleeps();
     test_site_output_full();
     test_site_machine_leaves();

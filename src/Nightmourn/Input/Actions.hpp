@@ -27,7 +27,7 @@ namespace Action {
     // Menus (see GUI/GameMenus.hpp)
     inline constexpr Nezumi::ActionID ToggleDebugMenu     = 4;
     inline constexpr Nezumi::ActionID ToggleCharacterMenu = 5; // skills and equipment
-    inline constexpr Nezumi::ActionID ToggleCraftingMenu  = 6; // the settlement's crafting rules
+    // 6: free
     inline constexpr Nezumi::ActionID ToggleInventoryMenu = 7;
     inline constexpr Nezumi::ActionID ToggleItemsMenu     = 8;
     inline constexpr Nezumi::ActionID ToggleOptionsMenu   = 9;
@@ -61,9 +61,8 @@ namespace Action {
 // Bind every action to its default keys: W/A/S/D for movement, the left
 // mouse button for mining, 1-9 and 0 for
 // the first ten action bar slots, C / B / I / O for the character,
-// inventory, items and options menus, V for the settlement's inventory,
-// K for its crafting rules, Shift and Ctrl (either side) as the inventory
-// click modifiers, Alt (held) for every crafting building's icon, Escape for
+// inventory, items and options menus, V for the settlement menu, Shift and
+// Ctrl (either side) as the inventory click modifiers, Alt (held) for every crafting building's icon, Escape for
 // the Main Menu,
 // and the tilde key (the one left of 1, whatever the layout prints on it)
 // for the debug menu

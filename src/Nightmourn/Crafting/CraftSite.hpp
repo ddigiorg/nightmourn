@@ -6,18 +6,20 @@
 // player sets, and makes things from its storage (the settlement's
 // inventory) into its storage, with nobody standing there.
 //
-// Rules, not per-machine recipes (crafting-design/DESIGN.md §3):
+// Limits per item, not per-machine recipes (crafting-design/DESIGN.md §3,
+// and the Settlement menu's Crafting tab):
 //
-// - A target per item: "keep 100 wooden arrows". A free machine makes a
-//   rule's item while the storage holds fewer than the target, counting
-//   what machines are already making, so several machines don't all pile
-//   on (it can end up one batch over). No target (0): not made.
-// - A reserve floor per item: "never use the last 20 wood". A job only
-//   starts if paying it leaves every ingredient at or above its floor.
+// - max: "keep 100 wooden arrows". A free machine makes the item while the
+//   storage holds fewer than its max, counting what machines are already
+//   making, so several machines don't all pile on (it can end up one batch
+//   over). 0: not made.
+// - min: "never use the last 20 wood". A job only starts if paying it
+//   leaves every ingredient at or above its min.
+// - priority (0..255): a free machine takes the highest-priority item it
+//   can make now; among equals it goes round robin from where it last left
+//   off, so one cheap item can't starve the rest.
 // - Each machine runs one job at a time (more workshops, more in
-//   parallel), and goes through the rules round robin from where it last
-//   left off, so one cheap rule can't starve the rest. It only takes rules
-//   whose recipe category it offers.
+//   parallel), and only takes items whose recipe category it offers.
 //
 // Jobs are paid when they start and delivered when they finish, all or
 // nothing; with no room for the results the machine waits (OutputFull) and
@@ -83,11 +85,18 @@ struct Machine {
     }
 };
 
-// Keep `target` of `item` in store, made by `recipe`
+// What a site does about one item
+struct CraftLimits {
+    std::uint32_t min      = 0; // never used as an ingredient below this
+    std::uint32_t max      = 0; // made while there are fewer (0: not made)
+    std::uint8_t  priority = 0; // higher first
+};
+
+// Keep `max` of `item` in store, made by `recipe`
 struct CraftRule {
     const Recipe* recipe = nullptr;
     ItemID        item   = {};
-    std::uint32_t target = 0;
+    std::uint32_t max    = 0;
 };
 
 class CraftSite {
@@ -122,14 +131,18 @@ public:
     // Rules
     // -------------------------------------------------------------------------
 
-    // Keep `target` of `item`, made by `recipe` (0: stop making it)
-    void          set_target(const Recipe& recipe, ItemID item, std::uint32_t target);
-    std::uint32_t target    (ItemID item) const;
+    // Keep `max` of `item`, made by `recipe` (0: stop making it)
+    void set_max(const Recipe& recipe, ItemID item, std::uint32_t max);
 
-    // Never use `item` below `floor` (0: use it all)
-    void          set_floor(ItemID item, std::uint32_t floor);
-    std::uint32_t floor    (ItemID item) const { return at_(floors_, item); }
+    // Never use `item` below `min` (0: use it all)
+    void set_min(ItemID item, std::uint32_t min);
 
+    // Higher goes first when a machine picks what to make
+    void set_priority(ItemID item, std::uint8_t priority);
+
+    CraftLimits limits(ItemID item) const;
+
+    // The items with a max, in the order they were first given one
     std::span<const CraftRule> rules() const { return rules_; }
 
     // How many of `item` its running jobs will make
@@ -172,7 +185,8 @@ private:
     std::size_t            machine_count_ = 0;
     std::vector<CraftRule> rules_         = {};
 
-    std::vector<std::uint32_t> floors_      = {}; // by ItemID
+    std::vector<std::uint32_t> mins_        = {}; // by ItemID
+    std::vector<std::uint32_t> priorities_  = {}; // by ItemID
     std::vector<std::uint32_t> in_progress_ = {}; // by ItemID
 
     std::priority_queue<Due, std::vector<Due>, std::greater<Due>> due_ = {};

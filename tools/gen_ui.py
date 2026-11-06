@@ -37,9 +37,9 @@ RIM     = (80, 128, 152, 200)       # 36 x 36 pt, thin bevelled rim over the ico
 BUTTON  = (160, 128, 204, 192)      # 22 x 32 pt, rectangular menu button
 DIVIDER = (212, 128, 228, 200)      # 8 x 36 pt
 FILL    = (236, 128, 252, 142)      # 8 x 7 pt, hp bar fill (white, tinted in game)
-MENU_ICONS_AT = (260, 128)          # 8 x (40 x 40 px), 48 px apart
-ITEM_ICONS_AT = (652, 128)          # 4 x (72 x 72 px), 80 px apart
-MENU_ICONS = ["character", "inventory", "settlement", "items", "crafting", "options", "debug", "main"]
+MENU_ICONS_AT = (260, 128)          # 7 x (40 x 40 px), 48 px apart
+ITEM_ICONS_AT = (604, 128)          # 4 x (72 x 72 px), 80 px apart
+MENU_ICONS = ["character", "inventory", "settlement", "items", "options", "debug", "main"]
 ITEMS      = ["wood", "stone", "gold", "food"]
 
 LIGHT = np.array([-0.55, -0.70, 0.45])
@@ -448,14 +448,6 @@ def gen_menu_icon(name):
         d.rectangle(P((14.4, 33.2), (30, 34.5)), fill=0)
         # A plate on the cover
         d.rounded_rectangle(P((17, 10), (26, 17)), radius=1 * S, outline=0, width=int(1.3 * S))
-    elif name == "crafting":    # anvil under a hammer: the settlement's crafting rules
-        # Anvil: horn to the left, face, waist and foot
-        d.polygon(P((3, 20), (11, 18), (35, 18), (35, 24), (13, 24)), fill=255)
-        d.polygon(P((15, 24), (31, 24), (28, 30), (18, 30)), fill=255)
-        d.rounded_rectangle(P((11, 30), (35, 36)), radius=1.5 * S, fill=255)
-        # Hammer, head up and to the right, its handle down to the left
-        line([(13, 15), (24, 5)], 2.4)
-        d.polygon(P((21, 4), (27, 0.5), (32, 6), (26, 10)), fill=255)
     elif name == "options":     # gear
         cx, cy = 20 * S, 20 * S
         pts = []
