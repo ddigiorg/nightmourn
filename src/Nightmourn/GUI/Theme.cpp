@@ -25,11 +25,11 @@ void apply_ui_theme(Nezumi::UI::Style& s) {
     s.heading               = { 0.74f, 0.82f, 0.92f, 1.00f };
     s.text_outline          = { 0.03f, 0.04f, 0.06f, 0.95f };
 
-    // Panels: a faint wash of light grey and no header line, so menus
+    // Panels: a see-through grey and no header line, so menus
     // read as one group while the world still shows through. The outline
     // shows only while the cursor is over the menu; the topbar and tabs are
     // slate.
-    s.panel_bg              = { 0.78f, 0.83f, 0.90f, 0.12f };
+    s.panel_bg              = { 0.30f, 0.33f, 0.38f, 0.35f }; // a darker grey, less see-through
     s.panel_border          = { 0.00f, 0.00f, 0.00f, 0.00f };
     s.panel_border_hovered  = { 0.51f, 0.57f, 0.67f, 0.70f };
     s.border_front          = { 0.00f, 0.00f, 0.00f, 0.00f };

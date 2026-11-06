@@ -9,7 +9,7 @@
 #include "Nightmourn/Item/Items.hpp"
 #include "Nightmourn/World/Constants.hpp"
 #include "Nezumi/UI/Context.hpp"
-#include <algorithm> // sort
+#include <algorithm> // clamp, sort
 #include <cstdio>    // snprintf
 #include <optional>  // optional
 #include <span>      // span
@@ -59,11 +59,15 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
+    // As tall as the items need, up to VISIBLE_ROWS rows; it scrolls the rest
+    const std::size_t rows = std::clamp<std::size_t>((sorted_.size() + COLUMNS - 1) / COLUMNS, 1, VISIBLE_ROWS);
+    const glm::vec2   size = InventoryMenu::panel_size(ui, COLUMNS, rows);
+
     const PanelConfig config = {
         .position    = ui.screen_size() * glm::vec2(0.5f, 0.3f),
         .pivot       = { 0.5f, 0.5f },
-        .size        = InventoryMenu::panel_size(ui, COLUMNS, VISIBLE_ROWS),
-        .min_size    = InventoryMenu::panel_size(ui, COLUMNS, VISIBLE_ROWS),
+        .size        = size,
+        .min_size    = size,
         .flags       = PanelFlags::Movable,
         .scroll_step = InventoryMenu::SLOT_SIZE.y + InventoryMenu::SLOT_GAP,
     };
