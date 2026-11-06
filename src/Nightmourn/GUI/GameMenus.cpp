@@ -19,9 +19,9 @@ using Nezumi::UI::PanelFlags;
 std::string_view menu_title(Menu menu) {
     switch (menu) {
         case Menu::Character: return "Character";
-        case Menu::Inventory: return "Player Inventory";
+        case Menu::Inventory: return "Inventory";
         case Menu::Settlement: return SettlementMenu::TITLE;
-        case Menu::Items:     return "Items";
+        case Menu::Crafting:  return "Crafting";
         case Menu::Options:   return "Options";
         case Menu::Debug:     return "Debug options";
         case Menu::Main:      return "Main Menu";
@@ -34,7 +34,7 @@ Nezumi::ActionID menu_action(Menu menu) {
         case Menu::Character: return Action::ToggleCharacterMenu;
         case Menu::Inventory: return Action::ToggleInventoryMenu;
         case Menu::Settlement: return Action::ToggleSettlementMenu;
-        case Menu::Items:     return Action::ToggleItemsMenu;
+        case Menu::Crafting:  return Action::ToggleCraftingMenu;
         case Menu::Options:   return Action::ToggleOptionsMenu;
         case Menu::Debug:     return Action::ToggleDebugMenu;
         case Menu::Main:      return Action::ToggleMainMenu;
@@ -110,9 +110,9 @@ void GameMenus::draw(Nezumi::UI::Context& ui, DebugFlags& flags, const GameMenuP
         if (panels.settlement) panels.settlement->draw(ui, open_[static_cast<std::size_t>(Menu::Settlement)], player, mods);
         else                   draw_stub_(ui, Menu::Settlement, "What your settlement keeps in store, and makes.");
     }
-    if (is_open(Menu::Items)) {
-        if (panels.items) panels.items->draw(ui, open_[static_cast<std::size_t>(Menu::Items)], mods);
-        else              draw_stub_(ui, Menu::Items, "Every item you have discovered, and how to make it.");
+    if (is_open(Menu::Crafting)) {
+        if (panels.items) panels.items->draw(ui, open_[static_cast<std::size_t>(Menu::Crafting)], mods);
+        else              draw_stub_(ui, Menu::Crafting, "Every item you have discovered, and how to make it.");
     }
     if (is_open(Menu::Options))   draw_stub_(ui, Menu::Options,   "Video, sound and key bindings.");
     debug_.draw(ui, flags);

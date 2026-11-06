@@ -2,10 +2,10 @@
 // GUI/InventoryMenu.hpp
 //
 // A panel showing one Inventory's slots in a grid, each stack with its count
-// in the bottom-right corner like Factorio's. The player's inventory (B) and
+// in the bottom-right corner like Factorio's. The player's inventory (X) and
 // a settlement's stock (V) are both InventoryMenus, set up by their Config:
 //
-//   InventoryMenu player    (sheet, player.inventory(), { .title = "Player Inventory" });
+//   InventoryMenu player    (sheet, player.inventory(), { .title = "Inventory" });
 //   InventoryMenu settlement(sheet, nullptr,            { .title = "Settlement Inventory",
 //                                                         .shortcuts = false });
 //

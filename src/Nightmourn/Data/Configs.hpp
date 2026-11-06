@@ -175,7 +175,7 @@
 //   item         something an inventory holds, its icon and how many fit
 //                in one slot. "recipe" (optional) is what crafting one
 //                takes, by item name: a building's item is crafted from wood
-//                in the Items menu, and the building is then free to place
+//                in the Crafting menu, and the building is then free to place
 //
 //     { "type": "item", "name": "wood",
 //       "icon": "__base__/graphics/gui/item/wood.png", "stack_size": 100 }

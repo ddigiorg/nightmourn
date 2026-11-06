@@ -58,7 +58,7 @@ class SettlementMenu;
 struct GameMenuPanels {
     InventoryMenu*  inventory  = nullptr; // Menu::Inventory
     SettlementMenu* settlement = nullptr; // Menu::Settlement
-    ItemsMenu*      items      = nullptr; // Menu::Items
+    ItemsMenu*      items      = nullptr; // Menu::Crafting
 };
 
 class GameMenus {
