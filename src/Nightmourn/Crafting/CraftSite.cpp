@@ -68,28 +68,36 @@ CraftCategoryMask CraftSite::categories() const {
 // Rules
 // -----------------------------------------------------------------------------
 
-void CraftSite::set_target(const Recipe& recipe, ItemID item, std::uint32_t target) {
+void CraftSite::set_max(const Recipe& recipe, ItemID item, std::uint32_t max) {
     auto rule = std::find_if(rules_.begin(), rules_.end(), [&](const CraftRule& r) { return r.item == item; });
-    if (target == 0) {
+    if (max == 0) {
         if (rule != rules_.end()) rules_.erase(rule); // its running jobs still finish
     } else if (rule != rules_.end()) {
-        *rule = { &recipe, item, target };
+        *rule = { &recipe, item, max };
     } else {
-        rules_.push_back({ &recipe, item, target });
+        rules_.push_back({ &recipe, item, max });
     }
     dirty_ = true;
 }
 
-std::uint32_t CraftSite::target(ItemID item) const {
-    for (const CraftRule& r : rules_) if (r.item == item) return r.target;
-    return 0;
+void CraftSite::set_min(ItemID item, std::uint32_t min) {
+    if (!item || (min == 0 && item.value() >= mins_.size())) return;
+    grow_(mins_, item) = min;
+    dirty_ = true;
 }
 
-void CraftSite::set_floor(ItemID item, std::uint32_t floor) {
-    if (!item) return;
-    if (floor == 0 && item.value() >= floors_.size()) return;
-    grow_(floors_, item) = floor;
+void CraftSite::set_priority(ItemID item, std::uint8_t priority) {
+    if (!item || (priority == 0 && item.value() >= priorities_.size())) return;
+    grow_(priorities_, item) = priority;
     dirty_ = true;
+}
+
+CraftLimits CraftSite::limits(ItemID item) const {
+    CraftLimits l;
+    l.min      = at_(mins_, item);
+    l.priority = static_cast<std::uint8_t>(at_(priorities_, item));
+    for (const CraftRule& r : rules_) if (r.item == item) l.max = r.max;
+    return l;
 }
 
 // -----------------------------------------------------------------------------
@@ -131,15 +139,27 @@ bool CraftSite::try_start_(std::size_t index, Nezumi::Tick now, Inventory& stora
     Machine& m = machines_[index];
     const std::size_t n = rules_.size();
 
+    // The highest priority it can make now; among equals, the first from
+    // its round-robin cursor
+    std::size_t best = n;
+    std::uint32_t best_priority = 0;
     for (std::size_t k = 0; k < n; k++) {
         const std::size_t i    = (m.next_rule + k) % n;
         const CraftRule&  rule = rules_[i];
+        const std::uint32_t priority = at_(priorities_, rule.item);
+        if (best < n && priority <= best_priority) continue;
         if (!rule.recipe || !rule.recipe->can_craft_in(m.categories)) continue;
-        if (storage.count(rule.item) + in_progress(rule.item) >= rule.target) continue;
+        if (storage.count(rule.item) + in_progress(rule.item) >= rule.max) continue;
         if (!affordable_(*rule.recipe, storage)) continue;
+        best          = i;
+        best_priority = priority;
+    }
 
+    if (best < n) {
+        const std::size_t i    = best;
+        const CraftRule&  rule = rules_[i];
         Inventory* const from[] = { &storage };
-        if (!pay(rule.recipe->ingredients, from)) continue;
+        if (!pay(rule.recipe->ingredients, from)) return false;
 
         m.state  = MachineState::Working;
         m.recipe = rule.recipe;
@@ -182,7 +202,7 @@ void CraftSite::end_job_(Machine& m) {
 
 bool CraftSite::affordable_(const Recipe& recipe, const Inventory& storage) const {
     for (const ItemAmount& in : recipe.ingredients)
-        if (storage.count(in.item) < in.count + floor(in.item)) return false;
+        if (storage.count(in.item) < in.count + at_(mins_, in.item)) return false;
     return true;
 }
 

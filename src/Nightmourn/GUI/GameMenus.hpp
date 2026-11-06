@@ -3,17 +3,16 @@
 //
 // The player's top-level menus, opened from the action bar's buttons or
 // their hotkeys: the character (skills and equipment), the player's inventory, the
-// settlement's inventory, items (every item in the game, and crafting),
-// the settlement's crafting rules, options, debug and the Main Menu. Options and debug have no action bar
-// button: the main menu opens options, and the tilde key the debug menu.
-// The debug menu, the main menu and (given their panels) the inventories,
-// items and crafting rules do something; the others open an empty panel saying what they
-// will hold.
+// Settlement (tabs: its inventory and its crafting, SettlementMenu), items
+// (every item in the game, and crafting), options, debug and the Main Menu.
+// Options and debug have no action bar button: the main menu opens options,
+// and the tilde key the debug menu. The debug menu, the main menu and (given
+// their panels) the inventory, the settlement and items do something; the
+// others open an empty panel saying what they will hold.
 //
-// The player opens and closes the settlement's inventory like any other.
-// While its stock is out of reach (the hero is outside the build area, or
-// there's no settlement) it stays open and says so instead (InventoryMenu's
-// note).
+// The player opens and closes the Settlement like any other. While its stock
+// is out of reach (the hero is outside the build area, or there's no
+// settlement) it stays open and says so instead (InventoryMenu's note).
 //
 //   on_tick:  menus_.handle_input(engine.input());
 //             if (menus_.quit_requested()) ...quit...
@@ -21,8 +20,8 @@
 //                         { .inventory = &player_menu_, .settlement = &settlement_menu_,
 //                           .items = &items_menu_ });
 //
-// While both inventories are open and in reach, stacks move between them
-// (InventoryMenu).
+// While the player's inventory and the Settlement's Inventory tab are both
+// open and in reach, stacks move between them (InventoryMenu).
 //
 // Escape closes every open menu, or opens the main menu when none is open,
 // like most games.
@@ -50,17 +49,16 @@ namespace Nightmourn {
 std::string_view menu_title (Menu menu);
 Nezumi::ActionID menu_action(Menu menu);
 
-class CraftRulesMenu;
 class InventoryMenu;
 class ItemsMenu;
+class SettlementMenu;
 
 // The panels GameMenus draws for the menus that do something. Any left
 // null shows a placeholder.
 struct GameMenuPanels {
-    InventoryMenu* inventory  = nullptr; // Menu::Inventory
-    InventoryMenu* settlement = nullptr; // Menu::Settlement
-    ItemsMenu*     items      = nullptr; // Menu::Items
-    CraftRulesMenu* rules     = nullptr; // Menu::Crafting
+    InventoryMenu*  inventory  = nullptr; // Menu::Inventory
+    SettlementMenu* settlement = nullptr; // Menu::Settlement
+    ItemsMenu*      items      = nullptr; // Menu::Items
 };
 
 class GameMenus {

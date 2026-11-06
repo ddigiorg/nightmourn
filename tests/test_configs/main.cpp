@@ -122,7 +122,7 @@ static void test_shipped_data() {
         CHECK(!p.find_item("wood")->recipe);
         CHECK(wood("wall") == 1 && wood("torch") == 1 && wood("barracks") == 1 && wood("banner") == 5);
         CHECK(wood("house") == 4 && wood("workshop") == 9 && wood("gate") == 2);
-        CHECK(p.find_settlement("player") && p.find_settlement("player")->config.inventory_slots == 40);
+        CHECK(p.find_settlement("player") && p.find_settlement("player")->config.inventory_slots == 80);
     }
     CHECK(p.find_tile("grass") && p.find_tile("grass")->tiles == 8);
 

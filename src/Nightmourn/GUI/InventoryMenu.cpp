@@ -43,7 +43,6 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
     using Nezumi::UI::PanelFlags;
 
     const std::size_t cols = config_.columns;
-    if (other && !other->inventory_) other = nullptr;
 
     // Sized to show visible_rows rows; the panel scrolls the rest
     const glm::vec2 size = panel_size(ui, cols, config_.visible_rows);
@@ -58,6 +57,13 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
         .scroll_step = SLOT_SIZE.y + SLOT_GAP, // a whole row at a time
     };
     if (!ui.begin_panel(config_.title, &open, config)) return;
+    draw_contents(ui, other, mods);
+    ui.end_panel();
+}
+
+void InventoryMenu::draw_contents(Nezumi::UI::Context& ui, InventoryMenu* other, Modifiers mods) {
+    const std::size_t cols = config_.columns;
+    if (other && !other->inventory_) other = nullptr;
 
     if (!inventory_) {
         for (std::size_t at = 0; at <= note_.size();) {
@@ -65,7 +71,6 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
             ui.text(note_.substr(at, end - at), at == 0 ? ui.style().text : ui.style().text_dim);
             at = end + 1;
         }
-        ui.end_panel();
         return;
     }
     Inventory&        inv = *inventory_;
@@ -138,8 +143,6 @@ void InventoryMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* oth
             ui.tooltip(tip);
         }
     }
-
-    ui.end_panel();
 }
 
 } // namespace Nightmourn
