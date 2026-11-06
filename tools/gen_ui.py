@@ -433,13 +433,19 @@ def gen_menu_icon(name):
         # Side straps
         line([(6.5, 15), (6.5, 33)], 2.0)
         line([(33.5, 15), (33.5, 33)], 2.0)
-    elif name == "settlement":  # a banner over a palisade: the settlement's stores
-        line([(20, 3), (20, 24)], 1.8)
-        d.polygon(P((21, 4), (33, 7), (21, 12)), fill=255)
-        for k in range(5):
-            x0 = 5 + 6.2 * k
-            d.polygon(P((x0, 37), (x0, 25), (x0 + 2.6, 21), (x0 + 5.2, 25), (x0 + 5.2, 37)), fill=255)
-        d.rectangle(P((4, 29), (36, 31)), fill=0)
+    elif name == "settlement":  # a castle: two towers and a wall, a gate between them
+        for x0 in (4, 26):      # towers, each with three merlons
+            d.rectangle(P((x0, 11), (x0 + 10, 36)), fill=255)
+            for k in range(3):
+                mx = x0 + k * 3.8
+                d.rectangle(P((mx, 6), (mx + 2.4, 11)), fill=255)
+            d.rectangle(P((x0 + 4.2, 17), (x0 + 5.8, 22)), fill=0)   # arrow slit
+        d.rectangle(P((14, 19), (26, 36)), fill=255)                  # the wall
+        for k in range(2):
+            mx = 16.2 + k * 5.4
+            d.rectangle(P((mx, 15), (mx + 2.4, 19)), fill=255)
+        d.rectangle(P((17, 28), (23, 36)), fill=0)                    # the gate,
+        d.ellipse(P((17, 25), (23, 31)), fill=0)                      # arched
     elif name == "crafting":    # anvil: horn to the left, a waist, a flared foot
         d.polygon(P((3, 11), (11, 9), (36, 9), (36, 16), (29, 16), (25, 20), (25, 25),
                     (32, 30), (32, 35), (8, 35), (8, 30), (15, 25), (15, 20), (11, 16), (10, 15)),
