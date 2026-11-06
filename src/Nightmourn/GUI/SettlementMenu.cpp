@@ -24,17 +24,21 @@ namespace {
     constexpr std::size_t COLUMNS      = 10;
     constexpr std::size_t VISIBLE_ROWS = 6;
 
+    // As wide as the inventory's 10 slots
+    constexpr float ROWS_W = static_cast<float>(COLUMNS) * (InventoryMenu::SLOT_SIZE.x + InventoryMenu::SLOT_GAP)
+                           - InventoryMenu::SLOT_GAP;
+
     // The Crafting tab's columns, from the content's left edge, and its rows
     constexpr vec2  ICON       = InventoryMenu::SLOT_SIZE;
     constexpr float ROW_PITCH  = ICON.y + 4.0f;
-    constexpr float RANGE_X    = ICON.x + 10.0f;
-    constexpr float RANGE_W    = 190.0f;
-    constexpr float MIN_X      = RANGE_X + RANGE_W + 8.0f;
-    constexpr float FIELD_W    = 64.0f;
-    constexpr float MAX_X      = MIN_X + FIELD_W + 8.0f;
-    constexpr float PRIORITY_X = MAX_X + FIELD_W + 8.0f;
-    constexpr float PRIORITY_W = 72.0f;
-    constexpr float ROWS_W     = PRIORITY_X + PRIORITY_W;
+    constexpr float GAP        = 6.0f;
+    constexpr float FIELD_W    = 64.0f; // 5 digits
+    constexpr float PRIORITY_W = 44.0f;
+    constexpr float PRIORITY_X = ROWS_W - PRIORITY_W;
+    constexpr float MAX_X      = PRIORITY_X - GAP - FIELD_W;
+    constexpr float MIN_X      = MAX_X - GAP - FIELD_W;
+    constexpr float RANGE_X    = ICON.x + GAP;
+    constexpr float RANGE_W    = MIN_X - GAP - RANGE_X;
 
     // The range slider's curve: most of the track for the low numbers
     constexpr float RANGE_POWER = 3.0f;
@@ -81,33 +85,26 @@ void SettlementMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* ot
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
-    // As wide as a crafting row, as tall as VISIBLE_ROWS inventory rows
-    // under the title and tabs; both tabs scroll the rest
+    // The inventory's size, 10 by VISIBLE_ROWS slots, its title bar tall
+    // enough for the tabs (the icon in place of the title, browser-style);
+    // both tabs scroll the rest
     const Nezumi::UI::Style& style = ui.style();
-    const float grid_h  = static_cast<float>(VISIBLE_ROWS) * (InventoryMenu::SLOT_SIZE.y + InventoryMenu::SLOT_GAP)
-                        - InventoryMenu::SLOT_GAP;
-    const float title_h = std::ceil(ui.text_height() + 2.0f * style.title_padding);
-    const float tabs_h  = std::ceil(ui.text_height() + 2.0f * style.frame_padding.y + 2.0f * style.title_padding);
-    const vec2  size    = { ROWS_W + 2.0f * style.panel_padding.x + 8.0f,
-                            grid_h + 2.0f * style.panel_padding.y + title_h + tabs_h + 1.0f };
+    const vec2 size = InventoryMenu::panel_size(ui, COLUMNS, VISIBLE_ROWS) + vec2(0.0f, 2.0f * style.frame_padding.y);
 
     const PanelConfig config = {
-        .position    = ui.screen_size() * vec2(0.495f, 0.6f),
+        .position    = ui.screen_size() * vec2(0.495f, 0.66f), // beside the player's, centers level
         .pivot       = { 1.0f, 0.5f },
         .size        = size,
         .min_size    = size,
         .flags       = PanelFlags::Movable,
         .scroll_step = tab_ == InventoryTab ? InventoryMenu::SLOT_SIZE.y + InventoryMenu::SLOT_GAP : ROW_PITCH,
         .tabs        = TABS,
+        .icon        = sheet_->menu_icon(Menu::Settlement),
     };
     if (!ui.begin_panel(TITLE, &open, config)) return;
     tab_ = ui.panel_tab() == CraftingTab ? CraftingTab : InventoryTab;
 
     if (tab_ == InventoryTab) {
-        // The slots, centered under the tabs
-        const float grid_w = static_cast<float>(COLUMNS) * (InventoryMenu::SLOT_SIZE.x + InventoryMenu::SLOT_GAP)
-                           - InventoryMenu::SLOT_GAP;
-        ui.set_next_pos({ std::max(0.0f, std::floor((ROWS_W - grid_w) * 0.5f)), 0.0f });
         inventory_.draw_contents(ui, other, mods);
     } else {
         draw_crafting_(ui);
@@ -166,7 +163,7 @@ void SettlementMenu::draw_crafting_(Nezumi::UI::Context& ui) {
     head(RANGE_X,    RANGE_W,    "Min - Max");
     head(MIN_X,      FIELD_W,    "Min");
     head(MAX_X,      FIELD_W,    "Max");
-    head(PRIORITY_X, PRIORITY_W, "Priority");
+    head(PRIORITY_X, PRIORITY_W, "Prio");
     y += ui.text_height() + style.item_spacing.y;
 
     for (const ItemPrototype* item : shown_) {
