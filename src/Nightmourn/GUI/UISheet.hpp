@@ -37,7 +37,7 @@ enum class Menu : std::uint8_t {
     Character, // skills and equipment
     Inventory,
     Settlement, // the settlement: its inventory and crafting (tabs)
-    Items,     // codex of every item type discovered, with recipes
+    Crafting,  // every item type discovered, with recipes: queue them here
     Options,
     Debug,
     Main,
@@ -50,7 +50,7 @@ struct UISheet {
     // Sprite names of the menu glyphs, by Menu. Item icons come from the
     // item configs' "icon" instead.
     static constexpr std::array<const char*, MENU_COUNT> MENU_ICON_NAMES = {
-        "menu/character", "menu/inventory", "menu/settlement", "menu/items",
+        "menu/character", "menu/inventory", "menu/settlement", "menu/crafting",
         "menu/options", "menu/debug", "menu/main",
     };
 

@@ -7,7 +7,7 @@
 // - 7 x 7 chunks of meadow, forests around the edges and a few trees near
 //   the hero, who starts at 0, 0 with only a banner (the action bar's slot
 //   1). Chop trees for wood (left click one, as in 02-mining), and craft
-//   from it in the Items menu (I): click an item to queue one, right click
+//   from it in the Crafting menu (C): click an item to queue one, right click
 //   for five, Shift + click for all you can afford. Its "recipe" (items.json:
 //   a wall, torch or barracks 1 wood, a gate 2, a house 4, a workshop 9, a
 //   banner 5) is paid when queued, from the hero's inventory first, then
@@ -56,7 +56,7 @@
 // - The day lasts 12 minutes and starts late in the afternoon; T speeds it
 //   up (1x, 20x, paused), N jumps to midnight and M to noon. Torches light
 //   the base at night, and the hero carries a small lantern.
-// - Two inventories, the same InventoryMenu: the Player Inventory (B) and
+// - Two inventories, the same InventoryMenu: the Inventory (X) and
 //   the Settlement menu's Inventory tab (V, or left click the banner), each
 //   with an action bar button, 10 wide and scrolling (the settlement's 80
 //   slots, 6 rows in view). The settlement's opens and closes when the
@@ -307,7 +307,7 @@ public:
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         // Side by side, just either side of the screen's center
         player_menu_ = std::make_unique<Nightmourn::InventoryMenu>(ui_sheet_, player_.inventory(),
-            InventoryMenu::Config{ .title = "Player Inventory", .anchor = { 0.505f, 0.66f }, .pivot = { 0.0f, 0.5f } });
+            InventoryMenu::Config{ .title = "Inventory", .anchor = { 0.505f, 0.66f }, .pivot = { 0.0f, 0.5f } });
         settlement_menu_ = std::make_unique<Nightmourn::SettlementMenu>(ui_sheet_, configs_);
         items_menu_ = std::make_unique<Nightmourn::ItemsMenu>(ui_sheet_, configs_);
         items_menu_->set_action_bar(action_bar_.get());
@@ -334,7 +334,7 @@ public:
         player_menu_->set_action_bar(action_bar_.get());
 
         engine.logger().info("Settlement Demo");
-        engine.logger().info("1: banner. I: items (click to craft). Left click: place (hold for walls), chop, or hit a raider. "
+        engine.logger().info("1: banner. C: crafting (click to craft). Left click: place (hold for walls), chop, or hit a raider. "
                              "Q: stop placing. Right click: take a building down. B: player inventory. V: settlement (inventory, crafting). "
                              "F: deposit. H: hit. P: spawn points.");
     }
@@ -601,7 +601,7 @@ private:
         };
     }
 
-    // The Items menu's clicks queue crafts, the queue's clicks cancel them,
+    // The Crafting menu's clicks queue crafts, the queue's clicks cancel them,
     // and the queue makes the front one: each tick, before the world's
     void craft_(Nightmourn::World& world, Nezumi::Engine& engine) {
         const CraftPlace here  = craft_place_(world);
@@ -897,8 +897,8 @@ private:
             text += line;
         }
 
-        text += "\nI: items (click: craft 1, right: 5, shift: all)  queue icon: cancel  slot or stack: pick a building  click: place (hold: wall)  Q: stop  right click: take down\n"
-                "click a tree: chop  click an enemy: attack  B: inventory  V: settlement  F: deposit  P: spawn points  T: time  N: midnight  M: noon\n";
+        text += "\nC: crafting (click: craft 1, right: 5, shift: all)  queue icon: cancel  slot or stack: pick a building  click: place (hold: wall)  Q: stop  right click: take down\n"
+                "click a tree: chop  click an enemy: attack  Z: character  X: inventory  V: settlement  F: deposit  P: spawn points  T: time  N: midnight  M: noon\n";
 
         r->draw_text(
             text, { HUD_MARGIN, top }, *font_,

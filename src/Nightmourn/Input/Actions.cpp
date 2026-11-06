@@ -19,11 +19,12 @@ void bind_default_actions(Nezumi::InputMap& input) {
     input.bind(Action::Mine, Nezumi::MouseButton::Left);
 
     input.bind(Action::ToggleDebugMenu,     ScanCode::Grave);
-    input.bind(Action::ToggleCharacterMenu, ScanCode::C);
-    input.bind(Action::ToggleInventoryMenu, ScanCode::B);
-    input.bind(Action::ToggleItemsMenu,     ScanCode::I);
-    input.bind(Action::ToggleOptionsMenu,   ScanCode::O);
+    // Z, X, C, V: the action bar's menu buttons, left to right
+    input.bind(Action::ToggleCharacterMenu,  ScanCode::Z);
+    input.bind(Action::ToggleInventoryMenu,  ScanCode::X);
+    input.bind(Action::ToggleCraftingMenu,   ScanCode::C);
     input.bind(Action::ToggleSettlementMenu, ScanCode::V);
+    input.bind(Action::ToggleOptionsMenu,    ScanCode::O);
     input.bind(Action::InventoryMoveMod,     { ScanCode::LShift, ScanCode::RShift });
     input.bind(Action::InventoryShortcutMod, { ScanCode::LCtrl,  ScanCode::RCtrl  });
     input.bind(Action::ShowCraftIcons,       { ScanCode::LAlt,   ScanCode::RAlt   });

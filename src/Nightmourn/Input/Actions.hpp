@@ -29,7 +29,7 @@ namespace Action {
     inline constexpr Nezumi::ActionID ToggleCharacterMenu = 5; // skills and equipment
     // 6: free
     inline constexpr Nezumi::ActionID ToggleInventoryMenu = 7;
-    inline constexpr Nezumi::ActionID ToggleItemsMenu     = 8;
+    inline constexpr Nezumi::ActionID ToggleCraftingMenu  = 8;
     inline constexpr Nezumi::ActionID ToggleOptionsMenu   = 9;
     inline constexpr Nezumi::ActionID ToggleMainMenu      = 10; // Escape: also closes open menus
 

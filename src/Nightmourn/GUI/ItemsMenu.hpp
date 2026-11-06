@@ -1,14 +1,18 @@
 // =============================================================================
 // GUI/ItemsMenu.hpp
 //
-// The Items menu (I): every item in the game in one grid, A to Z, and how
+// The Crafting menu (C): every item in the game in one grid, A to Z, and how
 // each is made, like a recipe book. Hover an item for what it is, what it's
 // made from, how long it takes and where it can be made; click one to queue
 // crafting it, right click for five, Shift + click for as many as you can
 // afford; Ctrl + click puts it on the action bar.
 //
+//   [Search                                                                     ]
 //   [banner][barracks][food][gate][gold][house][stone][torch][wall][wooden-arrow]
 //   [wood  ][workshop]
+//
+// The search bar above the grid shows only the items whose names hold what's
+// typed, ignoring case.
 //
 // The menu only asks: clicks become CraftRequests, which the game hands to
 // the player's CraftQueue in on_tick (it pays, and says no when it can't),
@@ -46,7 +50,7 @@ class Configs;
 struct ItemPrototype;
 struct InventoryModifiers;
 
-// A click in the Items menu: queue `count` crafts of `recipe`
+// A click in the Crafting menu: queue `count` crafts of `recipe`
 // (CraftQueue::ALL: as many as can be paid for)
 struct CraftRequest {
     const Recipe* recipe = nullptr;
@@ -103,8 +107,12 @@ private:
     std::vector<CraftRequest> requests_ = {};
 
     std::vector<const ItemPrototype*> sorted_ = {}; // A to Z
+    std::string                       search_ = {}; // the search bar's text
 
-    // Rebuilt every frame, kept to allocate nothing after the first
+
+    // Rebuilt every frame, kept to allocate nothing after the first: the
+    // items whose names match the search, and their slots
+    std::vector<const ItemPrototype*> shown_ = {};
     std::vector<Nezumi::UI::Slot> slots_ = {};
     std::string                   tip_   = {};
 };

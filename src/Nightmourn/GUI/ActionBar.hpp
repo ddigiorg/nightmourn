@@ -88,7 +88,7 @@ public:
     // The menus with a button, left to right: options open from the main
     // menu, and the debug menu from its key only
     static constexpr std::array<Menu, 5> BUTTONS = {
-        Menu::Character, Menu::Inventory, Menu::Settlement, Menu::Items, Menu::Main,
+        Menu::Character, Menu::Inventory, Menu::Crafting, Menu::Settlement, Menu::Main,
     };
 
     // UI drag type of anything that can go on the bar (items for now). The

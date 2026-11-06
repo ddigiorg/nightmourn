@@ -297,7 +297,7 @@ void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& i
             r.min + glm::round((SLOT_SIZE - vec2(ICON_SIZE)) * 0.5f) + vec2(0.0f, push), vec2(ICON_SIZE));
         ui.draw_image(icon, sheet_->menu_icon(menu), lit ? ICON_HOVER : ICON);
 
-        // "Inventory (B)"
+        // "Inventory (X)"
         char tip[64];
         const auto key = input.first_binding(menu_action(menu));
         const std::string_view title = menu_title(menu);

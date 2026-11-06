@@ -204,7 +204,7 @@ public:
         ui_sheet_       = Nightmourn::UISheet::load(*renderer, configs_);
         action_bar_     = std::make_unique<Nightmourn::ActionBar>(ui_sheet_);
         inventory_menu_ = std::make_unique<Nightmourn::InventoryMenu>(
-            ui_sheet_, player_.inventory(), Nightmourn::InventoryMenu::Config{ .title = "Player Inventory" });
+            ui_sheet_, player_.inventory(), Nightmourn::InventoryMenu::Config{ .title = "Inventory" });
 
         // Something besides wood to drag around
         player_.inventory().add(Nightmourn::Items::Stone, 37);
@@ -223,7 +223,7 @@ public:
 
         engine.logger().info("Mining Demo");
         engine.logger().info("W/A/S/D: move. Mouse wheel: zoom. Left click (hold): chop the hovered tree. "
-                             "B: inventory. 1-0: slots. R: regrow trees. Escape: main menu.");
+                             "X: inventory. 1-0: slots. R: regrow trees. Escape: main menu.");
     }
 
     // -------------------------------------------------------------------------
@@ -460,7 +460,7 @@ private:
             }
         }
 
-        text += "\nW/A/S/D: move  click (hold): chop  B: inventory  1-0: slots  R: regrow  Esc: menu\n";
+        text += "\nW/A/S/D: move  click (hold): chop  X: inventory  1-0: slots  R: regrow  Esc: menu\n";
 
         r->draw_text(
             text,

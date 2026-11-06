@@ -10,6 +10,8 @@
 #include "Nightmourn/World/Constants.hpp"
 #include "Nezumi/UI/Context.hpp"
 #include <algorithm> // clamp, sort
+#include <cctype>    // tolower
+#include <cmath>     // ceil
 #include <cstdio>    // snprintf
 #include <optional>  // optional
 #include <span>      // span
@@ -19,6 +21,18 @@ namespace Nightmourn {
 namespace {
     constexpr std::size_t COLUMNS      = 10;
     constexpr std::size_t VISIBLE_ROWS = 4;
+
+    // Whether `name` holds `query`, ignoring case ("" matches everything)
+    bool name_matches(std::string_view name, std::string_view query) {
+        const auto lower = [](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); };
+        if (query.size() > name.size()) return false;
+        for (std::size_t at = 0; at + query.size() <= name.size(); at++) {
+            std::size_t k = 0;
+            while (k < query.size() && lower(name[at + k]) == lower(query[k])) k++;
+            if (k == query.size()) return true;
+        }
+        return false;
+    }
 
     // "4 wood, 1 stone"
     void append_amounts(std::string& out, std::span<const ItemAmount> amounts) {
@@ -38,7 +52,8 @@ ItemsMenu::ItemsMenu(const UISheet& sheet, const Configs& configs)
     for (const ItemPrototype& item : configs.items) sorted_.push_back(&item);
     std::sort(sorted_.begin(), sorted_.end(),
               [](const ItemPrototype* a, const ItemPrototype* b) { return a->name < b->name; });
-    slots_.resize(sorted_.size());
+    shown_.reserve(sorted_.size());
+    slots_.reserve(sorted_.size());
 }
 
 // -----------------------------------------------------------------------------
@@ -59,9 +74,13 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
-    // As tall as the items need, up to VISIBLE_ROWS rows; it scrolls the rest
-    const std::size_t rows = std::clamp<std::size_t>((sorted_.size() + COLUMNS - 1) / COLUMNS, 1, VISIBLE_ROWS);
-    const glm::vec2   size = InventoryMenu::panel_size(ui, COLUMNS, rows);
+    // As tall as every item needs, up to VISIBLE_ROWS rows (it scrolls the
+    // rest), plus the search bar above them. The same while searching, so
+    // the menu doesn't jump about as you type.
+    const Nezumi::UI::Style& style = ui.style();
+    const float       search_h = std::ceil(ui.text_height() + 2.0f * style.frame_padding.y) + style.item_spacing.y;
+    const std::size_t rows     = std::clamp<std::size_t>((sorted_.size() + COLUMNS - 1) / COLUMNS, 1, VISIBLE_ROWS);
+    const glm::vec2   size     = InventoryMenu::panel_size(ui, COLUMNS, rows) + glm::vec2(0.0f, search_h);
 
     const PanelConfig config = {
         .position    = ui.screen_size() * glm::vec2(0.5f, 0.3f),
@@ -71,11 +90,27 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
         .flags       = PanelFlags::Movable,
         .scroll_step = InventoryMenu::SLOT_SIZE.y + InventoryMenu::SLOT_GAP,
     };
-    if (!ui.begin_panel("Items", &open, config)) return;
+    if (!ui.begin_panel("Crafting", &open, config)) return;
+
+    // The search bar, as wide as the grid: filters by name as you type
+    const float grid_w = static_cast<float>(COLUMNS) * InventoryMenu::SLOT_SIZE.x
+                       + static_cast<float>(COLUMNS - 1) * InventoryMenu::SLOT_GAP;
+    ui.set_next_width(grid_w);
+    ui.text_field("##search", search_, 64, "Search");
+
+    shown_.clear();
+    for (const ItemPrototype* item : sorted_)
+        if (name_matches(display_name(item->name), search_)) shown_.push_back(item);
+    if (shown_.empty()) {
+        ui.text("No items match.", style.text_dim);
+        ui.end_panel();
+        return;
+    }
 
     // Each kind of item; one that can't be queued here and now dimmed
-    for (std::size_t i = 0; i < sorted_.size(); i++) {
-        const ItemPrototype& item = *sorted_[i];
+    slots_.resize(shown_.size());
+    for (std::size_t i = 0; i < shown_.size(); i++) {
+        const ItemPrototype& item = *shown_[i];
         Nezumi::UI::Slot&    s    = slots_[i];
         s = {};
         s.icon  = sheet_->item_icon(item.id);
@@ -90,16 +125,16 @@ void ItemsMenu::draw(Nezumi::UI::Context& ui, bool& open, const InventoryModifie
 
     // Click: 1, Shift + click: all you can afford, Ctrl + click: action bar
     if (r.clicked >= 0) {
-        const ItemPrototype& item = *sorted_[static_cast<std::size_t>(r.clicked)];
+        const ItemPrototype& item = *shown_[static_cast<std::size_t>(r.clicked)];
         if (mods.shortcut)  { if (action_bar_) action_bar_->add_shortcut(item.id); }
         else if (item.recipe) requests_.push_back({ item.recipe, mods.move ? CraftQueue::ALL : 1u });
     }
     if (r.right_clicked >= 0) {
-        const ItemPrototype& item = *sorted_[static_cast<std::size_t>(r.right_clicked)];
+        const ItemPrototype& item = *shown_[static_cast<std::size_t>(r.right_clicked)];
         if (item.recipe) requests_.push_back({ item.recipe, CRAFT_MANY });
     }
 
-    if (r.hovered >= 0) tooltip_(ui, *sorted_[static_cast<std::size_t>(r.hovered)]);
+    if (r.hovered >= 0) tooltip_(ui, *shown_[static_cast<std::size_t>(r.hovered)]);
 
     ui.end_panel();
 }

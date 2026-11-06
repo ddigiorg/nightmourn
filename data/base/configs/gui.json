@@ -55,8 +55,8 @@
     },
     {
         "type": "sprite",
-        "name": "menu/items",
-        "filename": "__base__/graphics/gui/menu/items.png"
+        "name": "menu/crafting",
+        "filename": "__base__/graphics/gui/menu/crafting.png"
     },
     {
         "type": "sprite",

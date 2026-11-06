@@ -39,7 +39,7 @@ DIVIDER = (212, 128, 228, 200)      # 8 x 36 pt
 FILL    = (236, 128, 252, 142)      # 8 x 7 pt, hp bar fill (white, tinted in game)
 MENU_ICONS_AT = (260, 128)          # 7 x (40 x 40 px), 48 px apart
 ITEM_ICONS_AT = (604, 128)          # 4 x (72 x 72 px), 80 px apart
-MENU_ICONS = ["character", "inventory", "settlement", "items", "options", "debug", "main"]
+MENU_ICONS = ["character", "inventory", "settlement", "crafting", "options", "debug", "main"]
 ITEMS      = ["wood", "stone", "gold", "food"]
 
 LIGHT = np.array([-0.55, -0.70, 0.45])
@@ -440,14 +440,12 @@ def gen_menu_icon(name):
             x0 = 5 + 6.2 * k
             d.polygon(P((x0, 37), (x0, 25), (x0 + 2.6, 21), (x0 + 5.2, 25), (x0 + 5.2, 37)), fill=255)
         d.rectangle(P((4, 29), (36, 31)), fill=0)
-    elif name == "items":       # closed book: the item codex
-        d.rounded_rectangle(P((9, 4), (32, 36)), radius=2 * S, fill=255)
-        # Spine down the left, page edges along the right and bottom
-        d.rectangle(P((13, 4), (14.4, 36)), fill=0)
-        d.rectangle(P((28.6, 7), (30, 34.5)), fill=0)
-        d.rectangle(P((14.4, 33.2), (30, 34.5)), fill=0)
-        # A plate on the cover
-        d.rounded_rectangle(P((17, 10), (26, 17)), radius=1 * S, outline=0, width=int(1.3 * S))
+    elif name == "crafting":    # anvil: horn to the left, a waist, a flared foot
+        d.polygon(P((3, 11), (11, 9), (36, 9), (36, 16), (29, 16), (25, 20), (25, 25),
+                    (32, 30), (32, 35), (8, 35), (8, 30), (15, 25), (15, 20), (11, 16), (10, 15)),
+                  fill=255)
+        # The face's edge, cut so the top reads apart from the body
+        d.rectangle(P((11, 12.6), (36, 13.8)), fill=0)
     elif name == "options":     # gear
         cx, cy = 20 * S, 20 * S
         pts = []

@@ -20,7 +20,7 @@
 //   materials) only have a min. Hover an icon for the item: what makes it
 //   and from what, how many are in store and being made.
 //
-// Like the Items menu it only asks: edits become SettlementCraftEdits,
+// Like the Crafting menu it only asks: edits become SettlementCraftEdits,
 // which the game applies to the settlement's CraftSite in on_tick, so the
 // limits only change in the fixed tick. They can be changed only inside
 // the settlement (`editable`); elsewhere the tab just shows them.
