@@ -1,13 +1,13 @@
 // =============================================================================
 // GUI/Theme.hpp
 //
-// Nightmourn's look for Nezumi's UI: see-through panels of blue-tinted ash
-// grey that let the night world show behind them, pale moonlit highlights,
-// and no extra highlight on the panel in front. Call once at startup:
+// Nightmourn's look for Nezumi's UI, after Terraria's Stormdark pack: no
+// panels at all, just see-through slate slots, outlined text and controls
+// floating over the world, with pale moonlit highlights. Call once at startup:
 //
 //   Nightmourn::apply_ui_theme(engine.ui()->style());
 //
-// Only colors change; sizes stay the engine's.
+// Colors, plus the slot and control rounding and the text outline.
 // =============================================================================
 
 #pragma once

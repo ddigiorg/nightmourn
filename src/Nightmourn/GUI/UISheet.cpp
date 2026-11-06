@@ -56,15 +56,13 @@ Nezumi::UI::SlotStyle UISheet::item_slot_style(glm::vec2 slot_size, float gap) c
     return {
         .slot_size   = slot_size,
         .spacing     = { gap, gap },
-        .frame       = slot,
-        .frame_over  = rim,
-        .icon_inset  = 2.0f,
-        .icon_radius = 2.0f,
+        // No frame: Nezumi draws the theme's see-through rounded slot
+        // (Theme.cpp), its border lit while hovered
+        .icon_inset  = 3.0f,
         .label_size  = 11.0f,
         .label_color = { 0.86f, 0.90f, 0.96f, 1.0f },
-        .hover       = { 0.75f, 0.88f, 1.00f, 0.14f },
-        .drop_hover  = { 0.75f, 0.88f, 1.00f, 0.28f },
-        .highlight   = { 0.55f, 0.78f, 1.00f, 0.70f },
+        .hover       = { 0.78f, 0.83f, 0.90f, 0.10f },
+        .drop_hover  = { 0.78f, 0.83f, 0.90f, 0.22f },
     };
 }
 
