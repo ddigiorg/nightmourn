@@ -8,30 +8,61 @@
 namespace Nightmourn {
 
 void apply_ui_theme(Nezumi::UI::Style& s) {
-    s.text             = { 0.90f, 0.93f, 0.97f, 1.00f };
-    s.text_dim         = { 0.55f, 0.62f, 0.72f, 1.00f };
-    s.heading          = { 0.72f, 0.85f, 1.00f, 1.00f };
+    // Sizes: slightly rounded slots and controls, like Terraria's Stormdark
+    // pack and WoW's action bars
+    s.slot_rounding         = 5.0f;
+    s.frame_rounding        = 4.0f;
+    s.text_outline_width    = 1.25f; // text sits straight on the world
 
-    s.panel_bg         = { 0.05f, 0.08f, 0.14f, 0.96f };
-    s.panel_border     = { 0.01f, 0.02f, 0.05f, 1.00f };
-    s.title_bg         = { 0.08f, 0.13f, 0.22f, 1.00f };
-    s.title_bg_front   = { 0.11f, 0.19f, 0.33f, 1.00f };
+    // Text: pale ash, moonlit blue headings, dark outlines
+    s.text                  = { 0.88f, 0.90f, 0.93f, 1.00f };
+    s.text_dim              = { 0.62f, 0.66f, 0.72f, 1.00f };
+    s.heading               = { 0.74f, 0.82f, 0.92f, 1.00f };
+    s.text_outline          = { 0.03f, 0.04f, 0.06f, 0.95f };
 
-    s.frame_bg         = { 0.09f, 0.14f, 0.23f, 1.00f };
-    s.frame_bg_hovered = { 0.13f, 0.20f, 0.32f, 1.00f };
-    s.frame_bg_active  = { 0.17f, 0.26f, 0.41f, 1.00f };
-    s.frame_border     = { 0.02f, 0.04f, 0.08f, 1.00f };
+    // Panels: none. No background, outline or header line, so menus are
+    // their slots, labels and controls floating over the world.
+    s.panel_bg              = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.panel_border          = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.border_front          = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.border_front_end      = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.panel_shadow          = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.title_bg              = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.title_bg_front        = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.header_line           = { 0.00f, 0.00f, 0.00f, 0.00f };
+    s.tab_hovered           = { 0.00f, 0.00f, 0.00f, 0.00f }; // the label brightens instead
+    s.tab_picked            = { 0.00f, 0.00f, 0.00f, 0.00f }; // underlined in the accent
 
-    s.button           = { 0.14f, 0.23f, 0.38f, 1.00f };
-    s.button_hovered   = { 0.20f, 0.32f, 0.51f, 1.00f };
-    s.button_active    = { 0.10f, 0.17f, 0.28f, 1.00f };
+    // Slots: Stormdark's dark slate with a light grey-blue edge, both
+    // see-through
+    s.slot_bg               = { 0.08f, 0.09f, 0.13f, 0.72f }; // #14181F
+    s.slot_border           = { 0.51f, 0.57f, 0.67f, 0.55f }; // #8292AA
+    s.slot_border_hovered   = { 0.78f, 0.83f, 0.90f, 0.90f }; // #C8D4E6
 
-    s.accent           = { 0.45f, 0.72f, 1.00f, 1.00f };
-    s.accent_dim       = { 0.22f, 0.40f, 0.62f, 1.00f };
-    s.close_hovered    = { 0.70f, 0.20f, 0.25f, 1.00f };
-    s.separator        = { 0.15f, 0.22f, 0.33f, 1.00f };
-    s.scrollbar        = { 0.32f, 0.44f, 0.60f, 0.80f };
-    s.selection        = { 0.16f, 0.28f, 0.46f, 1.00f };
+    // Fields, tracks, buttons: the same slate and edge as the slots
+    s.frame_bg              = { 0.08f, 0.09f, 0.13f, 0.72f };
+    s.frame_bg_hovered      = { 0.16f, 0.19f, 0.25f, 0.80f };
+    s.frame_bg_active       = { 0.22f, 0.26f, 0.33f, 0.85f };
+    s.frame_border          = { 0.51f, 0.57f, 0.67f, 0.55f };
+    s.frame_border_hovered  = { 0.78f, 0.83f, 0.90f, 0.90f };
+    s.button                = { 0.08f, 0.09f, 0.13f, 0.72f };
+    s.button_hovered        = { 0.16f, 0.19f, 0.25f, 0.80f };
+    s.button_active         = { 0.22f, 0.26f, 0.33f, 0.85f };
+    s.button_border         = { 0.51f, 0.57f, 0.67f, 0.55f };
+    s.button_border_hovered = { 0.78f, 0.83f, 0.90f, 0.90f };
+    s.button_text_hovered   = { 0.96f, 0.97f, 1.00f, 1.00f };
+
+    // Tooltips: the slot's slate, a little more solid, with its edge
+    s.tooltip_bg            = { 0.08f, 0.09f, 0.13f, 0.92f };
+    s.tooltip_border        = { 0.51f, 0.57f, 0.67f, 0.80f };
+
+    s.accent                = { 0.66f, 0.77f, 0.90f, 1.00f }; // moonlight
+    s.accent_dim            = { 0.34f, 0.41f, 0.51f, 1.00f };
+    s.close_hovered         = { 0.71f, 0.32f, 0.35f, 0.90f };
+    s.close_text_hovered    = { 0.96f, 0.97f, 1.00f, 1.00f };
+    s.separator             = { 0.51f, 0.57f, 0.67f, 0.40f };
+    s.scrollbar             = { 0.51f, 0.57f, 0.67f, 0.70f };
+    s.selection             = { 0.66f, 0.77f, 0.90f, 0.25f };
 }
 
 } // namespace Nightmourn

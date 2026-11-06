@@ -90,6 +90,9 @@ public:
     // rest), title bar and padding included
     static glm::vec2 panel_size(const Nezumi::UI::Context& ui, std::size_t columns, std::size_t rows);
 
+    // Height of a panel's header row, which is also the height of a tab strip
+    static float header_height(const Nezumi::UI::Context& ui);
+
     // -------------------------------------------------------------------------
     // Config
     // -------------------------------------------------------------------------

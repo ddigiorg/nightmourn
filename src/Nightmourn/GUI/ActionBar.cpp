@@ -26,70 +26,35 @@ using glm::vec4;
 // -----------------------------------------------------------------------------
 // Layout
 //
-// UI points, from the bar's top-left corner. The slab sits along the bottom,
-// with an eagle over each end; everything on the slab lines up with the
-// grooves painted into it (tools/gen_ui.py, gen_plate).
+// UI points, from the bar's top-left corner: the slots, a gap, then the menu
+// buttons drawn as slots of the same size, all floating over the world with
+// no frame of their own (Theme.cpp's slot colors).
 // -----------------------------------------------------------------------------
 
 namespace {
-    // The eagles stand only a little taller than the slab, crouched over
-    // its ends; the slab wastes no room around what it holds
-    constexpr vec2  EAGLE_SIZE    = { 80.0f, 60.0f }; // the swept-back wing takes the outer 10
-    constexpr float EAGLE_OVERLAP = 6.0f;               // over each end of the slab
-    constexpr vec2  PLATE_SIZE    = { 546.0f, 50.0f };
-    constexpr float PLATE_X       = EAGLE_SIZE.x - EAGLE_OVERLAP;
-    constexpr float PLATE_Y       = EAGLE_SIZE.y - PLATE_SIZE.y;
-    constexpr vec2  BAR_SIZE      = { PLATE_SIZE.x + 2.0f * PLATE_X, EAGLE_SIZE.y };
-
-    constexpr float INSET         = 4.0f;               // slab edge to its contents
-    constexpr float CONTENT_X     = PLATE_X + INSET;
-    constexpr float CONTENT_W     = PLATE_SIZE.x - 2.0f * INSET;
-
-    // A thin hp bar along the top, split into tenths like WoW's xp bar
-    constexpr float HP_Y          = PLATE_Y + 3.0f;
-    constexpr float HP_H          = 6.0f;
-    constexpr int   HP_SEGMENTS   = 10;
-
     constexpr vec2  SLOT_SIZE     = { 36.0f, 36.0f };
-    constexpr float SLOT_GAP      = 3.0f;
-    constexpr float SLOTS_Y       = PLATE_Y + 11.0f;
+    constexpr float SLOT_GAP      = 4.0f;
     constexpr float SLOTS_W       = ActionBar::SLOT_COUNT * SLOT_SIZE.x + (ActionBar::SLOT_COUNT - 1) * SLOT_GAP;
 
-    // Rectangular menu buttons, like WoW's micro menu
-    constexpr float DIVIDER_W     = 8.0f;
-    constexpr vec2  BUTTON        = { 27.0f, 32.0f };
-    constexpr float BUTTON_GAP    = 2.0f;
+    constexpr float BUTTONS_GAP   = 12.0f; // between the slots and the buttons
     constexpr float BUTTON_COUNT  = static_cast<float>(ActionBar::BUTTONS.size());
-    constexpr float BUTTONS_X     = CONTENT_X + SLOTS_W + DIVIDER_W;
-    constexpr float BUTTONS_Y     = SLOTS_Y + (SLOT_SIZE.y - BUTTON.y) * 0.5f;
-    constexpr float ICON_SIZE     = 18.0f;
+    constexpr float BUTTONS_X     = SLOTS_W + BUTTONS_GAP;
+    constexpr float ICON_SIZE     = 22.0f;
 
-    static_assert(SLOTS_W + DIVIDER_W + BUTTON_COUNT * BUTTON.x + (BUTTON_COUNT - 1) * BUTTON_GAP == CONTENT_W,
-                  "slots, divider and buttons fill the slab");
-    static_assert(SLOTS_Y + SLOT_SIZE.y + 3.0f == EAGLE_SIZE.y, "3 points under the slots");
+    constexpr vec2  BAR_SIZE      = { BUTTONS_X + BUTTON_COUNT * SLOT_SIZE.x + (BUTTON_COUNT - 1) * SLOT_GAP, SLOT_SIZE.y };
+    constexpr float BAR_MARGIN    = 8.0f;  // above the screen's bottom edge
 
     // Colors
-    constexpr vec4 HP_TRACK      = { 0.03f, 0.04f, 0.07f, 1.00f };
-    constexpr vec4 HP_TICK       = { 0.20f, 0.24f, 0.30f, 1.00f };
-    constexpr vec4 HP_BORDER     = { 0.01f, 0.02f, 0.03f, 1.00f };
-    constexpr vec4 HP_FILL       = { 0.74f, 0.13f, 0.12f, 1.00f };
-    constexpr vec4 HP_TEXT       = { 0.95f, 0.95f, 0.97f, 1.00f };
-    constexpr vec4 SHADOW        = { 0.00f, 0.00f, 0.00f, 0.90f };
-    constexpr vec4 ICON          = { 0.78f, 0.86f, 0.95f, 1.00f };
-    constexpr vec4 ICON_HOVER    = { 0.92f, 0.97f, 1.00f, 1.00f };
-    constexpr vec4 OPEN_GLOW     = { 0.55f, 0.78f, 1.00f, 0.90f }; // ring around an open menu's button
-    constexpr vec4 BUTTON_HOVER  = { 1.18f, 1.18f, 1.22f, 1.00f };
-    constexpr vec4 BUTTON_HELD   = { 0.75f, 0.75f, 0.78f, 1.00f };
+    constexpr vec4 ICON          = { 0.80f, 0.85f, 0.92f, 1.00f };
+    constexpr vec4 ICON_HOVER    = { 0.96f, 0.98f, 1.00f, 1.00f };
 
     constexpr std::uint8_t FLASH_FRAMES = 8; // a used slot shows pressed this long
 
-    constexpr float HP_TEXT_SIZE = 10.0f;
-
     // The crafting queue: smaller icons than the slots, in a row over the
-    // slab's left end, just clear of the eagles' heads
+    // bar's left end
     constexpr vec2  QUEUE_ICON    = { 26.0f, 26.0f };
     constexpr float QUEUE_GAP     = 3.0f;
-    constexpr float QUEUE_RAISE   = 4.0f; // above the bar's top
+    constexpr float QUEUE_RAISE   = 6.0f; // above the bar's top
     constexpr vec4  QUEUE_BLOCKED = { 0.85f, 0.12f, 0.10f, 0.45f };
 }
 
@@ -139,44 +104,21 @@ void ActionBar::draw(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
 {
     using Nezumi::UI::PanelFlags;
 
-    // Bottom-center, every frame, so it follows window resizes. Only the
-    // slab takes the mouse: clicks above it, between the eagles, reach the
-    // game.
+    // Bottom-center, every frame, so it follows window resizes. The hero's
+    // health isn't shown here for now.
+    (void)hero;
     const Nezumi::UI::PanelConfig config = {
-        .position = { ui.screen_size().x * 0.5f, ui.screen_size().y },
+        .position = { ui.screen_size().x * 0.5f, ui.screen_size().y - BAR_MARGIN },
         .pivot    = { 0.5f, 1.0f },
         .size     = BAR_SIZE,
         .min_size = BAR_SIZE,
         .flags    = PanelFlags::NoTitleBar | PanelFlags::NoBackground | PanelFlags::PinPosition,
-        .hit_box  = Rect::from_size({ PLATE_X, PLATE_Y }, PLATE_SIZE),
     };
     if (!ui.begin_panel("##action-bar", config)) return;
 
-    const vec2 origin = ui.content_rect().min;
-    rect_ = Rect::from_size(origin, BAR_SIZE);
-    const auto at = [&](vec2 pos, vec2 size) { return Rect::from_size(origin + pos, size); };
-
-    // Back to front: the slab, what sits on it, then the eagles over its ends
-    ui.draw_nine_slice(at({ PLATE_X, PLATE_Y }, PLATE_SIZE), sheet_->plate);
-    draw_hp_bar_(ui, at({ CONTENT_X, HP_Y }, { CONTENT_W, HP_H }), hero);
-    ui.draw_image(at({ CONTENT_X + SLOTS_W, SLOTS_Y }, { DIVIDER_W, SLOT_SIZE.y }), sheet_->divider);
+    rect_ = Rect::from_size(ui.content_rect().min, BAR_SIZE);
     draw_slots_(ui, input, inventory);
     draw_buttons_(ui, input, menus);
-
-    ui.draw_image(at({ 0.0f, 0.0f }, EAGLE_SIZE), sheet_->eagle);
-    ui.draw_image(at({ BAR_SIZE.x - EAGLE_SIZE.x, 0.0f }, EAGLE_SIZE), sheet_->eagle.flipped_x());
-
-    // The hp text last, so the bar's text is one run with nothing after it
-    char hp[32];
-    const unsigned cur = hero ? hero->health : 0u;
-    if (hero) last_max_hp_ = hero->max_health;
-    std::snprintf(hp, sizeof hp, "%u / %u", cur, static_cast<unsigned>(last_max_hp_));
-    const Rect hp_rect = at({ CONTENT_X, HP_Y }, { CONTENT_W, HP_H });
-    const float w = ui.text_width(hp, HP_TEXT_SIZE);
-    const vec2  p = { std::round(hp_rect.center().x - w * 0.5f),
-                      std::round(hp_rect.center().y - ui.text_height(HP_TEXT_SIZE) * 0.5f) };
-    ui.draw_text(p + vec2(1.0f), hp, SHADOW, HP_TEXT_SIZE);
-    ui.draw_text(p, hp, HP_TEXT, HP_TEXT_SIZE);
 
     ui.end_panel();
 
@@ -194,7 +136,7 @@ void ActionBar::draw_queue_(Nezumi::UI::Context& ui) {
     const vec2 size = { static_cast<float>(n) * (QUEUE_ICON.x + QUEUE_GAP) - QUEUE_GAP, QUEUE_ICON.y };
 
     const Nezumi::UI::PanelConfig config = {
-        .position = { rect_.min.x + CONTENT_X, rect_.min.y - QUEUE_RAISE },
+        .position = { rect_.min.x, rect_.min.y - QUEUE_RAISE },
         .pivot    = { 0.0f, 1.0f },
         .size     = size,
         .min_size = size,
@@ -274,27 +216,6 @@ void ActionBar::draw_queue_(Nezumi::UI::Context& ui) {
     ui.end_panel();
 }
 
-void ActionBar::draw_hp_bar_(Nezumi::UI::Context& ui, const Rect& r, const Character* hero) {
-    ui.draw_rect(r, HP_TRACK, 2.0f, HP_BORDER, 1.0f);
-
-    const float frac = hero && hero->max_health > 0
-        ? std::clamp(static_cast<float>(hero->health) / static_cast<float>(hero->max_health), 0.0f, 1.0f)
-        : 0.0f;
-
-    const Rect inner = r.shrink({ 1.0f, 1.0f });
-    if (frac > 0.0f) {
-        const Rect fill = { inner.min, { inner.min.x + std::round(inner.width() * frac), inner.max.y } };
-        ui.draw_image(fill, sheet_->fill, HP_FILL, 1.0f);
-    }
-
-    // Tenths, as stone ticks over the fill (2 points: a box any thinner is
-    // mostly antialiased away)
-    for (int i = 1; i < HP_SEGMENTS; i++) {
-        const float x = std::round(r.min.x + r.width() * static_cast<float>(i) / HP_SEGMENTS);
-        ui.draw_rect({ { x - 1.0f, r.min.y }, { x + 1.0f, r.max.y } }, HP_TICK);
-    }
-}
-
 void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& input,
                             const Inventory* inventory)
 {
@@ -323,7 +244,7 @@ void ActionBar::draw_slots_(Nezumi::UI::Context& ui, const Nezumi::InputMap& inp
     const Nezumi::UI::DragPayload* drag = ui.drag_payload();
     if (drag && drag->type == DRAG_TYPE && (drag->value & NOT_A_SHORTCUT)) style.drop_hover = {};
 
-    ui.set_next_pos({ CONTENT_X, SLOTS_Y });
+    ui.set_next_pos({ 0.0f, 0.0f });
     const Nezumi::UI::Context::ID grid = ui.get_id("slots");
     const Nezumi::UI::SlotGridResult r = ui.slot_grid("slots", slots, SLOT_COUNT, style, DRAG_TYPE);
 
@@ -358,21 +279,23 @@ void ActionBar::draw_buttons_(Nezumi::UI::Context& ui, const Nezumi::InputMap& i
     for (std::size_t i = 0; i < BUTTONS.size(); i++) {
         const Menu menu = BUTTONS[i];
         const Rect r = Rect::from_size(
-            origin + vec2(BUTTONS_X + static_cast<float>(i) * (BUTTON.x + BUTTON_GAP), BUTTONS_Y),
-            BUTTON);
+            origin + vec2(BUTTONS_X + static_cast<float>(i) * (SLOT_SIZE.x + SLOT_GAP), 0.0f),
+            SLOT_SIZE);
 
         const auto it   = ui.interact(ui.get_id(menu_title(menu)), r);
         const bool open = menus.is_open(menu);
         if (it.clicked) menus.toggle(menu);
 
-        const vec4 tint = it.held ? BUTTON_HELD : it.hovered ? BUTTON_HOVER : vec4(1.0f);
-        ui.draw_nine_slice(r, sheet_->button, tint);
-        if (open) ui.draw_rect(r.shrink({ 1.0f, 1.0f }), {}, 3.0f, OPEN_GLOW, 1.5f);
+        // A slot like the others; lit while hovered or its menu is open
+        const Nezumi::UI::Style& style = ui.style();
+        const bool lit = it.hovered || open;
+        ui.draw_rect(r, lit ? style.frame_bg_hovered : style.slot_bg, style.slot_rounding,
+                     lit ? style.slot_border_hovered : style.slot_border, style.border_width);
 
         const float push = it.held ? 1.0f : 0.0f;
         const Rect  icon = Rect::from_size(
-            r.min + glm::round((BUTTON - vec2(ICON_SIZE)) * 0.5f) + vec2(0.0f, push), vec2(ICON_SIZE));
-        ui.draw_image(icon, sheet_->menu_icon(menu), (it.hovered || open) ? ICON_HOVER : ICON);
+            r.min + glm::round((SLOT_SIZE - vec2(ICON_SIZE)) * 0.5f) + vec2(0.0f, push), vec2(ICON_SIZE));
+        ui.draw_image(icon, sheet_->menu_icon(menu), lit ? ICON_HOVER : ICON);
 
         // "Inventory (B)"
         char tip[64];

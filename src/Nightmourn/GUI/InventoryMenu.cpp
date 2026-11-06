@@ -22,11 +22,17 @@ glm::vec2 InventoryMenu::panel_size(const Nezumi::UI::Context& ui, std::size_t c
         return static_cast<float>(count) * SLOT_SIZE.x + static_cast<float>(count - 1) * SLOT_GAP;
     };
     const Nezumi::UI::Style& style = ui.style();
-    const float title_h = std::ceil(ui.text_height() + 2.0f * style.title_padding);
     return {
         grid(columns) + 2.0f * style.panel_padding.x,
-        grid(rows) + 2.0f * style.panel_padding.y + title_h + 1.0f,
+        grid(rows) + 2.0f * style.panel_padding.y + header_height(ui) + 1.0f,
     };
+}
+
+float InventoryMenu::header_height(const Nezumi::UI::Context& ui) {
+    // Nezumi's header row (and a tab strip is as tall): the text, padded by
+    // title_padding and frame_padding above and below
+    const Nezumi::UI::Style& style = ui.style();
+    return std::ceil(ui.text_height() + 2.0f * style.title_padding + 2.0f * style.frame_padding.y);
 }
 
 InventoryMenu::InventoryMenu(const UISheet& sheet, Inventory* inventory, const Config& config)

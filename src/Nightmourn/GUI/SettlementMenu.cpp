@@ -85,11 +85,10 @@ void SettlementMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* ot
     using Nezumi::UI::PanelConfig;
     using Nezumi::UI::PanelFlags;
 
-    // The inventory's size, 10 by VISIBLE_ROWS slots, its title bar tall
-    // enough for the tabs (the icon in place of the title, browser-style);
+    // The inventory's size, 10 by VISIBLE_ROWS slots, plus the tab strip
+    // under the title (title and close button above, tabs below);
     // both tabs scroll the rest
-    const Nezumi::UI::Style& style = ui.style();
-    const vec2 size = InventoryMenu::panel_size(ui, COLUMNS, VISIBLE_ROWS) + vec2(0.0f, 2.0f * style.frame_padding.y);
+    const vec2 size = InventoryMenu::panel_size(ui, COLUMNS, VISIBLE_ROWS) + vec2(0.0f, InventoryMenu::header_height(ui));
 
     const PanelConfig config = {
         .position    = ui.screen_size() * vec2(0.495f, 0.66f), // beside the player's, centers level
@@ -98,8 +97,8 @@ void SettlementMenu::draw(Nezumi::UI::Context& ui, bool& open, InventoryMenu* ot
         .min_size    = size,
         .flags       = PanelFlags::Movable,
         .scroll_step = tab_ == InventoryTab ? InventoryMenu::SLOT_SIZE.y + InventoryMenu::SLOT_GAP : ROW_PITCH,
-        .tabs        = TABS,
-        .icon        = sheet_->menu_icon(Menu::Settlement),
+        .tabs          = TABS,
+        .tab_placement = Nezumi::UI::TabPlacement::Strip,
     };
     if (!ui.begin_panel(TITLE, &open, config)) return;
     tab_ = ui.panel_tab() == CraftingTab ? CraftingTab : InventoryTab;

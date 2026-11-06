@@ -1,12 +1,11 @@
 // =============================================================================
 // GUI/ActionBar.hpp
 //
-// The player's action bar, centered along the bottom of the screen, after
-// World of Warcraft's: two stone eagles flanking a stone slab that holds a
-// thin hp bar, a row of item slots, and the menu buttons.
+// The player's action bar, centered along the bottom of the screen: a row of
+// item slots and the menu buttons, drawn as the same see-through slots as
+// every menu (Theme.cpp), with no frame of their own.
 //
-//   [eagle] [ hp bar ...................................... ] [eagle]
-//           [ 1 ][ 2 ][ 3 ] ... [ 0 ]  |  [ch][in][st][it][mm]
+//   [ 1 ][ 2 ][ 3 ] ... [ 0 ]   [ch][in][st][it][mm]
 //
 // Slots hold items (ItemID, empty for none). Each slot is an input
 // action (Action::use_slot), shown by its key in the slot's corner, so
@@ -25,7 +24,7 @@
 //             for (std::size_t slot : action_bar_.take_used()) ...use it...
 //   on_draw:  action_bar_.draw(*engine.ui(), engine.input(), menus_, hero, &inventory);
 //
-// Above the slab's left end, the crafting queue: a small icon per queued
+// Above the bar's left end, the crafting queue: a small icon per queued
 // recipe (with how many, when more than one), the one being made shaded
 // for the time it has left and red when it's done but there's no room for
 // it. Click an icon to cancel one craft, right click for five; the game
@@ -159,7 +158,6 @@ public:
 
 private:
     void use_(std::size_t i);
-    void draw_hp_bar_  (Nezumi::UI::Context& ui, const Nezumi::UI::Rect& r, const Character* hero);
     void draw_slots_   (Nezumi::UI::Context& ui, const Nezumi::InputMap& input, const Inventory* inventory);
     void draw_buttons_ (Nezumi::UI::Context& ui, const Nezumi::InputMap& input, GameMenus& menus);
     void draw_queue_   (Nezumi::UI::Context& ui);
@@ -171,8 +169,7 @@ private:
     std::vector<std::size_t>                              used_   = {};
     std::array<std::array<char, 8>, SLOT_COUNT>           counts_ = {}; // slot count text, for Slot::count
 
-    std::uint16_t    last_max_hp_ = 0; // shown while the hero is dead
-    Nezumi::UI::Rect rect_        = {};
+    Nezumi::UI::Rect rect_ = {};
 
     const CraftQueue*        queue_       = nullptr;
     float                    craft_speed_ = 1.0f;
