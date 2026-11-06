@@ -2,15 +2,17 @@
 // GUI/SettlementMenu.hpp
 //
 // The Settlement menu (V, its action bar button, or a click on the banner
-// or a workshop), with tabs along the top, Colony Survival style:
+// or a workshop), browser-style: the settlement's icon at the title bar's
+// left (drag it to move the menu), its tabs beside it and the X on the
+// right, as wide as 10 inventory slots:
 //
 // - Inventory: the settlement's stock, the same slots as the player's
 //   Inventory (InventoryMenu), 10 wide and scrolling.
 // - Crafting: what the settlement makes (Crafting/CraftSite), a row per
 //   item its machines can make and per ingredient those recipes use:
 //
-//     [icon]  [====|=======|======]  [ 20 ]  [ 500 ]  [ 0  ]
-//             min . . . . . . . max    Min      Max   Priority
+//     [icon]  [==|=====|===]  [ 20 ]  [ 500 ]  [ 0 ]
+//             min . . . . max   Min      Max    Prio
 //
 //   min: never used as an ingredient below it. max: made while there are
 //   fewer (0: not made). priority: 0..255, higher first. Drag the
